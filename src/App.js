@@ -57,7 +57,7 @@ mobileCSS.textContent = `
 `;
 document.head.appendChild(mobileCSS);
 
-const INDUSTRIES = ["HVAC", "Plumbing", "Electrical", "Roofing"];
+const DEFAULT_INDUSTRIES = ["HVAC", "Plumbing", "Electrical", "Roofing"];
 const INTENTS = ["Transactional", "Commercial", "Informational"];
 const API = process.env.REACT_APP_API_URL || "http://localhost:3001";
 
@@ -169,8 +169,16 @@ function App() {
   // Keyword Library
   const [library, setLibrary] = useState({});
   const [activeIndustry, setActiveIndustry] = useState("HVAC");
+  const [industries, setIndustries] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("fortitude_industries") || "null") || DEFAULT_INDUSTRIES; } catch { return DEFAULT_INDUSTRIES; }
+  });
+  const [showAddIndustry, setShowAddIndustry] = useState(false);
+  const [newIndustryName, setNewIndustryName] = useState("");
+  const [editingRow, setEditingRow] = useState(null); // { id, keyword, volume, kd, intent }
+  const [savingEdit, setSavingEdit] = useState(false);
   const [newKeyword, setNewKeyword] = useState("");
   const [newVolume, setNewVolume] = useState("");
+  const [newKd, setNewKd] = useState("");
   const [newIntent, setNewIntent] = useState("Transactional");
   const [csvImporting, setCsvImporting] = useState(false);
   const [csvResult, setCsvResult] = useState(null); // { imported, total, errors }
@@ -361,15 +369,40 @@ function App() {
       const res = await authFetch(`${API}/api/keywords/library`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keyword: newKeyword.trim(), industry: activeIndustry, volume: parseInt(newVolume) || 0, intent: newIntent }),
+        body: JSON.stringify({ keyword: newKeyword.trim(), industry: activeIndustry, volume: parseInt(newVolume) || 0, kd: parseInt(newKd) || 0, intent: newIntent }),
       });
       const data = await res.json();
       setLibrary(prev => ({ ...prev, [activeIndustry]: [data.keyword, ...(prev[activeIndustry] || [])] }));
-      setNewKeyword("");
-      setNewVolume("");
+      setNewKeyword(""); setNewVolume(""); setNewKd("");
     } catch (e) {
       console.error("Failed to add keyword:", e);
     }
+  };
+
+  const updateKeyword = async (id, updates) => {
+    setSavingEdit(true);
+    try {
+      const res = await authFetch(`${API}/api/keywords/library/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      const data = await res.json();
+      setLibrary(prev => ({ ...prev, [activeIndustry]: prev[activeIndustry].map(k => k.id === id ? { ...k, ...data.keyword } : k) }));
+      setEditingRow(null);
+    } catch (e) { console.error("Failed to update keyword:", e); }
+    setSavingEdit(false);
+  };
+
+  const addIndustry = () => {
+    const name = newIndustryName.trim().toUpperCase();
+    if (!name || industries.includes(name)) return;
+    const updated = [...industries, name];
+    setIndustries(updated);
+    try { localStorage.setItem("fortitude_industries", JSON.stringify(updated)); } catch {}
+    setActiveIndustry(name);
+    setNewIndustryName("");
+    setShowAddIndustry(false);
   };
 
   const removeKeyword = async (id) => {
@@ -1113,6 +1146,7 @@ function App() {
     if (!keywords) return [];
     return [...keywords].sort((a, b) => {
       if (libSortField === "volume") return libSortDir === "asc" ? a.volume - b.volume : b.volume - a.volume;
+      if (libSortField === "kd") return libSortDir === "asc" ? (a.kd || 0) - (b.kd || 0) : (b.kd || 0) - (a.kd || 0);
       if (libSortField === "keyword") return libSortDir === "asc" ? a.keyword.localeCompare(b.keyword) : b.keyword.localeCompare(a.keyword);
       return 0;
     });
@@ -1252,7 +1286,7 @@ function App() {
                   <div className="f-form-grid" style={styles.formGrid}>
                     <input style={styles.searchInput} placeholder="Client name" value={newClient.name} onChange={e => setNewClient({ ...newClient, name: e.target.value })} />
                     <select style={styles.selectInput} value={newClient.industry} onChange={e => setNewClient({ ...newClient, industry: e.target.value })}>
-                      {INDUSTRIES.map(i => <option key={i}>{i}</option>)}
+                      {industries.map(i => <option key={i}>{i}</option>)}
                     </select>
                     <input style={styles.searchInput} placeholder="Domain (e.g. clientsite.com)" value={newClient.domain} onChange={e => setNewClient({ ...newClient, domain: e.target.value })} />
                     <input style={styles.searchInput} placeholder="WordPress URL (e.g. https://clientsite.com)" value={newClient.wordpress_url} onChange={e => setNewClient({ ...newClient, wordpress_url: e.target.value })} />
@@ -1989,16 +2023,38 @@ function App() {
           {/* KEYWORD LIBRARY */}
           {activeTab === "library" && (
             <div>
-              <div style={styles.industryTabs}>
-                {INDUSTRIES.map((ind) => (
+              {/* Industry Tabs + Add Industry */}
+              <div style={{ display: "flex", alignItems: "center", gap: 2, marginBottom: 24, flexWrap: "wrap" }}>
+                {industries.map((ind) => (
                   <button key={ind} style={{ ...styles.industryTab, ...(activeIndustry === ind ? styles.industryTabActive : {}) }} onClick={() => setActiveIndustry(ind)}>
                     {ind}<span style={styles.industryCount}>{library[ind]?.length || 0}</span>
                   </button>
                 ))}
+                {showAddIndustry ? (
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <input
+                      autoFocus
+                      style={{ ...styles.searchInput, width: 140, flex: "none", fontSize: 12, padding: "8px 12px" }}
+                      placeholder="Industry name..."
+                      value={newIndustryName}
+                      onChange={e => setNewIndustryName(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") addIndustry(); if (e.key === "Escape") { setShowAddIndustry(false); setNewIndustryName(""); } }}
+                    />
+                    <button style={{ ...styles.addBtn, padding: "8px 14px", fontSize: 11 }} onClick={addIndustry}>Add</button>
+                    <button style={{ ...styles.backBtn, marginBottom: 0, padding: "8px 12px" }} onClick={() => { setShowAddIndustry(false); setNewIndustryName(""); }}>✕</button>
+                  </div>
+                ) : (
+                  <button style={{ ...styles.industryTab, borderStyle: "dashed", color: "#d60000", borderColor: "#d60000" }} onClick={() => setShowAddIndustry(true)}>
+                    + Add Industry
+                  </button>
+                )}
               </div>
+
+              {/* Add Keyword Row */}
               <div style={styles.addKeywordRow}>
                 <input style={{ ...styles.searchInput, flex: 3 }} placeholder="Add a keyword..." value={newKeyword} onChange={e => setNewKeyword(e.target.value)} onKeyDown={e => e.key === "Enter" && addKeyword()} />
-                <input style={{ ...styles.searchInput, flex: 1, maxWidth: 120 }} placeholder="Volume" type="number" value={newVolume} onChange={e => setNewVolume(e.target.value)} />
+                <input style={{ ...styles.searchInput, flex: 1, maxWidth: 100 }} placeholder="Volume" type="number" value={newVolume} onChange={e => setNewVolume(e.target.value)} />
+                <input style={{ ...styles.searchInput, flex: "0 0 70px" }} placeholder="KD" type="number" min="0" max="100" value={newKd} onChange={e => setNewKd(e.target.value)} />
                 <select style={styles.selectInput} value={newIntent} onChange={e => setNewIntent(e.target.value)}>
                   {INTENTS.map(i => <option key={i} value={i}>{i}</option>)}
                 </select>
@@ -2008,6 +2064,8 @@ function App() {
                   <input type="file" accept=".csv,text/csv" style={{ display: "none" }} onChange={e => { if (e.target.files[0]) importCsv(e.target.files[0]); e.target.value = ""; }} disabled={csvImporting} />
                 </label>
               </div>
+
+              {/* CSV Result Toast */}
               {csvResult && (
                 <div style={{ background: csvResult.errors?.length && !csvResult.imported ? "rgba(214,0,0,0.08)" : "rgba(34,197,94,0.08)", borderLeft: `3px solid ${csvResult.errors?.length && !csvResult.imported ? "#d60000" : "#22c55e"}`, padding: "10px 16px", marginBottom: 16, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: "'Barlow', sans-serif" }}>
                   <span style={{ color: csvResult.errors?.length && !csvResult.imported ? "#ff4444" : "#22c55e" }}>
@@ -2016,24 +2074,48 @@ function App() {
                   <button onClick={() => setCsvResult(null)} style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 14, padding: "0 4px" }}>✕</button>
                 </div>
               )}
+
+              {/* Table */}
               <div style={styles.table}>
                 <div style={styles.tableHeader}>
                   <div style={{ flex: 3, cursor: "pointer", color: libSortField === "keyword" ? "#dc2626" : "#444" }} onClick={() => handleLibSort("keyword")}>Keyword {libSortField === "keyword" ? (libSortDir === "asc" ? "↑" : "↓") : "↕"}</div>
                   <div style={{ flex: 1, textAlign: "center", cursor: "pointer", color: libSortField === "volume" ? "#dc2626" : "#444" }} onClick={() => handleLibSort("volume")}>Volume {libSortField === "volume" ? (libSortDir === "asc" ? "↑" : "↓") : "↕"}</div>
+                  <div style={{ flex: "0 0 70px", textAlign: "center", cursor: "pointer", color: libSortField === "kd" ? "#dc2626" : "#444" }} onClick={() => handleLibSort("kd")}>KD {libSortField === "kd" ? (libSortDir === "asc" ? "↑" : "↓") : "↕"}</div>
                   <div style={{ flex: 1, textAlign: "center" }}>Intent</div>
-                  <div style={{ flex: 1, textAlign: "center" }}>Remove</div>
+                  <div style={{ flex: "0 0 130px", textAlign: "center" }}>Actions</div>
                 </div>
                 {getSortedLibrary(library[activeIndustry] || []).map((row) => (
-                  <div key={row.id} style={styles.tableRow} onMouseEnter={e => e.currentTarget.style.background = "#111"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                    <div style={{ flex: 3, color: "#fff", fontWeight: 500 }}>{row.keyword}</div>
-                    <div style={{ flex: 1, textAlign: "center", color: "#aaa" }}>{(row.volume || 0).toLocaleString()}</div>
-                    <div style={{ flex: 1, textAlign: "center" }}>
-                      <span style={{ ...styles.intentBadge, color: getIntentColor(row.intent), background: getIntentColor(row.intent) + "22", borderColor: getIntentColor(row.intent) + "44" }}>{row.intent}</span>
+                  editingRow?.id === row.id ? (
+                    <div key={row.id} style={{ ...styles.tableRow, background: "#111", flexWrap: "wrap", gap: 8, minWidth: 500 }}>
+                      <input style={{ ...styles.searchInput, flex: 3, minWidth: 160, fontSize: 12, padding: "6px 10px" }} value={editingRow.keyword} onChange={e => setEditingRow(r => ({ ...r, keyword: e.target.value }))} onKeyDown={e => e.key === "Enter" && updateKeyword(row.id, editingRow)} />
+                      <input style={{ ...styles.searchInput, flex: 1, maxWidth: 90, fontSize: 12, padding: "6px 10px" }} type="number" placeholder="Volume" value={editingRow.volume} onChange={e => setEditingRow(r => ({ ...r, volume: e.target.value }))} />
+                      <input style={{ ...styles.searchInput, flex: "0 0 60px", fontSize: 12, padding: "6px 10px" }} type="number" placeholder="KD" min="0" max="100" value={editingRow.kd} onChange={e => setEditingRow(r => ({ ...r, kd: e.target.value }))} />
+                      <select style={{ ...styles.selectInput, fontSize: 11, padding: "6px 10px" }} value={editingRow.intent} onChange={e => setEditingRow(r => ({ ...r, intent: e.target.value }))}>
+                        {INTENTS.map(i => <option key={i} value={i}>{i}</option>)}
+                      </select>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button style={{ ...styles.addBtn, padding: "6px 14px", fontSize: 10, opacity: savingEdit ? 0.5 : 1 }} onClick={() => updateKeyword(row.id, editingRow)} disabled={savingEdit}>{savingEdit ? "..." : "✓ Save"}</button>
+                        <button style={{ ...styles.backBtn, marginBottom: 0, padding: "6px 12px", fontSize: 10 }} onClick={() => setEditingRow(null)}>Cancel</button>
+                      </div>
                     </div>
-                    <div style={{ flex: 1, textAlign: "center" }}>
-                      <button style={{ ...styles.addKeywordBtn, color: "#ef4444", borderColor: "rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.1)" }} onClick={() => removeKeyword(row.id)}>Remove</button>
+                  ) : (
+                    <div key={row.id} style={styles.tableRow} onMouseEnter={e => e.currentTarget.style.background = "#111"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                      <div style={{ flex: 3, color: "#fff", fontWeight: 500 }}>{row.keyword}</div>
+                      <div style={{ flex: 1, textAlign: "center", color: "#aaa" }}>{(row.volume || 0).toLocaleString()}</div>
+                      <div style={{ flex: "0 0 70px", textAlign: "center" }}>
+                        {row.kd > 0 ? (
+                          <span style={{ display: "inline-block", padding: "2px 8px", fontSize: 11, fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", borderRadius: 2, background: row.kd <= 30 ? "rgba(34,197,94,0.15)" : row.kd <= 60 ? "rgba(234,179,8,0.15)" : "rgba(239,68,68,0.15)", color: row.kd <= 30 ? "#22c55e" : row.kd <= 60 ? "#eab308" : "#ef4444" }}>{row.kd}</span>
+                        ) : <span style={{ color: "#333" }}>—</span>}
+                      </div>
+                      <div style={{ flex: 1, textAlign: "center" }}>
+                        <span style={{ ...styles.intentBadge, color: getIntentColor(row.intent), background: getIntentColor(row.intent) + "22", borderColor: getIntentColor(row.intent) + "44" }}>{row.intent}</span>
+                      </div>
+                      <div style={{ flex: "0 0 130px", textAlign: "center", display: "flex", gap: 6, justifyContent: "center" }}>
+                        <button style={{ ...styles.addKeywordBtn }} onClick={() => setEditingRow({ id: row.id, keyword: row.keyword, volume: row.volume || 0, kd: row.kd || 0, intent: row.intent || "Transactional" })}>Edit</button>
+                        <button style={{ ...styles.addKeywordBtn, color: "#ef4444", borderColor: "rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.1)" }} onClick={() => removeKeyword(row.id)}>Remove</button>
+                      </div>
                     </div>
-                  </div>
+                  )
                 ))}
               </div>
             </div>
@@ -2048,7 +2130,7 @@ function App() {
               </div>
               {imageMode === "industry" && (
                 <div style={styles.industryTabs}>
-                  {INDUSTRIES.map((ind) => (
+                  {industries.map((ind) => (
                     <button key={ind} style={{ ...styles.industryTab, ...(imageIndustry === ind ? styles.industryTabActive : {}) }} onClick={() => { setImageIndustry(ind); loadImages(ind); }}>
                       {ind}
                     </button>
