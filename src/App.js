@@ -1158,7 +1158,7 @@ function App() {
       });
       const data = await res.json();
       if (data.success) {
-        setPublishResult({ success: true, url: data.wpPostUrl, qa: data.qa || null, repairHistory: data.repairHistory || [], yoastEdition: data.yoastEdition, longtailKeyphrase: data.longtailKeyphrase, fortitudePlugin: data.fortitudePlugin, canWriteSeoMeta: data.canWriteSeoMeta });
+        setPublishResult({ success: true, url: data.wpPostUrl, qa: data.qa || null, repairHistory: data.repairHistory || [], yoastEdition: data.yoastEdition, longtailKeyphrase: data.longtailKeyphrase, fortitudePlugin: data.fortitudePlugin, canWriteSeoMeta: data.canWriteSeoMeta, yoastOpt: data.yoastOpt || null });
         loadClients();
       } else {
         setPublishResult({ success: false, error: data.detail || data.error });
@@ -2450,6 +2450,23 @@ function App() {
                               {publishResult.yoastEdition && publishResult.yoastEdition !== "none" && !publishResult.canWriteSeoMeta && (
                                 <div style={{ marginTop: 6, fontSize: 10, color: "#f59e0b", fontFamily: "'Barlow Condensed', sans-serif", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 3, padding: "4px 8px" }}>
                                   ⚠ Yoast meta not written — install <strong>fortitude-seo-meta-writer.php</strong> on this site to enable focus keyphrase + meta description writing
+                                </div>
+                              )}
+                              {publishResult.yoastOpt && (
+                                <div style={{ marginTop: 8, padding: "8px 10px", background: "#0a0a0a", border: `1px solid ${publishResult.yoastOpt.issues?.length === 0 ? "rgba(34,197,94,0.2)" : "rgba(245,158,11,0.2)"}`, borderRadius: 4 }}>
+                                  <div style={{ fontSize: 10, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", color: publishResult.yoastOpt.issues?.length === 0 ? "#22c55e" : "#f59e0b", marginBottom: publishResult.yoastOpt.fixes?.length > 0 ? 4 : 0 }}>
+                                    {publishResult.yoastOpt.issues?.length === 0
+                                      ? `✓ YOAST OPTIMIZED — all checks passed (score ~${publishResult.yoastOpt.yoastScore})`
+                                      : `⚠ YOAST SCORE ~${publishResult.yoastOpt.yoastScore} — ${publishResult.yoastOpt.issues?.length} issue(s) remain: ${publishResult.yoastOpt.issues?.map(i => i.type).join(", ")}`
+                                    }
+                                  </div>
+                                  {publishResult.yoastOpt.fixes?.length > 0 && (
+                                    <div style={{ fontSize: 9, color: "#555", fontFamily: "'Barlow Condensed', sans-serif" }}>
+                                      {publishResult.yoastOpt.fixes.map((f, i) => (
+                                        <span key={i} style={{ marginRight: 10 }}>Pass {f.pass}: {f.type} → {f.fix}</span>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               )}
                               {publishResult.longtailKeyphrase && (
