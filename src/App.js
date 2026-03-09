@@ -1406,7 +1406,7 @@ function App() {
                         <div style={styles.clientCardTop}>
                           <div style={styles.clientAvatar}>
                             {client.logo_url
-                              ? <img src={client.logo_url} alt={client.name} style={{ width: "100%", height: "100%", objectFit: "contain", padding: 4 }} />
+                              ? <img src={client.logo_url} alt={client.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                               : client.name.charAt(0)}
                           </div>
                           <div style={{ ...styles.clientStatus, background: client.status === "active" ? "rgba(34,197,94,0.1)" : "rgba(245,158,11,0.1)", color: client.status === "active" ? "#22c55e" : "#f59e0b" }}>{client.status}</div>
@@ -1456,7 +1456,7 @@ function App() {
                         style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 20px", background: "#0d0d0d", borderTop: "2px solid #1a1a1a", cursor: "pointer", transition: "all 0.15s" }}>
                         <div style={{ ...styles.clientAvatar, flexShrink: 0, width: 36, height: 36, fontSize: 15 }}>
                           {client.logo_url
-                            ? <img src={client.logo_url} alt={client.name} style={{ width: "100%", height: "100%", objectFit: "contain", padding: 3 }} />
+                            ? <img src={client.logo_url} alt={client.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", borderRadius: 2 }} />
                             : client.name.charAt(0)}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -1494,7 +1494,7 @@ function App() {
                       onClick={() => logoInputRef.current && logoInputRef.current.click()}
                       title="Click to upload logo">
                       {selectedClient.logo_url
-                        ? <img src={selectedClient.logo_url} alt={selectedClient.name} style={{ width: "100%", height: "100%", objectFit: "contain", padding: 6 }} />
+                        ? <img src={selectedClient.logo_url} alt={selectedClient.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                         : selectedClient.name.charAt(0)}
                       {logoUploading && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff" }}>...</div>}
                       <input ref={logoInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => uploadClientLogo(e, selectedClient.id)} />
@@ -3455,7 +3455,7 @@ const styles = {
   clientGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 2 },
   clientCard: { background: "#0d0d0d", borderTop: "3px solid transparent", padding: "24px", cursor: "pointer", transition: "border-color 0.15s, background 0.15s" },
   clientCardTop: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
-  clientAvatar: { width: 40, height: 40, background: "#d60000", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, color: "#fff", fontFamily: "'Oswald', sans-serif" },
+  clientAvatar: { width: 40, height: 40, background: "#d60000", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, color: "#fff", fontFamily: "'Oswald', sans-serif", overflow: "hidden", flexShrink: 0 },
   clientStatus: { padding: "3px 10px", fontSize: 9, letterSpacing: "0.15em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 },
   clientName: { fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 4, fontFamily: "'Oswald', sans-serif", letterSpacing: "0.05em", textTransform: "uppercase" },
   clientIndustry: { fontSize: 10, color: "#555", letterSpacing: "0.12em", marginBottom: 20, textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif" },
