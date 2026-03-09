@@ -1537,7 +1537,6 @@ function App() {
                             } else {
                               setShowGbpAssignPanel(v => !v);
                             }
-                            }
                           } else {
                             startEditClient();
                           }
