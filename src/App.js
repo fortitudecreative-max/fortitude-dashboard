@@ -1158,7 +1158,7 @@ function App() {
       });
       const data = await res.json();
       if (data.success) {
-        setPublishResult({ success: true, url: data.wpPostUrl, qa: data.qa || null, repairHistory: data.repairHistory || [], yoastEdition: data.yoastEdition, longtailKeyphrase: data.longtailKeyphrase });
+        setPublishResult({ success: true, url: data.wpPostUrl, qa: data.qa || null, repairHistory: data.repairHistory || [], yoastEdition: data.yoastEdition, longtailKeyphrase: data.longtailKeyphrase, fortitudePlugin: data.fortitudePlugin, canWriteSeoMeta: data.canWriteSeoMeta });
         loadClients();
       } else {
         setPublishResult({ success: false, error: data.detail || data.error });
@@ -2446,6 +2446,11 @@ function App() {
                                 <span style={{ marginLeft: 10, fontSize: 10, padding: "2px 8px", borderRadius: 3, background: publishResult.yoastEdition === "none" ? "#1a1a1a" : "#0a1a0a", border: `1px solid ${publishResult.yoastEdition === "none" ? "#333" : "#22c55e33"}`, color: publishResult.yoastEdition === "none" ? "#555" : "#22c55e", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em" }}>
                                   {publishResult.yoastEdition === "premium" ? "Yoast Premium ✓" : publishResult.yoastEdition === "free" ? "Yoast Free ✓" : "No Yoast detected"}
                                 </span>
+                              )}
+                              {publishResult.yoastEdition && publishResult.yoastEdition !== "none" && !publishResult.canWriteSeoMeta && (
+                                <div style={{ marginTop: 6, fontSize: 10, color: "#f59e0b", fontFamily: "'Barlow Condensed', sans-serif", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 3, padding: "4px 8px" }}>
+                                  ⚠ Yoast meta not written — install <strong>fortitude-seo-meta-writer.php</strong> on this site to enable focus keyphrase + meta description writing
+                                </div>
                               )}
                               {publishResult.longtailKeyphrase && (
                                 <div style={{ marginTop: 5, fontSize: 10, color: "#555", fontFamily: "'Barlow Condensed', sans-serif" }}>
