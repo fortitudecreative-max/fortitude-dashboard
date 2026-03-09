@@ -359,11 +359,23 @@ function App() {
       setClients(prev => [data.client, ...prev]);
       setNewClient({ name: "", industry: "HVAC", domain: "", wordpress_url: "", brand_voice: "" });
       setShowAddClient(false);
-      // Auto-open the new client so selectedClient is set for Generate Queue
-      setSelectedClient(data.client);
-      setCompetitors(data.client.competitors || []);
-      loadMonthlyQueue(data.client.id);
-      loadScheduleJobs(data.client.id);
+      // Auto-open the new client — mirror handleClientClick so all state is set correctly
+      const c = data.client;
+      setSelectedClient(c);
+      setCompetitors(c.competitors || []);
+      setScheduleSettings({
+        schedule_frequency: c.schedule_frequency || "daily",
+        schedule_days: c.schedule_days || ["Mon","Tue","Wed","Thu","Fri"],
+        schedule_start_hour: c.schedule_start_hour || 9,
+        schedule_end_hour: c.schedule_end_hour || 12,
+        schedule_timezone: c.schedule_timezone || "America/New_York",
+      });
+      setGbpPostResult(null);
+      setShowGbpComposer(false);
+      loadMonthlyQueue(c.id);
+      loadScheduleJobs(c.id);
+      loadGbpStatus(c.id);
+      loadClientImages(c.id);
     } catch (e) {
       console.error("Failed to add client:", e);
     }
@@ -1902,8 +1914,8 @@ function App() {
                           <div style={{ flex: "0 0 20px", color: row.used ? "transparent" : "#333", fontSize: 13, userSelect: "none" }}>⠿</div>
                           <div style={{ flex: 3, color: "#fff", fontWeight: 500 }}>{row.keyword}</div>
                           <div style={{ flex: 1, textAlign: "center" }}>
-                            <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20, border: "1px solid", color: row.source === "gap" ? "#f59e0b" : row.source === "manual" ? "#a78bfa" : "#60a5fa", background: row.source === "gap" ? "rgba(245,158,11,0.1)" : row.source === "manual" ? "rgba(167,139,250,0.1)" : "rgba(96,165,250,0.1)", borderColor: row.source === "gap" ? "rgba(245,158,11,0.2)" : row.source === "manual" ? "rgba(167,139,250,0.2)" : "rgba(96,165,250,0.2)" }}>
-                              {row.source === "gap" ? "Gap" : row.source === "manual" ? "Manual" : "Library"}
+                            <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20, border: "1px solid", color: row.source === "gap" ? "#f59e0b" : row.source === "manual" ? "#a78bfa" : row.source === "ai" ? "#34d399" : "#60a5fa", background: row.source === "gap" ? "rgba(245,158,11,0.1)" : row.source === "manual" ? "rgba(167,139,250,0.1)" : row.source === "ai" ? "rgba(52,211,153,0.1)" : "rgba(96,165,250,0.1)", borderColor: row.source === "gap" ? "rgba(245,158,11,0.2)" : row.source === "manual" ? "rgba(167,139,250,0.2)" : row.source === "ai" ? "rgba(52,211,153,0.2)" : "rgba(96,165,250,0.2)" }}>
+                              {row.source === "gap" ? "Gap" : row.source === "manual" ? "Manual" : row.source === "ai" ? "AI" : "Library"}
                             </span>
                           </div>
                           <div style={{ flex: 1, textAlign: "center" }}>
