@@ -1076,6 +1076,19 @@ function App() {
     }
   };
 
+  const deleteClient = async (client) => {
+    if (!window.confirm(`Delete "${client.name}"?\n\nThis will permanently remove the client and all their scheduled jobs, keyword queue, posts, and images. This cannot be undone.`)) return;
+    try {
+      const res = await authFetch(`${API}/api/clients/${client.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.error) { alert("Delete failed: " + data.error); return; }
+      setClients(prev => prev.filter(c => c.id !== client.id));
+      setSelectedClient(null);
+    } catch (e) {
+      alert("Delete failed: " + e.message);
+    }
+  };
+
   const publishToWordPress = async () => {
     console.log("Publish clicked", { generatedPost: !!generatedPost, activeClient });
     if (!generatedPost || !activeClient) {
@@ -1458,9 +1471,12 @@ function App() {
                     <div style={styles.clientDetailIndustry}>{selectedClient.industry} · {selectedClient.domain || "No domain set"}</div>
                   </div>
                 </div>
-                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16, gap: 8 }}>
                   {!editingClient ? (
-                    <button style={{ ...styles.connectBtn, fontSize: 12, padding: "8px 16px" }} onClick={startEditClient}>✎ Edit Client</button>
+                    <>
+                      <button style={{ ...styles.connectBtn, fontSize: 12, padding: "8px 16px" }} onClick={startEditClient}>✎ Edit Client</button>
+                      <button style={{ ...styles.connectBtn, fontSize: 12, padding: "8px 16px", borderColor: "#d60000", color: "#d60000" }} onClick={() => deleteClient(selectedClient)}>✕ Delete Client</button>
+                    </>
                   ) : (
                     <div style={{ display: "flex", gap: 8 }}>
                       <button style={{ ...styles.addBtn, background: "none", border: "1px solid #333", color: "#666", fontSize: 12 }} onClick={() => setEditingClient(false)}>Cancel</button>
