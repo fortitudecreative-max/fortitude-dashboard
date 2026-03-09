@@ -253,6 +253,8 @@ function App() {
   const [clientImages, setClientImages] = useState([]);
   const [clientImageCategory, setClientImageCategory] = useState("");
   const [clientImageUploading, setClientImageUploading] = useState(false);
+  const [clientImageUploadQueue, setClientImageUploadQueue] = useState([]);
+  const [imageDragOver, setImageDragOver] = useState(false);
   const clientImageInputRef = useRef(null);
   const [queueMonth, setQueueMonth] = useState("");
 
@@ -827,6 +829,33 @@ function App() {
       setClientImageCategory("");
     } catch (e) { console.error("Failed to upload image:", e); }
     setClientImageUploading(false);
+    if (clientImageInputRef.current) clientImageInputRef.current.value = "";
+  };
+
+  const uploadClientImageBulk = async (files) => {
+    if (!files || files.length === 0) return;
+    const fileArray = Array.from(files);
+    setClientImageUploadQueue(fileArray.map(f => ({ name: f.name, status: "pending" })));
+    const category = clientImageCategory.trim() || "general";
+    const results = [];
+    for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i];
+      setClientImageUploadQueue(prev => prev.map((f, idx) => idx === i ? { ...f, status: "uploading" } : f));
+      try {
+        const formData = new FormData();
+        formData.append("image", file);
+        formData.append("industry", selectedClient.industry);
+        formData.append("category", category);
+        formData.append("client_id", selectedClient.id);
+        const res = await authFetch(`${API}/api/images/upload`, { method: "POST", body: formData });
+        const data = await res.json();
+        if (data.image) { results.push(data.image); setClientImages(prev => [data.image, ...prev]); }
+        setClientImageUploadQueue(prev => prev.map((f, idx) => idx === i ? { ...f, status: "done" } : f));
+      } catch (err) {
+        setClientImageUploadQueue(prev => prev.map((f, idx) => idx === i ? { ...f, status: "error" } : f));
+      }
+    }
+    setTimeout(() => { setClientImageUploadQueue([]); setClientImageCategory(""); }, 1500);
     if (clientImageInputRef.current) clientImageInputRef.current.value = "";
   };
 
@@ -1998,6 +2027,37 @@ function App() {
 
                         </div>
                       )}
+
+                      {/* ── Inline quick-add row ── */}
+                      <div style={{ borderTop: "1px solid #1a1a1a", padding: "10px 12px", display: "flex", alignItems: "center", gap: 8, background: "#0a0a0a" }}>
+                        <div style={{ flex: "0 0 20px" }}></div>
+                        <input
+                          style={{ ...styles.searchInput, flex: 3, fontSize: 12, padding: "7px 10px" }}
+                          placeholder="Add a keyword to queue..."
+                          value={manualKeywordText}
+                          onChange={e => setManualKeywordText(e.target.value)}
+                          onKeyDown={e => e.key === "Enter" && addManualKeyword()}
+                        />
+                        <select
+                          value={manualKeywordIntent}
+                          onChange={e => setManualKeywordIntent(e.target.value)}
+                          style={{ background: "#111", border: "1px solid #222", color: "#ccc", borderRadius: 4, padding: "7px 10px", fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", flex: 1 }}
+                        >
+                          <option value="Transactional">Transactional</option>
+                          <option value="Informational">Informational</option>
+                          <option value="Navigational">Navigational</option>
+                          <option value="Commercial">Commercial</option>
+                        </select>
+                        <div style={{ flex: 1 }}></div>
+                        <button
+                          style={{ ...styles.addBtn, fontSize: 11, padding: "6px 14px", opacity: addingManualKeyword || !manualKeywordText.trim() ? 0.4 : 1, flex: "0 0 auto" }}
+                          onClick={addManualKeyword}
+                          disabled={addingManualKeyword || !manualKeywordText.trim()}
+                        >
+                          {addingManualKeyword ? "Adding..." : "+ Add"}
+                        </button>
+                      </div>
+
                     </div>
                   )}
                 </div>
@@ -2042,16 +2102,56 @@ function App() {
                   <div style={{ fontSize: 11, color: "#555", letterSpacing: "0.08em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", marginBottom: 12 }}>
                     These images are used as featured images when generating posts.
                   </div>
-                  <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "center" }}>
-                    <input style={{ ...styles.searchInput, flex: 1, maxWidth: 220 }} placeholder="Category (e.g. technician, truck)" value={clientImageCategory} onChange={e => setClientImageCategory(e.target.value)} />
-                    <label style={{ ...styles.addBtn, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      {clientImageUploading ? "Uploading..." : "+ Upload Image"}
-                      <input ref={clientImageInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={uploadClientImage} disabled={clientImageUploading} />
-                    </label>
+
+                  {/* Drag-drop upload zone */}
+                  <div
+                    onDragOver={e => { e.preventDefault(); setImageDragOver(true); }}
+                    onDragLeave={() => setImageDragOver(false)}
+                    onDrop={e => { e.preventDefault(); setImageDragOver(false); uploadClientImageBulk(e.dataTransfer.files); }}
+                    style={{
+                      border: `2px dashed ${imageDragOver ? "#d60000" : "#2a2a2a"}`,
+                      borderRadius: 8,
+                      padding: "24px 20px",
+                      marginBottom: 16,
+                      textAlign: "center",
+                      background: imageDragOver ? "rgba(214,0,0,0.05)" : "#0a0a0a",
+                      transition: "border-color 0.15s, background 0.15s",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => clientImageInputRef.current?.click()}
+                  >
+                    <div style={{ fontSize: 24, marginBottom: 8, color: imageDragOver ? "#d60000" : "#333" }}>⬆</div>
+                    <div style={{ fontSize: 12, color: imageDragOver ? "#d60000" : "#555", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em" }}>
+                      {imageDragOver ? "DROP TO UPLOAD" : "DRAG & DROP IMAGES HERE, OR CLICK TO BROWSE"}
+                    </div>
+                    <div style={{ fontSize: 10, color: "#333", marginTop: 4, fontFamily: "'Barlow Condensed', sans-serif" }}>Supports bulk upload — drop multiple files at once</div>
+                    <input ref={clientImageInputRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={e => uploadClientImageBulk(e.target.files)} />
                   </div>
+
+                  {/* Category + upload queue status */}
+                  <div style={{ display: "flex", gap: 10, marginBottom: 12, alignItems: "center" }}>
+                    <input style={{ ...styles.searchInput, flex: 1, maxWidth: 220 }} placeholder="Category tag (e.g. technician, truck)" value={clientImageCategory} onChange={e => setClientImageCategory(e.target.value)} />
+                    <div style={{ fontSize: 11, color: "#444", fontFamily: "'Barlow Condensed', sans-serif" }}>Applied to all uploads</div>
+                  </div>
+
+                  {/* Upload progress */}
+                  {clientImageUploadQueue.length > 0 && (
+                    <div style={{ marginBottom: 12, background: "#0a0a0a", border: "1px solid #1a1a1a", borderRadius: 6, padding: "10px 14px" }}>
+                      {clientImageUploadQueue.map((f, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "#aaa", fontFamily: "'Barlow Condensed', sans-serif", marginBottom: i < clientImageUploadQueue.length - 1 ? 4 : 0 }}>
+                          <span style={{ color: f.status === "done" ? "#22c55e" : f.status === "error" ? "#ef4444" : f.status === "uploading" ? "#d60000" : "#444" }}>
+                            {f.status === "done" ? "✓" : f.status === "error" ? "✕" : f.status === "uploading" ? "⟳" : "○"}
+                          </span>
+                          <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span>
+                          <span style={{ color: f.status === "done" ? "#22c55e" : f.status === "error" ? "#ef4444" : "#555", fontSize: 10 }}>{f.status}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {clientImages.length === 0 ? (
                     <div style={{ padding: "24px", background: "#0d0d0d", border: "1px solid #1a1a1a", textAlign: "center" }}>
-                      <div style={{ fontSize: 11, color: "#444", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif" }}>No images yet — upload some to get started</div>
+                      <div style={{ fontSize: 11, color: "#444", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif" }}>No images yet — drop some above to get started</div>
                     </div>
                   ) : (
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>
