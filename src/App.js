@@ -107,6 +107,17 @@ function App() {
   const [activeTab, setActiveTab] = useState("clients");
   const [selectedClient, setSelectedClient] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  React.useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (!mobile) setMobileMenuOpen(false);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Clients
   const [clients, setClients] = useState([]);
@@ -1028,11 +1039,29 @@ function App() {
 
   return (
     <div style={styles.root}>
+      {/* Mobile overlay backdrop */}
+      {isMobile && mobileMenuOpen && (
+        <div onClick={() => setMobileMenuOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 40 }} />
+      )}
+
       {/* Sidebar */}
-      <div style={{ ...styles.sidebar, width: sidebarOpen ? 240 : 64 }}>
+      <div style={{
+        ...styles.sidebar,
+        width: isMobile ? 240 : (sidebarOpen ? 240 : 64),
+        position: isMobile ? "fixed" : "relative",
+        top: isMobile ? 0 : "auto",
+        left: isMobile ? (mobileMenuOpen ? 0 : -240) : "auto",
+        height: isMobile ? "100vh" : "auto",
+        zIndex: isMobile ? 50 : "auto",
+        transition: isMobile ? "left 0.25s ease" : "width 0.2s ease",
+        flexShrink: 0,
+      }}>
         <div style={styles.logo}>
-          {sidebarOpen ? <div><div style={styles.logoText}>FORTITUDE</div><div style={styles.logoSub}>CREATIVE</div></div> : <div style={styles.logoIcon}>F</div>}
-          <button style={styles.toggleBtn} onClick={() => setSidebarOpen(!sidebarOpen)}>{sidebarOpen ? "←" : "→"}</button>
+          <div><div style={styles.logoText}>FORTITUDE</div><div style={styles.logoSub}>CREATIVE</div></div>
+          {isMobile
+            ? <button style={styles.toggleBtn} onClick={() => setMobileMenuOpen(false)}>✕</button>
+            : <button style={styles.toggleBtn} onClick={() => setSidebarOpen(!sidebarOpen)}>{sidebarOpen ? "←" : "→"}</button>
+          }
         </div>
         <nav style={styles.nav}>
           {[
@@ -1044,13 +1073,13 @@ function App() {
             { id: "publishing", icon: "⟳", label: "Publishing" },
             { id: "settings", icon: "⚙", label: "Settings" },
           ].map((item) => (
-            <button key={item.id} style={{ ...styles.navItem, ...(activeTab === item.id ? styles.navItemActive : {}) }} onClick={() => { setActiveTab(item.id); setSelectedClient(null); }}>
+            <button key={item.id} style={{ ...styles.navItem, ...(activeTab === item.id ? styles.navItemActive : {}) }} onClick={() => { setActiveTab(item.id); setSelectedClient(null); if (isMobile) setMobileMenuOpen(false); }}>
               <span style={styles.navIcon}>{item.icon}</span>
-              {sidebarOpen && <span style={styles.navLabel}>{item.label}</span>}
+              {(sidebarOpen || isMobile) && <span style={styles.navLabel}>{item.label}</span>}
             </button>
           ))}
         </nav>
-        {sidebarOpen && (
+        {(sidebarOpen || isMobile) && (
           <div style={styles.sidebarFooter}>
             <div style={styles.apiStatus}><div style={styles.statusDot} /><span style={styles.statusText}>Connected</span></div>
             <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid #1a1a1a" }}>
@@ -1067,10 +1096,14 @@ function App() {
       </div>
 
       {/* Main */}
-      <div style={styles.main}>
-        <div style={styles.header}>
-          <div>
-            <div style={styles.headerTitle}>
+      <div style={{ ...styles.main, marginLeft: isMobile ? 0 : "auto" }}>
+        <div style={{ ...styles.header, padding: isMobile ? "0 16px" : "0 32px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {isMobile && (
+              <button onClick={() => setMobileMenuOpen(true)} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: 20, padding: "4px 8px 4px 0", lineHeight: 1 }}>☰</button>
+            )}
+            <div>
+              <div style={styles.headerTitle}>
               {activeTab === "clients" && !selectedClient && "Client Management"}
               {activeTab === "clients" && selectedClient && selectedClient.name}
               {activeTab === "library" && "Keyword Library"}
@@ -1083,17 +1116,18 @@ function App() {
             </div>
             <div style={styles.headerSub}>{new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</div>
           </div>
-          <div style={styles.headerRight}>
-            <div style={styles.headerBadge}>{clients.filter(c => c.status === "active").length} Active Clients</div>
           </div>
+          {!isMobile && <div style={styles.headerRight}>
+            <div style={styles.headerBadge}>{clients.filter(c => c.status === "active").length} Active Clients</div>
+          </div>}
         </div>
 
-        <div style={styles.content}>
+        <div style={{ ...styles.content, padding: isMobile ? "16px" : "32px" }}>
 
           {/* CLIENTS */}
           {activeTab === "clients" && !selectedClient && (
             <div>
-              <div style={styles.statsRow}>
+              <div style={{ ...styles.statsRow, gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)" }}>
                 {[
                   { label: "Total Clients", value: clients.length, icon: "◈" },
                   { label: "Keywords", value: totalKeywords, icon: "⌕" },
@@ -1121,7 +1155,7 @@ function App() {
 
               {showAddClient && (
                 <div style={styles.addClientForm}>
-                  <div style={styles.formGrid}>
+                  <div style={{ ...styles.formGrid, gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
                     <input style={styles.searchInput} placeholder="Client name" value={newClient.name} onChange={e => setNewClient({ ...newClient, name: e.target.value })} />
                     <select style={styles.selectInput} value={newClient.industry} onChange={e => setNewClient({ ...newClient, industry: e.target.value })}>
                       {INDUSTRIES.map(i => <option key={i}>{i}</option>)}
@@ -1250,8 +1284,8 @@ function App() {
           {activeTab === "clients" && selectedClient && (
             <div>
               <button style={styles.backBtn} onClick={() => setSelectedClient(null)}>← Back to Clients</button>
-              <div style={styles.clientDetail}>
-                <div style={styles.clientDetailHeader}>
+              <div style={{ ...styles.clientDetail, padding: isMobile ? 16 : 32 }}>
+                <div style={{ ...styles.clientDetailHeader, flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "center" }}>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
                     <div style={{ ...styles.clientDetailAvatar, overflow: "hidden", position: "relative", cursor: "pointer" }}
                       onClick={() => logoInputRef.current && logoInputRef.current.click()}
@@ -1310,7 +1344,7 @@ function App() {
                     </div>
                   </div>
                 ) : (
-                  <div style={styles.detailGrid}>
+                  <div style={{ ...styles.detailGrid, gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)" }}>
                     {[
                       { label: "WordPress", status: selectedClient.wordpress_url && selectedClient.wordpress_username ? "Connected" : "Not Connected", icon: "W" },
                       { label: "Google Business", status: gbpStatus.connected ? "Connected" : "Not Connected", icon: "G", gbp: true },
@@ -3065,7 +3099,7 @@ const styles = {
   integrationLabel: { fontSize: 12, color: "#fff", fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" },
   integrationStatus: { fontSize: 10, letterSpacing: "0.08em", fontFamily: "'Barlow Condensed', sans-serif", textTransform: "uppercase" },
   connectBtn: { padding: "6px 16px", background: "transparent", border: "1px solid #d60000", color: "#d60000", fontSize: 10, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 700 },
-  industryTabs: { display: "flex", gap: 2, marginBottom: 24 },
+  industryTabs: { display: "flex", gap: 2, marginBottom: 24, flexWrap: "wrap" },
   industryTab: { padding: "10px 20px", background: "none", border: "1px solid #222", color: "#555", cursor: "pointer", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", display: "flex", alignItems: "center", gap: 8, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600 },
   industryTabActive: { background: "#d60000", border: "1px solid #d60000", color: "#fff" },
   industryCount: { background: "rgba(255,255,255,0.1)", padding: "2px 8px", fontSize: 10 },
@@ -3080,9 +3114,9 @@ const styles = {
   imageFilename: { fontSize: 9, color: "#555", marginTop: 3, fontFamily: "'Barlow Condensed', sans-serif" },
   searchInput: { flex: 1, background: "#111", border: "none", borderBottom: "2px solid #222", color: "#fff", padding: "12px 16px", fontSize: 13, fontFamily: "'Barlow', sans-serif", outline: "none" },
   selectInput: { background: "#111", border: "none", borderBottom: "2px solid #222", color: "#fff", padding: "12px 16px", fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", outline: "none", cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.08em" },
-  table: { background: "#0d0d0d", overflow: "hidden", border: "1px solid #1a1a1a" },
-  tableHeader: { display: "flex", padding: "10px 20px", borderBottom: "2px solid #d60000", fontSize: 9, color: "#d60000", letterSpacing: "0.15em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, background: "#000" },
-  tableRow: { display: "flex", padding: "14px 20px", borderBottom: "1px solid #111", fontSize: 13, alignItems: "center", transition: "background 0.1s", cursor: "default" },
+  table: { background: "#0d0d0d", overflow: "auto", border: "1px solid #1a1a1a" },
+  tableHeader: { display: "flex", padding: "10px 20px", borderBottom: "2px solid #d60000", fontSize: 9, color: "#d60000", letterSpacing: "0.15em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, background: "#000", minWidth: 500 },
+  tableRow: { display: "flex", padding: "14px 20px", borderBottom: "1px solid #111", fontSize: 13, alignItems: "center", transition: "background 0.1s", cursor: "default", minWidth: 500 },
   intentBadge: { padding: "2px 10px", fontSize: 10, border: "1px solid", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 600 },
   addKeywordBtn: { padding: "4px 14px", background: "transparent", border: "1px solid #d60000", color: "#d60000", fontSize: 10, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 700 },
   keywordSearch: { background: "#0d0d0d", borderTop: "3px solid #d60000", padding: 28, marginBottom: 28 },
