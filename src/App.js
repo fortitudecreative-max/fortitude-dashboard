@@ -224,6 +224,7 @@ function App() {
   const [findingCompetitors, setFindingCompetitors] = useState(false);
   const [monthlyQueue, setMonthlyQueue] = useState([]);
   const [refreshingQueue, setRefreshingQueue] = useState(false);
+  const [queueError, setQueueError] = useState(null);
   const [queueReplacing, setQueueReplacing] = useState(null); // id of row being replaced
   const [gapSuggestions, setGapSuggestions] = useState([]);
   const [showManualKeywordInput, setShowManualKeywordInput] = useState(false);
@@ -358,6 +359,11 @@ function App() {
       setClients(prev => [data.client, ...prev]);
       setNewClient({ name: "", industry: "HVAC", domain: "", wordpress_url: "", brand_voice: "" });
       setShowAddClient(false);
+      // Auto-open the new client so selectedClient is set for Generate Queue
+      setSelectedClient(data.client);
+      setCompetitors(data.client.competitors || []);
+      loadMonthlyQueue(data.client.id);
+      loadScheduleJobs(data.client.id);
     } catch (e) {
       console.error("Failed to add client:", e);
     }
@@ -549,6 +555,7 @@ function App() {
   };
 
   const loadMonthlyQueue = async (clientId) => {
+    setQueueError(null);
     try {
       const res = await authFetch(`${API}/api/keywords/queue/${clientId}`);
       const data = await res.json();
@@ -560,12 +567,17 @@ function App() {
   const refreshMonthlyQueue = async () => {
     if (!selectedClient) return;
     setRefreshingQueue(true);
+    setQueueError(null);
     try {
       const res = await authFetch(`${API}/api/keywords/monthly-refresh/${selectedClient.id}`, { method: "POST" });
       const data = await res.json();
       console.log("Refresh result:", data);
-      await loadMonthlyQueue(selectedClient.id);
-    } catch (e) { console.error("Failed to refresh queue:", e); }
+      if (data.error) { setQueueError(data.error + (data.detail ? `: ${data.detail}` : "")); }
+      else { await loadMonthlyQueue(selectedClient.id); }
+    } catch (e) {
+      console.error("Failed to refresh queue:", e);
+      setQueueError("Network error — could not reach the server. Is the backend running?");
+    }
     setRefreshingQueue(false);
   };
 
@@ -1853,6 +1865,11 @@ function App() {
                   {monthlyQueue.length === 0 && !queueReplacing ? (
                     <div style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 10, padding: 24, textAlign: "center" }}>
                       <div style={{ color: "#444", fontSize: 13, marginBottom: 12 }}>No monthly queue yet. Click "Refresh Queue" to generate 30 keywords (15 from competitor gaps + 15 from library).</div>
+                      {queueError && (
+                        <div style={{ color: "#d60000", fontSize: 12, marginBottom: 12, background: "#1a0000", border: "1px solid #330000", borderRadius: 6, padding: "8px 12px" }}>
+                          ⚠ {queueError}
+                        </div>
+                      )}
                       <button style={styles.addBtn} onClick={refreshMonthlyQueue} disabled={refreshingQueue}>{refreshingQueue ? "Generating..." : "Generate Queue"}</button>
                     </div>
                   ) : (
