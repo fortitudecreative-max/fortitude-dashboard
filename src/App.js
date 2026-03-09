@@ -172,6 +172,8 @@ function App() {
   const [newKeyword, setNewKeyword] = useState("");
   const [newVolume, setNewVolume] = useState("");
   const [newIntent, setNewIntent] = useState("Transactional");
+  const [csvImporting, setCsvImporting] = useState(false);
+  const [csvResult, setCsvResult] = useState(null); // { imported, total, errors }
   const [libSortField, setLibSortField] = useState("volume");
   const [libSortDir, setLibSortDir] = useState("desc");
 
@@ -377,6 +379,70 @@ function App() {
     } catch (e) {
       console.error("Failed to remove keyword:", e);
     }
+  };
+
+  const importCsv = async (file) => {
+    if (!file) return;
+    setCsvImporting(true);
+    setCsvResult(null);
+    const text = await file.text();
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (lines.length === 0) { setCsvImporting(false); return; }
+
+    // Detect if first row is a header
+    const firstLower = lines[0].toLowerCase();
+    const hasHeader = firstLower.includes("keyword") || firstLower.includes("volume") || firstLower.includes("intent");
+    const dataLines = hasHeader ? lines.slice(1) : lines;
+
+    // Parse columns: keyword, volume (optional), intent (optional)
+    // Supported formats:
+    //   keyword
+    //   keyword, volume
+    //   keyword, volume, intent
+    //   keyword, intent  (if second col is a word not a number)
+    const keywords = [];
+    const errors = [];
+    dataLines.forEach((line, i) => {
+      const cols = line.split(",").map(c => c.trim().replace(/^["']|["']$/g, ""));
+      const kw = cols[0];
+      if (!kw) return;
+      const second = cols[1] || "";
+      const third = cols[2] || "";
+      let volume = 0, intent = "Transactional";
+      if (second && !isNaN(second)) {
+        volume = parseInt(second) || 0;
+        if (third && INTENTS.includes(third)) intent = third;
+        else if (third) {
+          const match = INTENTS.find(i => i.toLowerCase().startsWith(third.toLowerCase()));
+          if (match) intent = match;
+        }
+      } else if (second) {
+        const match = INTENTS.find(i => i.toLowerCase().startsWith(second.toLowerCase()));
+        if (match) intent = match;
+      }
+      keywords.push({ keyword: kw, industry: activeIndustry, volume, intent });
+    });
+
+    if (keywords.length === 0) {
+      setCsvResult({ imported: 0, total: 0, errors: ["No valid keywords found in file"] });
+      setCsvImporting(false);
+      return;
+    }
+
+    try {
+      const res = await authFetch(`${API}/api/keywords/library/bulk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keywords }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setLibrary(prev => ({ ...prev, [activeIndustry]: [...(data.keywords || []), ...(prev[activeIndustry] || [])] }));
+      setCsvResult({ imported: data.imported, total: keywords.length, errors });
+    } catch (e) {
+      setCsvResult({ imported: 0, total: keywords.length, errors: [e.message] });
+    }
+    setCsvImporting(false);
   };
 
   const uploadImage = async (e) => {
@@ -1937,7 +2003,19 @@ function App() {
                   {INTENTS.map(i => <option key={i} value={i}>{i}</option>)}
                 </select>
                 <button style={styles.addBtn} onClick={addKeyword}>+ Add</button>
+                <label style={{ ...styles.addBtn, background: "transparent", border: "1px solid #d60000", color: "#d60000", cursor: csvImporting ? "not-allowed" : "pointer", opacity: csvImporting ? 0.5 : 1, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  {csvImporting ? "⟳ Importing..." : "⬆ Import CSV"}
+                  <input type="file" accept=".csv,text/csv" style={{ display: "none" }} onChange={e => { if (e.target.files[0]) importCsv(e.target.files[0]); e.target.value = ""; }} disabled={csvImporting} />
+                </label>
               </div>
+              {csvResult && (
+                <div style={{ background: csvResult.errors?.length && !csvResult.imported ? "rgba(214,0,0,0.08)" : "rgba(34,197,94,0.08)", borderLeft: `3px solid ${csvResult.errors?.length && !csvResult.imported ? "#d60000" : "#22c55e"}`, padding: "10px 16px", marginBottom: 16, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: "'Barlow', sans-serif" }}>
+                  <span style={{ color: csvResult.errors?.length && !csvResult.imported ? "#ff4444" : "#22c55e" }}>
+                    {csvResult.imported > 0 ? `✓ Imported ${csvResult.imported} of ${csvResult.total} keywords into ${activeIndustry}` : `✗ Import failed: ${csvResult.errors?.[0] || "Unknown error"}`}
+                  </span>
+                  <button onClick={() => setCsvResult(null)} style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 14, padding: "0 4px" }}>✕</button>
+                </div>
+              )}
               <div style={styles.table}>
                 <div style={styles.tableHeader}>
                   <div style={{ flex: 3, cursor: "pointer", color: libSortField === "keyword" ? "#dc2626" : "#444" }} onClick={() => handleLibSort("keyword")}>Keyword {libSortField === "keyword" ? (libSortDir === "asc" ? "↑" : "↓") : "↕"}</div>
