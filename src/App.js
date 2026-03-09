@@ -1197,7 +1197,7 @@ function App() {
           {[
             { id: "clients", icon: "◈", label: "Clients" },
             { id: "library", icon: "⌕", label: "Keyword Library" },
-            { id: "gap", icon: "⊕", label: "Competitor Gap" },
+
             { id: "content", icon: "✦", label: "Content" },
             { id: "seo", icon: "◎", label: "SEO Audit" },
             { id: "publishing", icon: "⟳", label: "Publishing" },
