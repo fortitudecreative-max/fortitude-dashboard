@@ -1080,7 +1080,9 @@ function App() {
   };
 
   const deleteClient = async (client) => {
-    if (!window.confirm(`Delete "${client.name}"?\n\nThis will permanently remove the client and all their scheduled jobs, keyword queue, posts, and images. This cannot be undone.`)) return;
+    const input = window.prompt(`Type the client name to confirm deletion:\n\n"${client.name}"\n\nThis permanently removes the client, all scheduled jobs, keyword queue, posts, and images.`);
+    if (input === null) return;
+    if (input.trim() !== client.name) { alert(`Name didn't match. Type exactly: ${client.name}`); return; }
     try {
       const res = await authFetch(`${API}/api/clients/${client.id}`, { method: "DELETE" });
       const data = await res.json();
