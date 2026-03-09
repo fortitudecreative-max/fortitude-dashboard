@@ -6,6 +6,57 @@ fontLink.rel = "stylesheet";
 fontLink.href = "https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap";
 document.head.appendChild(fontLink);
 
+const mobileCSS = document.createElement("style");
+mobileCSS.textContent = `
+  html, body, #root { height: 100%; }
+  .f-root { display: flex; min-height: 100vh; }
+  .f-sidebar {
+    background: #0a0a0a;
+    border-right: 2px solid #1a1a1a;
+    display: flex;
+    flex-direction: column;
+    transition: width 0.2s ease;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .f-main { flex: 1; display: flex; flex-direction: column; overflow: auto; min-width: 0; }
+  .f-hamburger { display: none; }
+  .f-backdrop { display: none; }
+  .f-header-badge { display: flex; }
+  .f-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; margin-bottom: 32px; }
+  .f-detail-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; margin-bottom: 32px; }
+  .f-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .f-content-pad { padding: 32px; }
+  .f-header-pad { padding: 0 32px; }
+  .f-client-detail-pad { padding: 32px; }
+  .f-client-detail-header { display: flex; gap: 20px; align-items: center; margin-bottom: 32px; }
+  .f-table-wrap { overflow-x: auto; }
+
+  @media (max-width: 767px) {
+    .f-sidebar {
+      position: fixed !important;
+      top: 0; left: 0; height: 100vh;
+      width: 260px !important;
+      z-index: 100;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+    }
+    .f-sidebar.open { transform: translateX(0); }
+    .f-backdrop { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 90; }
+    .f-hamburger { display: flex; align-items: center; background: none; border: none; color: #fff; font-size: 22px; cursor: pointer; padding: 4px 10px 4px 0; line-height: 1; }
+    .f-header-badge { display: none; }
+    .f-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+    .f-detail-grid { grid-template-columns: repeat(2, 1fr) !important; }
+    .f-form-grid { grid-template-columns: 1fr !important; }
+    .f-content-pad { padding: 16px; }
+    .f-header-pad { padding: 0 16px; }
+    .f-client-detail-pad { padding: 16px; }
+    .f-client-detail-header { flex-direction: column; align-items: flex-start; }
+    .f-close-btn { display: flex !important; }
+  }
+`;
+document.head.appendChild(mobileCSS);
+
 const INDUSTRIES = ["HVAC", "Plumbing", "Electrical", "Roofing"];
 const INTENTS = ["Transactional", "Commercial", "Informational"];
 const API = process.env.REACT_APP_API_URL || "http://localhost:3001";
@@ -108,16 +159,6 @@ function App() {
   const [selectedClient, setSelectedClient] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  React.useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      if (!mobile) setMobileMenuOpen(false);
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   // Clients
   const [clients, setClients] = useState([]);
@@ -1039,29 +1080,17 @@ function App() {
 
   return (
     <div style={styles.root}>
-      {/* Mobile overlay backdrop */}
-      {isMobile && mobileMenuOpen && (
-        <div onClick={() => setMobileMenuOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 40 }} />
-      )}
+      {/* Mobile backdrop */}
+      {mobileMenuOpen && <div className="f-backdrop" onClick={() => setMobileMenuOpen(false)} />}
 
       {/* Sidebar */}
-      <div style={{
-        ...styles.sidebar,
-        width: isMobile ? 240 : (sidebarOpen ? 240 : 64),
-        position: isMobile ? "fixed" : "relative",
-        top: isMobile ? 0 : "auto",
-        left: isMobile ? (mobileMenuOpen ? 0 : -240) : "auto",
-        height: isMobile ? "100vh" : "auto",
-        zIndex: isMobile ? 50 : "auto",
-        transition: isMobile ? "left 0.25s ease" : "width 0.2s ease",
-        flexShrink: 0,
-      }}>
+      <div className={`f-sidebar${mobileMenuOpen ? " open" : ""}`} style={{ width: sidebarOpen ? 240 : 64 }}>
         <div style={styles.logo}>
-          <div><div style={styles.logoText}>FORTITUDE</div><div style={styles.logoSub}>CREATIVE</div></div>
-          {isMobile
-            ? <button style={styles.toggleBtn} onClick={() => setMobileMenuOpen(false)}>✕</button>
-            : <button style={styles.toggleBtn} onClick={() => setSidebarOpen(!sidebarOpen)}>{sidebarOpen ? "←" : "→"}</button>
-          }
+          {sidebarOpen ? <div><div style={styles.logoText}>FORTITUDE</div><div style={styles.logoSub}>CREATIVE</div></div> : <div style={styles.logoIcon}>F</div>}
+          <div style={{ display: "flex", gap: 6 }}>
+            <button className="f-close-btn" style={{ display: "none", background: "none", border: "1px solid #2a2a2a", color: "#555", cursor: "pointer", padding: "4px 8px", fontSize: 12 }} onClick={() => setMobileMenuOpen(false)}>✕</button>
+            <button style={styles.toggleBtn} onClick={() => setSidebarOpen(!sidebarOpen)}>{sidebarOpen ? "←" : "→"}</button>
+          </div>
         </div>
         <nav style={styles.nav}>
           {[
@@ -1073,13 +1102,13 @@ function App() {
             { id: "publishing", icon: "⟳", label: "Publishing" },
             { id: "settings", icon: "⚙", label: "Settings" },
           ].map((item) => (
-            <button key={item.id} style={{ ...styles.navItem, ...(activeTab === item.id ? styles.navItemActive : {}) }} onClick={() => { setActiveTab(item.id); setSelectedClient(null); if (isMobile) setMobileMenuOpen(false); }}>
+            <button key={item.id} style={{ ...styles.navItem, ...(activeTab === item.id ? styles.navItemActive : {}) }} onClick={() => { setActiveTab(item.id); setSelectedClient(null); setMobileMenuOpen(false); }}>
               <span style={styles.navIcon}>{item.icon}</span>
-              {(sidebarOpen || isMobile) && <span style={styles.navLabel}>{item.label}</span>}
+              {sidebarOpen && <span style={styles.navLabel}>{item.label}</span>}
             </button>
           ))}
         </nav>
-        {(sidebarOpen || isMobile) && (
+        {sidebarOpen && (
           <div style={styles.sidebarFooter}>
             <div style={styles.apiStatus}><div style={styles.statusDot} /><span style={styles.statusText}>Connected</span></div>
             <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid #1a1a1a" }}>
@@ -1096,12 +1125,10 @@ function App() {
       </div>
 
       {/* Main */}
-      <div style={{ ...styles.main, marginLeft: isMobile ? 0 : "auto" }}>
-        <div style={{ ...styles.header, padding: isMobile ? "0 16px" : "0 32px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {isMobile && (
-              <button onClick={() => setMobileMenuOpen(true)} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: 20, padding: "4px 8px 4px 0", lineHeight: 1 }}>☰</button>
-            )}
+      <div className="f-main">
+        <div style={styles.header} className="f-header-pad">
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button className="f-hamburger" onClick={() => setMobileMenuOpen(true)}>☰</button>
             <div>
               <div style={styles.headerTitle}>
               {activeTab === "clients" && !selectedClient && "Client Management"}
@@ -1117,17 +1144,17 @@ function App() {
             <div style={styles.headerSub}>{new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</div>
           </div>
           </div>
-          {!isMobile && <div style={styles.headerRight}>
+          <div className="f-header-badge" style={styles.headerRight}>
             <div style={styles.headerBadge}>{clients.filter(c => c.status === "active").length} Active Clients</div>
-          </div>}
+          </div>
         </div>
 
-        <div style={{ ...styles.content, padding: isMobile ? "16px" : "32px" }}>
+        <div style={styles.content} className="f-content-pad">
 
           {/* CLIENTS */}
           {activeTab === "clients" && !selectedClient && (
             <div>
-              <div style={{ ...styles.statsRow, gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)" }}>
+              <div className="f-stats-grid">
                 {[
                   { label: "Total Clients", value: clients.length, icon: "◈" },
                   { label: "Keywords", value: totalKeywords, icon: "⌕" },
@@ -1155,7 +1182,7 @@ function App() {
 
               {showAddClient && (
                 <div style={styles.addClientForm}>
-                  <div style={{ ...styles.formGrid, gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
+                  <div className="f-form-grid" style={styles.formGrid}>
                     <input style={styles.searchInput} placeholder="Client name" value={newClient.name} onChange={e => setNewClient({ ...newClient, name: e.target.value })} />
                     <select style={styles.selectInput} value={newClient.industry} onChange={e => setNewClient({ ...newClient, industry: e.target.value })}>
                       {INDUSTRIES.map(i => <option key={i}>{i}</option>)}
@@ -1284,8 +1311,8 @@ function App() {
           {activeTab === "clients" && selectedClient && (
             <div>
               <button style={styles.backBtn} onClick={() => setSelectedClient(null)}>← Back to Clients</button>
-              <div style={{ ...styles.clientDetail, padding: isMobile ? 16 : 32 }}>
-                <div style={{ ...styles.clientDetailHeader, flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "center" }}>
+              <div style={styles.clientDetail} className="f-client-detail-pad">
+                <div style={styles.clientDetailHeader} className="f-client-detail-header">
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
                     <div style={{ ...styles.clientDetailAvatar, overflow: "hidden", position: "relative", cursor: "pointer" }}
                       onClick={() => logoInputRef.current && logoInputRef.current.click()}
@@ -1344,7 +1371,7 @@ function App() {
                     </div>
                   </div>
                 ) : (
-                  <div style={{ ...styles.detailGrid, gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)" }}>
+                  <div className="f-detail-grid" style={styles.detailGrid}>
                     {[
                       { label: "WordPress", status: selectedClient.wordpress_url && selectedClient.wordpress_username ? "Connected" : "Not Connected", icon: "W" },
                       { label: "Google Business", status: gbpStatus.connected ? "Connected" : "Not Connected", icon: "G", gbp: true },
@@ -3057,12 +3084,12 @@ const styles = {
   statusDot: { width: 6, height: 6, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e" },
   statusText: { fontSize: 10, color: "#444", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif" },
   main: { flex: 1, display: "flex", flexDirection: "column", overflow: "auto" },
-  header: { padding: "0 32px", borderBottom: "2px solid #1a1a1a", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#000", minHeight: 64, borderTop: "3px solid #d60000" },
+  header: { borderBottom: "2px solid #1a1a1a", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#000", minHeight: 64, borderTop: "3px solid #d60000" },
   headerTitle: { fontSize: 20, fontWeight: 700, letterSpacing: "0.15em", color: "#fff", textTransform: "uppercase", fontFamily: "'Oswald', sans-serif" },
   headerSub: { fontSize: 10, color: "#444", marginTop: 3, letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif" },
   headerRight: { display: "flex", gap: 12, alignItems: "center" },
   headerBadge: { padding: "5px 14px", background: "#d60000", color: "#fff", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600 },
-  content: { padding: "32px", flex: 1, background: "#000" },
+  content: { flex: 1, background: "#000" },
   statsRow: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 2, marginBottom: 32 },
   statCard: { background: "#0d0d0d", borderTop: "3px solid #d60000", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 6 },
   statIcon: { fontSize: 16, color: "#d60000" },
