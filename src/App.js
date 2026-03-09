@@ -1158,7 +1158,7 @@ function App() {
       });
       const data = await res.json();
       if (data.success) {
-        setPublishResult({ success: true, url: data.wpPostUrl, qa: data.qa || null, repairHistory: data.repairHistory || [] });
+        setPublishResult({ success: true, url: data.wpPostUrl, qa: data.qa || null, repairHistory: data.repairHistory || [], yoastEdition: data.yoastEdition, longtailKeyphrase: data.longtailKeyphrase });
         loadClients();
       } else {
         setPublishResult({ success: false, error: data.detail || data.error });
@@ -1383,6 +1383,8 @@ function App() {
                   {clients.map((client) => {
                     const handleClientClick = () => {
                       setSelectedClient(client);
+                      setEditingClient(false);
+                      setClientEdits({});
                       loadScheduleJobs(client.id);
                       loadMonthlyQueue(client.id);
                       loadGbpStatus(client.id);
@@ -2421,11 +2423,42 @@ function App() {
                   </div>
                   {publishResult && (
                     <div style={{ marginTop: 16 }}>
-                      {/* Publish status */}
-                      <div style={{ padding: "10px 14px", background: publishResult.success ? "#0a1a0a" : "#1a0a0a", border: `1px solid ${publishResult.success ? "#22c55e33" : "#ef444433"}`, borderRadius: 3, marginBottom: publishResult.qa ? 10 : 0 }}>
-                        {publishResult.success
-                          ? <span style={{ fontSize: 11, color: "#22c55e", fontFamily: "'Barlow Condensed', sans-serif" }}>✓ Published — <a href={publishResult.url} target="_blank" rel="noreferrer" style={{ color: "#22c55e" }}>{publishResult.url}</a></span>
-                          : <span style={{ fontSize: 11, color: "#ef4444", fontFamily: "'Barlow Condensed', sans-serif" }}>✗ {publishResult.error}</span>}
+                      {/* ── Prominent publish status banner ── */}
+                      <div style={{
+                        padding: "16px 18px",
+                        background: publishResult.success ? "rgba(34,197,94,0.07)" : "rgba(239,68,68,0.07)",
+                        border: `2px solid ${publishResult.success ? "#22c55e" : "#ef4444"}`,
+                        borderRadius: 6,
+                        marginBottom: publishResult.qa ? 12 : 0,
+                        display: "flex", alignItems: "flex-start", gap: 12,
+                      }}>
+                        <div style={{ fontSize: 22, lineHeight: 1, marginTop: 1 }}>
+                          {publishResult.success ? "✓" : "✗"}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: publishResult.success ? "#22c55e" : "#ef4444", fontFamily: "'Oswald', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4 }}>
+                            {publishResult.success ? "Published Successfully" : "Publish Failed"}
+                          </div>
+                          {publishResult.success ? (
+                            <div style={{ fontSize: 11, color: "#aaa", fontFamily: "'Barlow', sans-serif", lineHeight: 1.5 }}>
+                              <a href={publishResult.url} target="_blank" rel="noreferrer" style={{ color: "#60a5fa", wordBreak: "break-all" }}>{publishResult.url}</a>
+                              {publishResult.yoastEdition && (
+                                <span style={{ marginLeft: 10, fontSize: 10, padding: "2px 8px", borderRadius: 3, background: publishResult.yoastEdition === "none" ? "#1a1a1a" : "#0a1a0a", border: `1px solid ${publishResult.yoastEdition === "none" ? "#333" : "#22c55e33"}`, color: publishResult.yoastEdition === "none" ? "#555" : "#22c55e", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em" }}>
+                                  {publishResult.yoastEdition === "premium" ? "Yoast Premium ✓" : publishResult.yoastEdition === "free" ? "Yoast Free ✓" : "No Yoast detected"}
+                                </span>
+                              )}
+                              {publishResult.longtailKeyphrase && (
+                                <div style={{ marginTop: 5, fontSize: 10, color: "#555", fontFamily: "'Barlow Condensed', sans-serif" }}>
+                                  Focus keyphrase set to: <span style={{ color: "#a78bfa" }}>"{publishResult.longtailKeyphrase}"</span>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: 11, color: "#ef4444", fontFamily: "'Barlow', sans-serif", lineHeight: 1.5 }}>
+                              {publishResult.error}
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* QA results */}
