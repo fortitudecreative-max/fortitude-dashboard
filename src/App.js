@@ -739,7 +739,7 @@ function App() {
     setSeoAuditLoading(false);
   };
 
-  const runSiteCrawl = (overrideUrl) => {
+  const runSiteCrawl = async (overrideUrl) => {
     const url = overrideUrl || seoUrl;
     if (!url || !url.trim()) return;
     setSeoUrl(url);
