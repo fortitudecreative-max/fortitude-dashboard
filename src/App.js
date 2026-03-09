@@ -174,6 +174,8 @@ function App() {
   const [gbpPosts, setGbpPosts] = useState([]);
   const [showGbpComposer, setShowGbpComposer] = useState(false);
   const [gbpLocations, setGbpLocations] = useState([]);
+  const [gbpLocationsLoading, setGbpLocationsLoading] = useState(false);
+  const [gbpLocationsError, setGbpLocationsError] = useState(null);
   const [gbpAgencyConnected, setGbpAgencyConnected] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const [clientsViewMode, setClientsViewMode] = useState("grid");
@@ -501,11 +503,22 @@ function App() {
   };
 
   const loadGbpLocations = async () => {
+    setGbpLocationsLoading(true);
+    setGbpLocationsError(null);
     try {
       const res = await authFetch(`${API}/api/gbp/locations`);
       const data = await res.json();
-      setGbpLocations(data.locations || []);
-    } catch (e) {}
+      if (data.error) {
+        setGbpLocationsError(data.error);
+      } else {
+        setGbpLocations(data.locations || []);
+        if ((data.locations || []).length === 0) setGbpLocationsError("No locations found in your Google Business account.");
+      }
+    } catch (e) {
+      setGbpLocationsError("Failed to load locations: " + e.message);
+    } finally {
+      setGbpLocationsLoading(false);
+    }
   };
 
   const connectAgencyGbp = () => {
@@ -1478,7 +1491,17 @@ function App() {
                           Assign GBP Location to This Client
                         </div>
                         {gbpLocations.length === 0 ? (
-                          <button style={styles.searchBtn} onClick={loadGbpLocations}>Load My Locations</button>
+                          <div>
+                            <button style={styles.searchBtn} onClick={loadGbpLocations} disabled={gbpLocationsLoading}>
+                              {gbpLocationsLoading ? "Loading..." : "Load My Locations"}
+                            </button>
+                            {gbpLocationsError && (
+                              <div style={{ marginTop: 10, padding: "10px 14px", background: "#1a0000", border: "1px solid #d60000", borderRadius: 4, fontSize: 11, color: "#ff6b6b", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.05em" }}>
+                                ⚠ {gbpLocationsError}
+                                {gbpLocationsError.includes("429") || gbpLocationsError.includes("quota") || gbpLocationsError.includes("429") ? " — Google rate limit hit. Wait 1 minute and try again." : ""}
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                             {gbpLocations.map((loc, i) => (
