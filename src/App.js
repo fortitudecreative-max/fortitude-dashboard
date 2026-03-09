@@ -209,6 +209,7 @@ function App() {
   const [contentError, setContentError] = useState(null);
   const [publishLoading, setPublishLoading] = useState(false);
   const [publishResult, setPublishResult] = useState(null);
+  const [yoastRetrying, setYoastRetrying] = useState(false);
   const [activeClient, setActiveClient] = useState(null);
   const [editingClient, setEditingClient] = useState(false);
   const [clientEdits, setClientEdits] = useState({});
@@ -1123,6 +1124,31 @@ function App() {
     }
   };
 
+  const retryYoastOptimize = async () => {
+    if (!publishResult?.wpPostId || !selectedClient?.id) return;
+    setYoastRetrying(true);
+    try {
+      const res = await authFetch(`${API}/api/yoast-optimize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: selectedClient.id,
+          wpPostId: publishResult.wpPostId,
+          title: generatedPost?.title || "",
+          keyword: generatedPost?.keyword || "",
+          metaDescription: generatedPost?.metaDescription || "",
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPublishResult(prev => ({ ...prev, yoastOpt: data }));
+      }
+    } catch(e) {
+      console.error("Yoast retry failed:", e);
+    }
+    setYoastRetrying(false);
+  };
+
   const publishToWordPress = async () => {
     console.log("Publish clicked", { generatedPost: !!generatedPost, activeClient });
     if (!generatedPost || !activeClient) {
@@ -1158,7 +1184,7 @@ function App() {
       });
       const data = await res.json();
       if (data.success) {
-        setPublishResult({ success: true, url: data.wpPostUrl, qa: data.qa || null, repairHistory: data.repairHistory || [], yoastEdition: data.yoastEdition, longtailKeyphrase: data.longtailKeyphrase, fortitudePlugin: data.fortitudePlugin, canWriteSeoMeta: data.canWriteSeoMeta, yoastOpt: data.yoastOpt || null });
+        setPublishResult({ success: true, wpPostId: data.wpPostId, url: data.wpPostUrl, qa: data.qa || null, repairHistory: data.repairHistory || [], yoastEdition: data.yoastEdition, longtailKeyphrase: data.longtailKeyphrase, fortitudePlugin: data.fortitudePlugin, canWriteSeoMeta: data.canWriteSeoMeta, yoastOpt: data.yoastOpt || null });
         loadClients();
       } else {
         setPublishResult({ success: false, error: data.detail || data.error });
@@ -2454,11 +2480,21 @@ function App() {
                               )}
                               {publishResult.yoastOpt && (
                                 <div style={{ marginTop: 8, padding: "8px 10px", background: "#0a0a0a", border: `1px solid ${publishResult.yoastOpt.issues?.length === 0 ? "rgba(34,197,94,0.2)" : "rgba(245,158,11,0.2)"}`, borderRadius: 4 }}>
-                                  <div style={{ fontSize: 10, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", color: publishResult.yoastOpt.issues?.length === 0 ? "#22c55e" : "#f59e0b", marginBottom: publishResult.yoastOpt.fixes?.length > 0 ? 4 : 0 }}>
-                                    {publishResult.yoastOpt.issues?.length === 0
-                                      ? `✓ YOAST OPTIMIZED — all checks passed (score ~${publishResult.yoastOpt.yoastScore})`
-                                      : `⚠ YOAST SCORE ~${publishResult.yoastOpt.yoastScore} — ${publishResult.yoastOpt.issues?.length} issue(s) remain: ${publishResult.yoastOpt.issues?.map(i => i.type).join(", ")}`
-                                    }
+                                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                                    <div style={{ fontSize: 10, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", color: publishResult.yoastOpt.issues?.length === 0 ? "#22c55e" : "#f59e0b", marginBottom: publishResult.yoastOpt.fixes?.length > 0 ? 4 : 0 }}>
+                                      {publishResult.yoastOpt.issues?.length === 0
+                                        ? `✓ YOAST OPTIMIZED — all checks passed (score ~${publishResult.yoastOpt.yoastScore})`
+                                        : `⚠ YOAST SCORE ~${publishResult.yoastOpt.yoastScore} — ${publishResult.yoastOpt.issues?.length} issue(s) remain: ${publishResult.yoastOpt.issues?.map(i => i.type).join(", ")}`
+                                      }
+                                    </div>
+                                    {publishResult.yoastOpt.issues?.length > 0 && (
+                                      <button
+                                        onClick={retryYoastOptimize}
+                                        disabled={yoastRetrying}
+                                        style={{ flexShrink: 0, fontSize: 9, padding: "3px 10px", background: "none", border: "1px solid rgba(245,158,11,0.4)", color: "#f59e0b", borderRadius: 3, cursor: yoastRetrying ? "not-allowed" : "pointer", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", opacity: yoastRetrying ? 0.5 : 1 }}>
+                                        {yoastRetrying ? "RUNNING..." : "↻ RE-RUN FIX"}
+                                      </button>
+                                    )}
                                   </div>
                                   {publishResult.yoastOpt.fixes?.length > 0 && (
                                     <div style={{ fontSize: 9, color: "#555", fontFamily: "'Barlow Condensed', sans-serif" }}>
