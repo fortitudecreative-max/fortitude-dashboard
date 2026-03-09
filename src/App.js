@@ -752,7 +752,8 @@ function App() {
 
     if (siteEvtRef.current) siteEvtRef.current.close();
 
-    const evtUrl = `${API}/api/seo/site-audit?url=${encodeURIComponent(url.trim())}&maxPages=100`;
+    const token = (await supabase.auth.getSession()).data.session?.access_token || "";
+    const evtUrl = `${API}/api/seo/site-audit?url=${encodeURIComponent(url.trim())}&maxPages=100&token=${encodeURIComponent(token)}`;
     const es = new EventSource(evtUrl);
     siteEvtRef.current = es;
 
