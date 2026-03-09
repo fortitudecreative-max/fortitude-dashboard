@@ -240,6 +240,7 @@ function App() {
   const [gbpPostResult, setGbpPostResult] = useState(null);
   const [gbpPosts, setGbpPosts] = useState([]);
   const [showGbpComposer, setShowGbpComposer] = useState(false);
+  const [showGbpAssignPanel, setShowGbpAssignPanel] = useState(false);
   const [gbpLocations, setGbpLocations] = useState([]);
   const [gbpLocationsLoading, setGbpLocationsLoading] = useState(false);
   const [gbpLocationsError, setGbpLocationsError] = useState(null);
@@ -372,6 +373,7 @@ function App() {
       });
       setGbpPostResult(null);
       setShowGbpComposer(false);
+      setShowGbpAssignPanel(false);
       loadMonthlyQueue(c.id);
       loadScheduleJobs(c.id);
       loadGbpStatus(c.id);
@@ -767,6 +769,7 @@ function App() {
         setGbpPostResult({ ok: true, msg: "Post published to Google Business Profile!" });
         setGbpPost({ summary: "", ctaUrl: "", ctaType: "LEARN_MORE", imageUrl: "" });
         setShowGbpComposer(false);
+      setShowGbpAssignPanel(false);
         loadGbpPosts(selectedClient.id);
       } else {
         setGbpPostResult({ ok: false, msg: data.error || "Post failed" });
@@ -1355,6 +1358,7 @@ function App() {
                       loadClientImages(client.id);
                       setGbpPostResult(null);
                       setShowGbpComposer(false);
+      setShowGbpAssignPanel(false);
                       setCompetitors(client.competitors || []);
                       setScheduleSettings({
                         schedule_frequency: client.schedule_frequency || "daily",
@@ -1402,6 +1406,7 @@ function App() {
                       loadGbpStatus(client.id);
                       setGbpPostResult(null);
                       setShowGbpComposer(false);
+      setShowGbpAssignPanel(false);
                       setCompetitors(client.competitors || []);
                       setScheduleSettings({
                         schedule_frequency: client.schedule_frequency || "daily",
@@ -1530,7 +1535,8 @@ function App() {
                             } else if (gbpStatus.connected) {
                               disconnectGbp(selectedClient.id);
                             } else {
-                              loadGbpLocations().then(() => {});
+                              setShowGbpAssignPanel(v => !v);
+                            }
                             }
                           } else {
                             startEditClient();
@@ -1542,6 +1548,75 @@ function App() {
                         </button>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {/* GBP ASSIGN PANEL — dropdown from G tile */}
+                {!editingClient && gbpAgencyConnected && !gbpStatus.connected && showGbpAssignPanel && (
+                  <div style={{ marginBottom: 24, background: "#0a0a0a", border: "1px solid #1f1f1f", borderTop: "2px solid #d60000", borderRadius: "0 0 8px 8px", padding: 20 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                      <div style={{ fontSize: 10, color: "#d60000", letterSpacing: "0.15em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
+                        Assign GBP Location to This Client
+                      </div>
+                      <button onClick={() => setShowGbpAssignPanel(false)} style={{ background: "none", border: "none", color: "#555", fontSize: 16, cursor: "pointer", lineHeight: 1 }}>✕</button>
+                    </div>
+
+                    {/* Manual entry */}
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 10, color: "#666", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>Business Name (display label)</div>
+                      <input
+                        style={{ width: "100%", background: "#111", border: "1px solid #222", color: "#fff", padding: "10px 12px", fontSize: 13, fontFamily: "'Barlow Condensed', sans-serif", borderRadius: 4, boxSizing: "border-box", marginBottom: 10 }}
+                        placeholder="e.g. David & Goliath HVAC"
+                        value={gbpManualTitle || ""}
+                        onChange={e => setGbpManualTitle(e.target.value)}
+                      />
+                      <div style={{ fontSize: 10, color: "#666", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
+                        GBP Location ID — <span style={{ color: "#d60000", textTransform: "none" }}>business.google.com → Info → Business Profile ID</span>
+                      </div>
+                      <input
+                        style={{ width: "100%", background: "#111", border: "1px solid #222", color: "#fff", padding: "10px 12px", fontSize: 13, fontFamily: "'Barlow Condensed', sans-serif", borderRadius: 4, boxSizing: "border-box", marginBottom: 10 }}
+                        placeholder="e.g. 12345678901234567"
+                        value={gbpManualLocationId || ""}
+                        onChange={e => setGbpManualLocationId(e.target.value.trim())}
+                      />
+                      <button
+                        style={{ ...styles.addBtn, opacity: (gbpManualTitle && gbpManualLocationId) ? 1 : 0.4 }}
+                        disabled={!gbpManualTitle || !gbpManualLocationId}
+                        onClick={() => {
+                          assignGbpLocation(selectedClient.id, { name: `locations/${gbpManualLocationId}`, title: gbpManualTitle, accountName: "" });
+                          setShowGbpAssignPanel(false);
+                        }}
+                      >
+                        Assign Location
+                      </button>
+                    </div>
+
+                    {/* Auto-detect */}
+                    <div style={{ borderTop: "1px solid #1a1a1a", paddingTop: 14 }}>
+                      <div style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>Or Auto-Detect from Your Account</div>
+                      <button style={styles.searchBtn} onClick={loadGbpLocations} disabled={gbpLocationsLoading}>
+                        {gbpLocationsLoading ? "Loading..." : "Load My Locations"}
+                      </button>
+                      {gbpLocationsError && (
+                        <div style={{ marginTop: 10, padding: "10px 14px", background: "#1a0000", border: "1px solid #d60000", borderRadius: 4, fontSize: 11, color: "#ff6b6b", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.05em" }}>
+                          ⚠ {gbpLocationsError}{gbpLocationsError.includes("429") ? " — Google rate limit. Wait 1 min and retry, or use manual entry above." : ""}
+                        </div>
+                      )}
+                      {gbpLocations.length > 0 && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
+                          {gbpLocations.map((loc, i) => (
+                            <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "#111", borderLeft: "2px solid #1a1a1a" }}>
+                              <div>
+                                <div style={{ fontSize: 13, color: "#fff", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, letterSpacing: "0.05em" }}>{loc.title}</div>
+                                {loc.address && <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{loc.address}</div>}
+                                <div style={{ fontSize: 10, color: "#333", marginTop: 2, fontFamily: "monospace" }}>{loc.name}</div>
+                              </div>
+                              <button style={styles.addBtn} onClick={() => { assignGbpLocation(selectedClient.id, loc); setShowGbpAssignPanel(false); }}>Assign</button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -1712,76 +1787,7 @@ function App() {
                       )}
                     </div>
 
-                    {!gbpStatus.connected && (
-                      <div style={{ background: "#0d0d0d", borderTop: "3px solid #d60000", padding: 20, marginBottom: 16 }}>
-                        <div style={{ fontSize: 10, color: "#d60000", letterSpacing: "0.15em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, marginBottom: 12 }}>
-                          Assign GBP Location to This Client
-                        </div>
 
-                        {/* Manual entry — always shown first */}
-                        <div style={{ marginBottom: 16 }}>
-                          <div style={{ fontSize: 11, color: "#666", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", marginBottom: 8 }}>
-                            BUSINESS NAME (display label)
-                          </div>
-                          <input
-                            style={{ width: "100%", background: "#111", border: "1px solid #222", color: "#fff", padding: "10px 12px", fontSize: 13, fontFamily: "'Barlow Condensed', sans-serif", borderRadius: 4, boxSizing: "border-box", marginBottom: 10 }}
-                            placeholder="e.g. David & Goliath HVAC"
-                            value={gbpManualTitle || ""}
-                            onChange={e => setGbpManualTitle(e.target.value)}
-                          />
-                          <div style={{ fontSize: 11, color: "#666", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", marginBottom: 8 }}>
-                            GBP LOCATION ID — find it at <span style={{ color: "#d60000" }}>business.google.com → Info → Business Profile ID</span>
-                          </div>
-                          <input
-                            style={{ width: "100%", background: "#111", border: "1px solid #222", color: "#fff", padding: "10px 12px", fontSize: 13, fontFamily: "'Barlow Condensed', sans-serif", borderRadius: 4, boxSizing: "border-box", marginBottom: 10 }}
-                            placeholder="e.g. 12345678901234567"
-                            value={gbpManualLocationId || ""}
-                            onChange={e => setGbpManualLocationId(e.target.value.trim())}
-                          />
-                          <button
-                            style={{ ...styles.addBtn, opacity: (gbpManualTitle && gbpManualLocationId) ? 1 : 0.4 }}
-                            disabled={!gbpManualTitle || !gbpManualLocationId}
-                            onClick={() => {
-                              const loc = {
-                                name: `locations/${gbpManualLocationId}`,
-                                title: gbpManualTitle,
-                                accountName: "",
-                              };
-                              assignGbpLocation(selectedClient.id, loc);
-                            }}
-                          >
-                            Assign Location
-                          </button>
-                        </div>
-
-                        {/* Auto-load fallback */}
-                        <div style={{ borderTop: "1px solid #1a1a1a", paddingTop: 14, marginTop: 4 }}>
-                          <div style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", marginBottom: 8 }}>OR AUTO-DETECT FROM YOUR ACCOUNT</div>
-                          <button style={styles.searchBtn} onClick={loadGbpLocations} disabled={gbpLocationsLoading}>
-                            {gbpLocationsLoading ? "Loading..." : "Load My Locations"}
-                          </button>
-                          {gbpLocationsError && (
-                            <div style={{ marginTop: 10, padding: "10px 14px", background: "#1a0000", border: "1px solid #d60000", borderRadius: 4, fontSize: 11, color: "#ff6b6b", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.05em" }}>
-                              ⚠ {gbpLocationsError}{gbpLocationsError.includes("429") ? " — Google rate limit. Wait 1 min and retry, or use manual entry above." : ""}
-                            </div>
-                          )}
-                          {gbpLocations.length > 0 && (
-                            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
-                              {gbpLocations.map((loc, i) => (
-                                <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "#111", borderLeft: "2px solid #1a1a1a" }}>
-                                  <div>
-                                    <div style={{ fontSize: 13, color: "#fff", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, letterSpacing: "0.05em" }}>{loc.title}</div>
-                                    {loc.address && <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{loc.address}</div>}
-                                    <div style={{ fontSize: 10, color: "#333", marginTop: 2, fontFamily: "monospace" }}>{loc.name}</div>
-                                  </div>
-                                  <button style={styles.addBtn} onClick={() => assignGbpLocation(selectedClient.id, loc)}>Assign</button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
 
                     {showGbpComposer && gbpStatus.connected && (
                       <div style={{ background: "#0d0d0d", borderTop: "3px solid #d60000", padding: 24, marginBottom: 16 }}>
