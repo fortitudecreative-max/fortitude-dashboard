@@ -191,7 +191,7 @@ function App() {
   const [libSubTab, setLibSubTab] = useState("library");
   const [showAddToClientModal, setShowAddToClientModal] = useState(false);
   const [addToClientTargets, setAddToClientTargets] = useState(new Set()); // client ids
-  const [addToClientDest, setAddToClientDest] = useState("queue"); // "queue" | "schedule"
+  const [addToClientDest, setAddToClientDest] = useState("clientlist"); // "clientlist" | "queue" | "schedule"
   const [addToClientBusy, setAddToClientBusy] = useState(false);
   const [addToClientResult, setAddToClientResult] = useState(null);
 
@@ -237,6 +237,9 @@ function App() {
   const [clientUsedKeywords, setClientUsedKeywords] = useState([]);
   const [clientUsedPage, setClientUsedPage] = useState(1);
   const [clientUsedTotal, setClientUsedTotal] = useState(0);
+  const [clientKeywords, setClientKeywords] = useState([]);
+  const [clientKeywordsPage, setClientKeywordsPage] = useState(1);
+  const [clientKeywordsTotal, setClientKeywordsTotal] = useState(0);
   const [clientListPage, setClientListPage] = useState(1);
   const [monthlyQueuePage, setMonthlyQueuePage] = useState(1);
   const [clientTab, setClientTab] = useState('monthly'); // 'monthly' | 'clientlist' | 'used'
@@ -399,7 +402,8 @@ function App() {
       loadGbpStatus(c.id);
       loadClientImages(c.id);
       loadClientUsedKeywords(c.id);
-      setClientTab("monthly");
+      loadClientKeywords(c.id);
+      setClientTab("clientkeywords");
       setClientListPage(1);
       setMonthlyQueuePage(1);
     } catch (e) {
@@ -502,6 +506,17 @@ function App() {
     } catch(e) {}
   };
 
+  const loadClientKeywords = async (clientId, page = 1) => {
+    if (!clientId) return;
+    try {
+      const res = await authFetch(`${API}/api/clients/${clientId}/keywords?page=${page}`);
+      const data = await res.json();
+      setClientKeywords(data.keywords || []);
+      setClientKeywordsTotal(data.total || 0);
+      setClientKeywordsPage(page);
+    } catch(e) {}
+  };
+
   const removeClientUsedKeyword = async (id) => {
     try {
       await authFetch(`${API}/api/keywords/used-client/${id}`, { method: 'DELETE' });
@@ -541,7 +556,16 @@ function App() {
     for (const clientId of clientIds) {
       for (const kw of kws) {
         try {
-          if (addToClientDest === 'queue') {
+          if (addToClientDest === 'clientlist') {
+            // Add to client's keyword list
+            const res = await authFetch(`${API}/api/clients/${clientId}/keywords`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ keyword: kw.keyword, source: 'library', intent: kw.intent || 'Informational', volume: kw.volume || 0, kd: kw.kd || 0 }),
+            });
+            const d = await res.json();
+            if (d.keyword) successCount++; else errorCount++;
+          } else if (addToClientDest === 'queue') {
             // Add to monthly keyword queue
             const res = await authFetch(`${API}/api/keywords/queue/add`, {
               method: 'POST',
@@ -551,7 +575,7 @@ function App() {
             const d = await res.json();
             if (d.success) successCount++; else errorCount++;
           } else {
-            // Add to scheduled queue (schedule_jobs via existing scheduler add endpoint)
+            // Add to scheduled queue
             const res = await authFetch(`${API}/api/schedule/add`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -2045,16 +2069,16 @@ function App() {
                   </div>
                 )}
 
-                {/* KEYWORD TABS: Monthly Queue | Client List | Used Keywords */}
+                {/* KEYWORD TABS: Monthly Queue | Client Keywords | Used Keywords */}
                 <div style={{ marginBottom: 28 }}>
                   {/* Tab Bar */}
                   <div style={{ display: "flex", gap: 2, marginBottom: 20, borderBottom: "1px solid #222", paddingBottom: 0 }}>
                     {[
                       { key: "monthly", label: `Monthly Queue${monthlyQueue.length ? ` (${monthlyQueue.length})` : ""}` },
-                      { key: "clientlist", label: `Client List${(library[selectedClient.industry] || []).length ? ` (${(library[selectedClient.industry] || []).length})` : ""}` },
+                      { key: "clientkeywords", label: `Client Keywords${clientKeywordsTotal ? ` (${clientKeywordsTotal})` : ""}` },
                       { key: "used", label: `Used Keywords${clientUsedTotal ? ` (${clientUsedTotal})` : ""}` },
                     ].map(t => (
-                      <button key={t.key} onClick={() => { setClientTab(t.key); if (t.key === "used") loadClientUsedKeywords(selectedClient.id, 1); }} style={{ ...styles.industryTab, ...(clientTab === t.key ? styles.industryTabActive : {}), marginBottom: -1, borderBottom: clientTab === t.key ? "2px solid #d60000" : "1px solid transparent" }}>{t.label}</button>
+                      <button key={t.key} onClick={() => { setClientTab(t.key); if (t.key === "used") loadClientUsedKeywords(selectedClient.id, 1); if (t.key === "clientkeywords") loadClientKeywords(selectedClient.id, 1); }} style={{ ...styles.industryTab, ...(clientTab === t.key ? styles.industryTabActive : {}), marginBottom: -1, borderBottom: clientTab === t.key ? "2px solid #d60000" : "1px solid transparent" }}>{t.label}</button>
                     ))}
                   </div>
 
@@ -2135,13 +2159,18 @@ function App() {
                     </div>
                   )}
 
-                  {/* ── CLIENT LIST TAB ── */}
-                  {clientTab === "clientlist" && (
+                  {/* ── CLIENT KEYWORDS TAB ── */}
+                  {clientTab === "clientkeywords" && (
                     <div>
-                      <div style={{ ...styles.sectionTitle, marginBottom: 16 }}>Client List — {selectedClient.industry}</div>
-                      <div style={{ fontSize: 11, color: "#555", marginBottom: 16 }}>Keywords assigned to this client from the library. Schedule or generate posts from here.</div>
-                      {(library[selectedClient.industry] || []).length === 0 ? (
-                        <div style={{ color: "#444", fontSize: 13 }}>No keywords in the {selectedClient.industry} library yet. Add some in the Keyword Library tab.</div>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                        <div style={styles.sectionTitle}>Client Keywords</div>
+                        <div style={{ fontSize: 11, color: "#555" }}>Drag a row or click → Queue to move it to Monthly Queue • ✕ to remove</div>
+                      </div>
+                      {clientKeywords.length === 0 ? (
+                        <div style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 10, padding: 24, textAlign: "center" }}>
+                          <div style={{ color: "#444", fontSize: 13 }}>No keywords assigned to this client yet.</div>
+                          <div style={{ color: "#333", fontSize: 11, marginTop: 6 }}>Go to the Keyword Library, select keywords, click "Add to Client" and choose "Client Keywords".</div>
+                        </div>
                       ) : (
                         <div>
                           <div style={styles.table}>
@@ -2149,35 +2178,46 @@ function App() {
                               <div style={{ flex: 3 }}>Keyword</div>
                               <div style={{ flex: 1, textAlign: "center" }}>Volume</div>
                               <div style={{ flex: 1, textAlign: "center" }}>Intent</div>
-                              <div style={{ flex: "0 0 200px", textAlign: "center" }}>Actions</div>
+                              <div style={{ flex: "0 0 120px", textAlign: "center" }}>Actions</div>
                             </div>
-                            {(library[selectedClient.industry] || []).slice((clientListPage - 1) * 20, clientListPage * 20).map(row => (
-                              <div key={row.id} style={styles.tableRow} onMouseEnter={e => e.currentTarget.style.background = "#111"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                                <div style={{ flex: 3, color: "#fff", fontWeight: 500 }}>{row.keyword}</div>
+                            {clientKeywords.map(row => (
+                              <div key={row.id}
+                                draggable
+                                onDragStart={e => { e.dataTransfer.setData("clientKwId", row.id); e.dataTransfer.setData("clientKwKeyword", row.keyword); e.dataTransfer.setData("clientKwIntent", row.intent || "Informational"); e.dataTransfer.setData("clientKwVolume", String(row.volume || 0)); e.dataTransfer.effectAllowed = "move"; }}
+                                style={{ ...styles.tableRow, cursor: "grab" }}
+                                onMouseEnter={e => e.currentTarget.style.background = "#111"}
+                                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                              >
+                                <div style={{ flex: 3, color: "#fff", fontWeight: 500, display: "flex", alignItems: "center", gap: 8 }}>
+                                  <span style={{ color: "#333", fontSize: 13 }}>⠿</span>{row.keyword}
+                                </div>
                                 <div style={{ flex: 1, textAlign: "center", color: "#aaa" }}>{(row.volume || 0).toLocaleString()}</div>
                                 <div style={{ flex: 1, textAlign: "center" }}>
                                   <span style={{ ...styles.intentBadge, color: getIntentColor(row.intent), background: getIntentColor(row.intent) + "22", borderColor: getIntentColor(row.intent) + "44" }}>{row.intent}</span>
                                 </div>
-                                <div style={{ flex: "0 0 200px", display: "flex", gap: 4, justifyContent: "center", flexWrap: "wrap" }}>
-                                  <button style={styles.addKeywordBtn} onClick={() => generatePost(row.keyword, selectedClient)}>Generate</button>
-                                  <button
-                                    style={{ ...styles.addKeywordBtn, opacity: monthlyQueue.find(q => q.keyword.toLowerCase() === row.keyword.toLowerCase()) ? 0.35 : 1 }}
-                                    disabled={!!monthlyQueue.find(q => q.keyword.toLowerCase() === row.keyword.toLowerCase())}
-                                    onClick={() => addQueueKeyword(row.keyword, "library", row.intent, row.volume)}
-                                  >{monthlyQueue.find(q => q.keyword.toLowerCase() === row.keyword.toLowerCase()) ? "In Queue" : "+ Queue"}</button>
+                                <div style={{ flex: "0 0 120px", display: "flex", gap: 4, justifyContent: "center" }}>
+                                  <button style={styles.addKeywordBtn} title="Move to Monthly Queue" onClick={async () => {
+                                    await addQueueKeyword(row.keyword, "clientlist", row.intent, row.volume);
+                                    await authFetch(`${API}/api/clients/${selectedClient.id}/keywords/${row.id}`, { method: "DELETE" });
+                                    setClientKeywords(prev => prev.filter(k => k.id !== row.id));
+                                    setClientKeywordsTotal(prev => Math.max(0, prev - 1));
+                                  }}>→ Queue</button>
                                   <button style={{ ...styles.addKeywordBtn, color: "#ef4444", borderColor: "rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.08)" }} onClick={async () => {
-                                    await authFetch(`${API}/api/keywords/library/${row.id}`, { method: "DELETE" });
-                                    setLibrary(prev => ({ ...prev, [selectedClient.industry]: prev[selectedClient.industry].filter(k => k.id !== row.id) }));
+                                    await authFetch(`${API}/api/clients/${selectedClient.id}/keywords/${row.id}`, { method: "DELETE" });
+                                    setClientKeywords(prev => prev.filter(k => k.id !== row.id));
+                                    setClientKeywordsTotal(prev => Math.max(0, prev - 1));
                                   }}>✕</button>
                                 </div>
                               </div>
                             ))}
                           </div>
-                          {(library[selectedClient.industry] || []).length > 20 && (
-                            <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 12 }}>
-                              <button style={{ ...styles.addKeywordBtn, opacity: clientListPage === 1 ? 0.3 : 1 }} disabled={clientListPage === 1} onClick={() => setClientListPage(p => p - 1)}>← Prev</button>
-                              <span style={{ color: "#555", fontSize: 12, padding: "4px 8px" }}>{clientListPage} / {Math.ceil((library[selectedClient.industry] || []).length / 20)}</span>
-                              <button style={{ ...styles.addKeywordBtn, opacity: clientListPage >= Math.ceil((library[selectedClient.industry] || []).length / 20) ? 0.3 : 1 }} disabled={clientListPage >= Math.ceil((library[selectedClient.industry] || []).length / 20)} onClick={() => setClientListPage(p => p + 1)}>Next →</button>
+                          {clientKeywordsTotal > 20 && (
+                            <div style={{ display: "flex", gap: 6, justifyContent: "center", alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
+                              <button style={{ ...styles.addKeywordBtn, opacity: clientKeywordsPage === 1 ? 0.3 : 1 }} disabled={clientKeywordsPage === 1} onClick={() => loadClientKeywords(selectedClient.id, clientKeywordsPage - 1)}>← Prev</button>
+                              {Array.from({ length: Math.ceil(clientKeywordsTotal / 20) }, (_, i) => i + 1).map(p => (
+                                <button key={p} style={{ ...styles.addKeywordBtn, ...(p === clientKeywordsPage ? { color: "#d60000", borderColor: "#d60000", background: "rgba(214,0,0,0.08)" } : {}) }} onClick={() => loadClientKeywords(selectedClient.id, p)}>{p}</button>
+                              ))}
+                              <button style={{ ...styles.addKeywordBtn, opacity: clientKeywordsPage >= Math.ceil(clientKeywordsTotal / 20) ? 0.3 : 1 }} disabled={clientKeywordsPage >= Math.ceil(clientKeywordsTotal / 20)} onClick={() => loadClientKeywords(selectedClient.id, clientKeywordsPage + 1)}>Next →</button>
                             </div>
                           )}
                         </div>
@@ -2189,9 +2229,11 @@ function App() {
                   {clientTab === "used" && (
                     <div>
                       <div style={{ ...styles.sectionTitle, marginBottom: 8 }}>Used Keywords</div>
-                      <div style={{ fontSize: 11, color: "#555", marginBottom: 16 }}>Keywords published for this client. Added automatically on publish, or manually.</div>
+                      <div style={{ fontSize: 11, color: "#555", marginBottom: 16 }}>Keywords published for this client. Added automatically after a post is published.</div>
                       {clientUsedKeywords.length === 0 ? (
-                        <div style={{ color: "#444", fontSize: 13 }}>No used keywords yet. They appear here automatically after a post is published.</div>
+                        <div style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 10, padding: 24, textAlign: "center" }}>
+                          <div style={{ color: "#444", fontSize: 13 }}>No used keywords yet — they'll appear here automatically after publishing.</div>
+                        </div>
                       ) : (
                         <div>
                           <div style={styles.table}>
@@ -2211,9 +2253,11 @@ function App() {
                             ))}
                           </div>
                           {clientUsedTotal > 20 && (
-                            <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 12 }}>
+                            <div style={{ display: "flex", gap: 6, justifyContent: "center", alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
                               <button style={{ ...styles.addKeywordBtn, opacity: clientUsedPage === 1 ? 0.3 : 1 }} disabled={clientUsedPage === 1} onClick={() => loadClientUsedKeywords(selectedClient.id, clientUsedPage - 1)}>← Prev</button>
-                              <span style={{ color: "#555", fontSize: 12, padding: "4px 8px" }}>{clientUsedPage} / {Math.ceil(clientUsedTotal / 20)}</span>
+                              {Array.from({ length: Math.ceil(clientUsedTotal / 20) }, (_, i) => i + 1).map(p => (
+                                <button key={p} style={{ ...styles.addKeywordBtn, ...(p === clientUsedPage ? { color: "#d60000", borderColor: "#d60000", background: "rgba(214,0,0,0.08)" } : {}) }} onClick={() => loadClientUsedKeywords(selectedClient.id, p)}>{p}</button>
+                              ))}
                               <button style={{ ...styles.addKeywordBtn, opacity: clientUsedPage >= Math.ceil(clientUsedTotal / 20) ? 0.3 : 1 }} disabled={clientUsedPage >= Math.ceil(clientUsedTotal / 20)} onClick={() => loadClientUsedKeywords(selectedClient.id, clientUsedPage + 1)}>Next →</button>
                             </div>
                           )}
@@ -3654,7 +3698,8 @@ function App() {
                 <div style={{ fontSize: 10, color: '#d60000', letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, marginBottom: 10 }}>Add To</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {[
-                    { val: 'queue', label: 'Keyword Queue', desc: 'Adds to the client's keyword pool. Schedule from their queue later, or generate on the fly.' },
+                    { val: 'clientlist', label: 'Client Keywords', desc: "Adds to the client's keyword list. From there you can drag keywords into the Monthly Queue when ready." },
+                    { val: 'queue', label: 'Monthly Queue', desc: 'Adds directly to the client's monthly keyword queue to generate posts from.' },
                     { val: 'schedule', label: 'Scheduled Queue', desc: 'Adds directly to the publishing schedule so posts generate automatically.' },
                   ].map(opt => (
                     <label key={opt.val} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', cursor: 'pointer', padding: '10px 14px', border: `1px solid ${addToClientDest === opt.val ? '#d60000' : '#222'}`, background: addToClientDest === opt.val ? 'rgba(214,0,0,0.06)' : 'transparent', transition: 'all 0.15s' }}>
@@ -3694,7 +3739,7 @@ function App() {
               {/* Result */}
               {addToClientResult && (
                 <div style={{ padding: '10px 14px', background: addToClientResult.errors > 0 && addToClientResult.success === 0 ? 'rgba(239,68,68,0.08)' : 'rgba(34,197,94,0.08)', borderLeft: `3px solid ${addToClientResult.errors > 0 && addToClientResult.success === 0 ? '#ef4444' : '#22c55e'}`, fontSize: 12, color: addToClientResult.errors > 0 && addToClientResult.success === 0 ? '#ef4444' : '#22c55e', marginBottom: 4, fontFamily: "'Barlow', sans-serif" }}>
-                  {addToClientResult.success > 0 && `✓ Added ${addToClientResult.success} keyword${addToClientResult.success !== 1 ? 's' : ''} to ${addToClientResult.dest === 'queue' ? 'keyword queue' : 'scheduled queue'}${addToClientResult.errors > 0 ? ` (${addToClientResult.errors} failed)` : ''}`}
+                  {addToClientResult.success > 0 && `✓ Added ${addToClientResult.success} keyword${addToClientResult.success !== 1 ? 's' : ''} to ${addToClientResult.dest === 'clientlist' ? 'client keywords' : addToClientResult.dest === 'queue' ? 'monthly queue' : 'scheduled queue'}${addToClientResult.errors > 0 ? ` (${addToClientResult.errors} failed)` : ''}`}
                   {addToClientResult.success === 0 && `✗ Failed to add keywords. Check that the client has WordPress configured.`}
                 </div>
               )}
