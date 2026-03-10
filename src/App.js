@@ -677,7 +677,7 @@ function App() {
       const res = await authFetch(`${API}/api/competitors/find`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientName: selectedClient.name, industry: selectedClient.industry, domain: selectedClient.domain }),
+        body: JSON.stringify({ clientName: selectedClient.name, industry: selectedClient.industry, domain: selectedClient.domain, serviceArea: selectedClient.service_area }),
       });
       const data = await res.json();
       if (data.competitors) {
@@ -1218,6 +1218,7 @@ function App() {
       wordpress_password: selectedClient.wordpress_password || "",
       brand_voice: selectedClient.brand_voice || "",
       domain: selectedClient.domain || "",
+      service_area: selectedClient.service_area || "",
     });
     setEditingClient(true);
   };
@@ -1688,6 +1689,10 @@ function App() {
                       <div>
                         <div style={styles.postMetaLabel}>Domain</div>
                         <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.domain} onChange={e => setClientEdits({ ...clientEdits, domain: e.target.value })} placeholder="clientsite.com" />
+                      </div>
+                      <div>
+                        <div style={styles.postMetaLabel}>Service Area</div>
+                        <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.service_area} onChange={e => setClientEdits({ ...clientEdits, service_area: e.target.value })} placeholder="e.g. Charlotte, NC" />
                       </div>
                       <div>
                         <div style={styles.postMetaLabel}>WordPress URL</div>
