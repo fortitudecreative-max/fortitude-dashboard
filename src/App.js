@@ -448,9 +448,13 @@ function App() {
     }
   };
   // Move selected keywords to a different industry
-  const moveKeywordsToIndustry = async (targetIndustry) => {
-    if (!selectedKwIds.size || targetIndustry === activeIndustry) return;
-    const ids = [...selectedKwIds];
+  const moveKeywordsToIndustry = async (targetIndustry, draggedId) => {
+    if (targetIndustry === activeIndustry) return;
+    // If dragged item is in selection, move all selected; otherwise just the one dragged
+    const ids = draggedId && selectedKwIds.has(draggedId)
+      ? [...selectedKwIds]
+      : draggedId ? [draggedId] : [...selectedKwIds];
+    if (!ids.length) return;
     try {
       await Promise.all(ids.map(id => authFetch(`${API}/api/keywords/library/${id}`, {
         method: 'PUT',
@@ -2308,18 +2312,21 @@ function App() {
                 <button onClick={() => setLibSubTab("library")} style={{ ...styles.industryTab, ...(libSubTab === "library" ? styles.industryTabActive : {}) }}>Keyword Library</button>
                 <button
                   onClick={() => setLibSubTab("used")}
-                  onDragOver={e => { e.preventDefault(); if (selectedKwIds.size > 0) e.currentTarget.style.background = "rgba(34,197,94,0.2)"; }}
+                  onDragOver={e => { e.preventDefault(); e.currentTarget.style.background = "rgba(34,197,94,0.2)"; }}
                   onDragLeave={e => { e.currentTarget.style.background = ""; }}
                   onDrop={async e => {
                     e.currentTarget.style.background = "";
-                    const ids = [...selectedKwIds];
-                    const kws = (library[activeIndustry] || []).filter(k => ids.includes(k.id));
+                    const draggedId = e.dataTransfer.getData("kwId");
+                    const allLibKws = library[activeIndustry] || [];
+                    // If dragged item is in selection, move all selected; otherwise just the one
+                    const idsToMove = draggedId && selectedKwIds.has(draggedId) ? [...selectedKwIds] : (draggedId ? [draggedId] : [...selectedKwIds]);
+                    const kws = allLibKws.filter(k => idsToMove.includes(k.id));
                     await Promise.all(kws.map(k => addUsedKeyword(k.keyword)));
                     setSelectedKwIds(new Set());
                     setLibSubTab("used");
                   }}
                   style={{ ...styles.industryTab, ...(libSubTab === "used" ? styles.industryTabActive : {}), transition: "background 0.15s" }}
-                  title={selectedKwIds.size > 0 ? "Drop to mark selected as used" : ""}
+                  title="Drop keywords here to mark as used"
                 >
                   Used Keywords{usedKeywords.length > 0 && <span style={styles.industryCount}>{usedKeywords.length}</span>}
                   {selectedKwIds.size > 0 && libSubTab !== "used" && <span style={{ marginLeft: 4, fontSize: 10, color: "#22c55e" }}>⬇ drop</span>}
@@ -2375,9 +2382,9 @@ function App() {
                           transition: "all 0.15s",
                         }}
                         onClick={() => { setActiveIndustry(ind); setSelectedKwIds(new Set()); }}
-                        onDragOver={e => { e.preventDefault(); if (ind !== activeIndustry && selectedKwIds.size > 0) setDragOverIndustry(ind); }}
+                        onDragOver={e => { e.preventDefault(); if (ind !== activeIndustry) setDragOverIndustry(ind); }}
                         onDragLeave={() => setDragOverIndustry(null)}
-                        onDrop={e => { e.preventDefault(); setDragOverIndustry(null); moveKeywordsToIndustry(ind); }}
+                        onDrop={e => { e.preventDefault(); setDragOverIndustry(null); const draggedId = e.dataTransfer.getData("kwId"); moveKeywordsToIndustry(ind, draggedId); }}
                       >
                         {ind}<span style={styles.industryCount}>{library[ind]?.length || 0}</span>
                       </button>
@@ -2473,9 +2480,9 @@ function App() {
                       ) : (
                         <div
                           key={row.id}
-                          draggable={selectedKwIds.has(row.id)}
-                          onDragStart={e => { if (!selectedKwIds.has(row.id)) { setSelectedKwIds(new Set([row.id])); } }}
-                          style={{ ...styles.tableRow, cursor: selectedKwIds.has(row.id) ? "grab" : "default", background: selectedKwIds.has(row.id) ? "rgba(214,0,0,0.06)" : "transparent" }}
+                          draggable={true}
+                          onDragStart={e => { e.dataTransfer.setData("kwId", row.id); }}
+                          style={{ ...styles.tableRow, cursor: "grab", background: selectedKwIds.has(row.id) ? "rgba(214,0,0,0.06)" : "transparent" }}
                           onMouseEnter={e => { if (!selectedKwIds.has(row.id)) e.currentTarget.style.background = "#111"; }}
                           onMouseLeave={e => { if (!selectedKwIds.has(row.id)) e.currentTarget.style.background = "transparent"; }}
                         >
