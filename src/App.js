@@ -553,8 +553,10 @@ function App() {
       if (data.competitors) {
         setCompetitors(data.competitors);
         await saveCompetitors(data.competitors);
+      } else {
+        alert("Auto-find failed: " + (data.error || "Unknown error") + (data.detail ? "\n\n" + data.detail : ""));
       }
-    } catch (e) { console.error("Failed to find competitors:", e); }
+    } catch (e) { alert("Auto-find failed: " + e.message); }
     setFindingCompetitors(false);
   };
 
