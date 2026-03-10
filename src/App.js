@@ -2500,6 +2500,7 @@ function App() {
                     ))}
                   </div>
                 </div>
+              </div>
 
             </div>
           )}
@@ -3765,7 +3766,7 @@ function App() {
   );
 }
 
-const R = #d60000;
+const R = "#d60000";
 const styles = {
   root: { display: "flex", minHeight: "100vh", background: "#000", fontFamily: "'Barlow', sans-serif", color: "#fff" },
   sidebar: { background: "#0a0a0a", borderRight: "2px solid #1a1a1a", display: "flex", flexDirection: "column", transition: "width 0.2s ease", overflow: "hidden", flexShrink: 0 },
