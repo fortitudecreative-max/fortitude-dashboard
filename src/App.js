@@ -2265,8 +2265,23 @@ function App() {
               {/* Sub-tabs: Library | Used Keywords */}
               <div style={{ display: "flex", gap: 2, marginBottom: 20, borderBottom: "1px solid #222", paddingBottom: 12 }}>
                 <button onClick={() => setLibSubTab("library")} style={{ ...styles.industryTab, ...(libSubTab === "library" ? styles.industryTabActive : {}) }}>Keyword Library</button>
-                <button onClick={() => setLibSubTab("used")} style={{ ...styles.industryTab, ...(libSubTab === "used" ? styles.industryTabActive : {}) }}>
+                <button
+                  onClick={() => setLibSubTab("used")}
+                  onDragOver={e => { e.preventDefault(); if (selectedKwIds.size > 0) e.currentTarget.style.background = "rgba(34,197,94,0.2)"; }}
+                  onDragLeave={e => { e.currentTarget.style.background = ""; }}
+                  onDrop={async e => {
+                    e.currentTarget.style.background = "";
+                    const ids = [...selectedKwIds];
+                    const kws = (library[activeIndustry] || []).filter(k => ids.includes(k.id));
+                    await Promise.all(kws.map(k => addUsedKeyword(k.keyword)));
+                    setSelectedKwIds(new Set());
+                    setLibSubTab("used");
+                  }}
+                  style={{ ...styles.industryTab, ...(libSubTab === "used" ? styles.industryTabActive : {}), transition: "background 0.15s" }}
+                  title={selectedKwIds.size > 0 ? "Drop to mark selected as used" : ""}
+                >
                   Used Keywords{usedKeywords.length > 0 && <span style={styles.industryCount}>{usedKeywords.length}</span>}
+                  {selectedKwIds.size > 0 && libSubTab !== "used" && <span style={{ marginLeft: 4, fontSize: 10, color: "#22c55e" }}>⬇ drop</span>}
                 </button>
               </div>
 
@@ -2338,10 +2353,17 @@ function App() {
                   </div>
 
                   {selectedKwIds.size > 0 && (
-                    <div style={{ background: "rgba(214,0,0,0.08)", border: "1px solid rgba(214,0,0,0.2)", borderRadius: 4, padding: "10px 16px", marginBottom: 16, fontSize: 12, color: "#d60000", display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ background: "rgba(214,0,0,0.08)", border: "1px solid rgba(214,0,0,0.2)", borderRadius: 4, padding: "10px 16px", marginBottom: 16, fontSize: 12, color: "#d60000", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                       <span style={{ fontWeight: 700 }}>{selectedKwIds.size} selected</span>
-                      <span style={{ color: "#555" }}>Drag selected rows onto an industry tab to move them, or:</span>
-                      <button style={{ ...styles.addKeywordBtn, color: "#d60000", borderColor: "rgba(214,0,0,0.3)", background: "rgba(214,0,0,0.1)" }} onClick={() => setSelectedKwIds(new Set())}>✕ Clear Selection</button>
+                      <span style={{ color: "#555" }}>Drag rows to an industry tab to move, or drag to Used Keywords tab:</span>
+                      <button style={{ ...styles.addKeywordBtn, color: "#ef4444", borderColor: "rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.1)" }} onClick={async () => {
+                        if (!window.confirm(`Delete ${selectedKwIds.size} keyword(s)??`)) return;
+                        const ids = [...selectedKwIds];
+                        await Promise.all(ids.map(id => authFetch(`${API}/api/keywords/library/${id}`, { method: 'DELETE' })));
+                        setLibrary(prev => ({ ...prev, [activeIndustry]: (prev[activeIndustry] || []).filter(k => !ids.includes(k.id)) }));
+                        setSelectedKwIds(new Set());
+                      }}>🗑 Delete Selected</button>
+                      <button style={{ ...styles.addKeywordBtn, color: "#d60000", borderColor: "rgba(214,0,0,0.3)", background: "rgba(214,0,0,0.1)" }} onClick={() => setSelectedKwIds(new Set())}>✕ Clear</button>
                     </div>
                   )}
 
