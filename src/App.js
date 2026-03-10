@@ -234,6 +234,12 @@ function App() {
   const [competitors, setCompetitors] = useState([]);
   const [findingCompetitors, setFindingCompetitors] = useState(false);
   const [monthlyQueue, setMonthlyQueue] = useState([]);
+  const [clientUsedKeywords, setClientUsedKeywords] = useState([]);
+  const [clientUsedPage, setClientUsedPage] = useState(1);
+  const [clientUsedTotal, setClientUsedTotal] = useState(0);
+  const [clientListPage, setClientListPage] = useState(1);
+  const [monthlyQueuePage, setMonthlyQueuePage] = useState(1);
+  const [clientTab, setClientTab] = useState('monthly'); // 'monthly' | 'clientlist' | 'used'
   const [refreshingQueue, setRefreshingQueue] = useState(false);
   const [queueError, setQueueError] = useState(null);
   const [queueReplacing, setQueueReplacing] = useState(null); // id of row being replaced
@@ -392,6 +398,10 @@ function App() {
       loadScheduleJobs(c.id);
       loadGbpStatus(c.id);
       loadClientImages(c.id);
+      loadClientUsedKeywords(c.id);
+      setClientTab("monthly");
+      setClientListPage(1);
+      setMonthlyQueuePage(1);
     } catch (e) {
       console.error("Failed to add client:", e);
     }
@@ -479,6 +489,24 @@ function App() {
       const res = await authFetch(`${API}/api/keywords/used`);
       const data = await res.json();
       setUsedKeywords(data.keywords || []);
+    } catch(e) {}
+  };
+  const loadClientUsedKeywords = async (clientId, page = 1) => {
+    if (!clientId) return;
+    try {
+      const res = await authFetch(`${API}/api/keywords/used/${clientId}?page=${page}`);
+      const data = await res.json();
+      setClientUsedKeywords(data.keywords || []);
+      setClientUsedTotal(data.total || 0);
+      setClientUsedPage(page);
+    } catch(e) {}
+  };
+
+  const removeClientUsedKeyword = async (id) => {
+    try {
+      await authFetch(`${API}/api/keywords/used-client/${id}`, { method: 'DELETE' });
+      setClientUsedKeywords(prev => prev.filter(k => k.id !== id));
+      setClientUsedTotal(prev => prev - 1);
     } catch(e) {}
   };
 
@@ -2012,219 +2040,181 @@ function App() {
                   </div>
                 )}
 
-                {/* MONTHLY KEYWORD QUEUE */}
+                {/* KEYWORD TABS: Monthly Queue | Client List | Used Keywords */}
                 <div style={{ marginBottom: 28 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                    <div>
-                      <div style={styles.sectionTitle}>Monthly Keyword Queue {queueMonth ? `— ${queueMonth}` : ""}</div>
-                    </div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button style={{ ...styles.addBtn, background: "transparent", border: "1px solid #d60000", color: "#d60000" }} onClick={() => { setShowManualKeywordInput(v => !v); setManualKeywordText(""); }}>
-                        {showManualKeywordInput ? "✕ Cancel" : "+ Add Keyword"}
-                      </button>
-                      <button style={styles.addBtn} onClick={refreshMonthlyQueue} disabled={refreshingQueue}>
-                        {refreshingQueue ? "Refreshing..." : "⟳ Refresh Queue"}
-                      </button>
-                    </div>
+                  {/* Tab Bar */}
+                  <div style={{ display: "flex", gap: 2, marginBottom: 20, borderBottom: "1px solid #222", paddingBottom: 0 }}>
+                    {[
+                      { key: "monthly", label: `Monthly Queue${monthlyQueue.length ? ` (${monthlyQueue.length})` : ""}` },
+                      { key: "clientlist", label: `Client List${(library[selectedClient.industry] || []).length ? ` (${(library[selectedClient.industry] || []).length})` : ""}` },
+                      { key: "used", label: `Used Keywords${clientUsedTotal ? ` (${clientUsedTotal})` : ""}` },
+                    ].map(t => (
+                      <button key={t.key} onClick={() => { setClientTab(t.key); if (t.key === "used") loadClientUsedKeywords(selectedClient.id, 1); }} style={{ ...styles.industryTab, ...(clientTab === t.key ? styles.industryTabActive : {}), marginBottom: -1, borderBottom: clientTab === t.key ? "2px solid #d60000" : "1px solid transparent" }}>{t.label}</button>
+                    ))}
                   </div>
 
-                  {showManualKeywordInput && (
-                    <div style={{ background: "#0a0a0a", border: "1px solid #222", borderRadius: 8, padding: "14px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                      <input
-                        style={{ ...styles.searchInput, flex: "1 1 200px", minWidth: 160 }}
-                        placeholder="Enter keyword..."
-                        value={manualKeywordText}
-                        onChange={e => setManualKeywordText(e.target.value)}
-                        onKeyDown={e => e.key === "Enter" && addManualKeyword()}
-                        autoFocus
-                      />
-                      <select
-                        value={manualKeywordIntent}
-                        onChange={e => setManualKeywordIntent(e.target.value)}
-                        style={{ background: "#111", border: "1px solid #333", color: "#ccc", borderRadius: 6, padding: "8px 12px", fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", cursor: "pointer" }}
-                      >
-                        <option value="Transactional">Transactional</option>
-                        <option value="Informational">Informational</option>
-                        <option value="Navigational">Navigational</option>
-                        <option value="Commercial">Commercial</option>
-                      </select>
-                      <button
-                        style={{ ...styles.addBtn, opacity: addingManualKeyword || !manualKeywordText.trim() ? 0.5 : 1 }}
-                        onClick={addManualKeyword}
-                        disabled={addingManualKeyword || !manualKeywordText.trim()}
-                      >
-                        {addingManualKeyword ? "Adding..." : "Add to Queue"}
-                      </button>
-                    </div>
-                  )}
+                  {/* ── MONTHLY QUEUE TAB ── */}
+                  {clientTab === "monthly" && (
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                        <div style={styles.sectionTitle}>Monthly Keyword Queue {queueMonth ? `— ${queueMonth}` : ""}</div>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button style={{ ...styles.addBtn, background: "transparent", border: "1px solid #d60000", color: "#d60000" }} onClick={() => { setShowManualKeywordInput(v => !v); setManualKeywordText(""); }}>
+                            {showManualKeywordInput ? "✕ Cancel" : "+ Add Keyword"}
+                          </button>
+                          <button style={styles.addBtn} onClick={refreshMonthlyQueue} disabled={refreshingQueue}>
+                            {refreshingQueue ? "Refreshing..." : "⟳ Refresh Queue"}
+                          </button>
+                        </div>
+                      </div>
 
-                  {monthlyQueue.length === 0 && !queueReplacing ? (
-                    <div style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 10, padding: 24, textAlign: "center" }}>
-                      <div style={{ color: "#444", fontSize: 13, marginBottom: 12 }}>No monthly queue yet. Click "Refresh Queue" to generate 30 keywords (15 from competitor gaps + 15 from library).</div>
-                      {queueError && (
-                        <div style={{ color: "#d60000", fontSize: 12, marginBottom: 12, background: "#1a0000", border: "1px solid #330000", borderRadius: 6, padding: "8px 12px" }}>
-                          ⚠ {queueError}
+                      {showManualKeywordInput && (
+                        <div style={{ background: "#0a0a0a", border: "1px solid #222", borderRadius: 8, padding: "14px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                          <input style={{ ...styles.searchInput, flex: "1 1 200px", minWidth: 160 }} placeholder="Enter keyword..." value={manualKeywordText} onChange={e => setManualKeywordText(e.target.value)} onKeyDown={e => e.key === "Enter" && addManualKeyword()} autoFocus />
+                          <select value={manualKeywordIntent} onChange={e => setManualKeywordIntent(e.target.value)} style={{ background: "#111", border: "1px solid #333", color: "#ccc", borderRadius: 6, padding: "8px 12px", fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", cursor: "pointer" }}>
+                            {["Transactional","Informational","Navigational","Commercial"].map(i => <option key={i} value={i}>{i}</option>)}
+                          </select>
+                          <button style={{ ...styles.addBtn, opacity: addingManualKeyword || !manualKeywordText.trim() ? 0.5 : 1 }} onClick={addManualKeyword} disabled={addingManualKeyword || !manualKeywordText.trim()}>{addingManualKeyword ? "Adding..." : "Add to Queue"}</button>
                         </div>
                       )}
-                      <button style={styles.addBtn} onClick={refreshMonthlyQueue} disabled={refreshingQueue}>{refreshingQueue ? "Generating..." : "Generate Queue"}</button>
-                    </div>
-                  ) : (
-                    <div style={styles.table}>
-                      <div style={styles.tableHeader}>
-                        <div style={{ flex: "0 0 20px" }}></div>
-                        <div style={{ flex: 3 }}>Keyword</div>
-                        <div style={{ flex: 1, textAlign: "center" }}>Source</div>
-                        <div style={{ flex: 1, textAlign: "center" }}>Intent</div>
-                        <div style={{ flex: 1, textAlign: "center" }}>Status</div>
-                        <div style={{ flex: "0 0 32px" }}></div>
-                      </div>
-                      {monthlyQueue.map(row => (
-                        <div
-                          key={row.id}
-                          draggable={!row.used}
-                          onDragStart={() => { if (!row.used) setDragQueueId(row.id); }}
-                          onDragOver={e => { e.preventDefault(); if (!row.used) setDragOverQueueId(row.id); }}
-                          onDragLeave={() => setDragOverQueueId(null)}
-                          onDrop={() => { reorderQueue(dragQueueId, row.id); setDragQueueId(null); setDragOverQueueId(null); }}
-                          onDragEnd={() => { setDragQueueId(null); setDragOverQueueId(null); }}
-                          style={{
-                            ...styles.tableRow,
-                            opacity: dragQueueId === row.id ? 0.35 : row.used ? 0.4 : 1,
-                            cursor: row.used ? "default" : "grab",
-                            borderLeft: dragOverQueueId === row.id && dragQueueId !== row.id ? "2px solid #d60000" : "2px solid transparent",
-                            transition: "border-color 0.1s, opacity 0.1s",
-                          }}
-                        >
-                          <div style={{ flex: "0 0 20px", color: row.used ? "transparent" : "#333", fontSize: 13, userSelect: "none" }}>⠿</div>
-                          <div style={{ flex: 3, color: "#fff", fontWeight: 500 }}>{row.keyword}</div>
-                          <div style={{ flex: 1, textAlign: "center" }}>
-                            <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20, border: "1px solid", color: row.source === "gap" ? "#f59e0b" : row.source === "manual" ? "#a78bfa" : row.source === "ai" ? "#34d399" : "#60a5fa", background: row.source === "gap" ? "rgba(245,158,11,0.1)" : row.source === "manual" ? "rgba(167,139,250,0.1)" : row.source === "ai" ? "rgba(52,211,153,0.1)" : "rgba(96,165,250,0.1)", borderColor: row.source === "gap" ? "rgba(245,158,11,0.2)" : row.source === "manual" ? "rgba(167,139,250,0.2)" : row.source === "ai" ? "rgba(52,211,153,0.2)" : "rgba(96,165,250,0.2)" }}>
-                              {row.source === "gap" ? "Gap" : row.source === "manual" ? "Manual" : row.source === "ai" ? "AI" : "Library"}
-                            </span>
-                          </div>
-                          <div style={{ flex: 1, textAlign: "center" }}>
-                            <span style={{ ...styles.intentBadge, color: getIntentColor(row.intent), background: getIntentColor(row.intent) + "22", borderColor: getIntentColor(row.intent) + "44" }}>{row.intent}</span>
-                          </div>
-                          <div style={{ flex: 1, textAlign: "center" }}>
-                            <span style={{ fontSize: 11, color: row.used ? "#555" : "#22c55e" }}>{row.used ? "Used" : "Queued"}</span>
-                          </div>
-                          <div style={{ flex: "0 0 32px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <button
-                              onClick={() => removeQueueItem(row.id)}
-                              title="Remove from queue"
-                              style={{ background: "none", border: "none", cursor: "pointer", color: "#333", fontSize: 14, lineHeight: 1, padding: "2px 4px", borderRadius: 3, transition: "color 0.15s" }}
-                              onMouseEnter={e => e.currentTarget.style.color = "#ef4444"}
-                              onMouseLeave={e => e.currentTarget.style.color = "#333"}
-                            >✕</button>
-                          </div>
+
+                      {monthlyQueue.length === 0 && !queueReplacing ? (
+                        <div style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 10, padding: 24, textAlign: "center" }}>
+                          <div style={{ color: "#444", fontSize: 13, marginBottom: 12 }}>No monthly queue yet. Click "Refresh Queue" to generate keywords.</div>
+                          {queueError && <div style={{ color: "#d60000", fontSize: 12, marginBottom: 12, background: "#1a0000", border: "1px solid #330000", borderRadius: 6, padding: "8px 12px" }}>{queueError}</div>}
                         </div>
-                      ))}
-
-                      {/* ── Replacement panel ── */}
-                      {queueReplacing && (
-                        <div style={{ borderTop: "1px solid #1a1a1a", padding: "16px 12px", background: "#0a0a0a" }}>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                            <span style={{ fontSize: 11, color: "#d60000", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 700 }}>+ Add Replacement Keyword</span>
-                            <button onClick={() => { setQueueReplacing(null); setGapSuggestions([]); }} style={{ background: "none", border: "none", color: "#444", cursor: "pointer", fontSize: 13 }}>✕ Cancel</button>
-                          </div>
-
-                          {/* Gap suggestions */}
-                          <div style={{ marginBottom: 14 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                              <span style={{ fontSize: 11, color: "#888", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>From Competitor Gap</span>
-                              <button
-                                onClick={loadGapSuggestions}
-                                disabled={queueGapLoading}
-                                style={{ fontSize: 11, padding: "3px 10px", background: "transparent", border: "1px solid #f59e0b44", color: "#f59e0b", borderRadius: 4, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.05em", opacity: queueGapLoading ? 0.5 : 1 }}
-                              >{queueGapLoading ? "Generating..." : "⟳ Generate Suggestions"}</button>
+                      ) : (
+                        <div>
+                          {queueReplacing && <div style={{ color: "#d60000", fontSize: 12, marginBottom: 12, padding: "8px 12px", background: "#0d0000", border: "1px solid #330000" }}>⟳ Generating new keyword queue...</div>}
+                          <div style={styles.table}>
+                            <div style={styles.tableHeader}>
+                              <div style={{ flex: "0 0 28px" }}></div>
+                              <div style={{ flex: 3 }}>Keyword</div>
+                              <div style={{ flex: 1, textAlign: "center" }}>Intent</div>
+                              <div style={{ flex: 1, textAlign: "center" }}>Source</div>
+                              <div style={{ flex: "0 0 160px", textAlign: "center" }}>Actions</div>
                             </div>
-                            {gapSuggestions.length > 0 && (
-                              gapSuggestions[0].startsWith("__error__:") ? (
-                                <div style={{ fontSize: 11, color: "#ef4444", fontFamily: "'Barlow Condensed', sans-serif" }}>{gapSuggestions[0].replace("__error__: ", "")}</div>
-                              ) : (
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                                  {gapSuggestions.map((kw, i) => (
-                                    <button
-                                      key={i}
-                                      onClick={() => addQueueKeyword(kw, "gap", "Transactional", 0)}
-                                      style={{ fontSize: 11, padding: "4px 12px", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)", color: "#f59e0b", borderRadius: 20, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", transition: "background 0.15s" }}
-                                      onMouseEnter={e => e.currentTarget.style.background = "rgba(245,158,11,0.18)"}
-                                      onMouseLeave={e => e.currentTarget.style.background = "rgba(245,158,11,0.08)"}
-                                    >{kw}</button>
-                                  ))}
+                            {monthlyQueue.slice((monthlyQueuePage - 1) * 20, monthlyQueuePage * 20).map((row, idx) => (
+                              <div key={row.id}
+                                draggable
+                                onDragStart={e => { setDragQueueId(row.id); e.dataTransfer.effectAllowed = "move"; }}
+                                onDragOver={e => { e.preventDefault(); setDragOverQueueId(row.id); }}
+                                onDragEnd={() => { setDragQueueId(null); setDragOverQueueId(null); }}
+                                onDrop={() => reorderQueue(dragQueueId, row.id)}
+                                style={{ ...styles.tableRow, cursor: "grab", borderLeft: dragOverQueueId === row.id ? "2px solid #d60000" : "2px solid transparent", opacity: row.used ? 0.4 : 1 }}
+                                onMouseEnter={e => e.currentTarget.style.background = "#111"}
+                                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                              >
+                                <div style={{ flex: "0 0 28px", color: "#333", fontSize: 11, textAlign: "center" }}>{(monthlyQueuePage - 1) * 20 + idx + 1}</div>
+                                <div style={{ flex: 3, color: row.used ? "#555" : "#fff", fontWeight: 500 }}>{row.keyword}{row.used && <span style={{ marginLeft: 8, fontSize: 10, color: "#555" }}>used</span>}</div>
+                                <div style={{ flex: 1, textAlign: "center" }}>
+                                  <span style={{ ...styles.intentBadge, color: getIntentColor(row.intent), background: getIntentColor(row.intent) + "22", borderColor: getIntentColor(row.intent) + "44" }}>{row.intent}</span>
                                 </div>
-                              )
-                            )}
+                                <div style={{ flex: 1, textAlign: "center", color: "#555", fontSize: 11 }}>{row.source || "—"}</div>
+                                <div style={{ flex: "0 0 160px", display: "flex", gap: 4, justifyContent: "center" }}>
+                                  <button style={styles.addKeywordBtn} onClick={() => generatePost(row.keyword, selectedClient)}>Generate</button>
+                                  <button style={{ ...styles.addKeywordBtn, color: "#ef4444", borderColor: "rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.08)" }} onClick={async () => { await authFetch(`${API}/api/keywords/queue/${row.id}`, { method: "DELETE" }); setMonthlyQueue(prev => prev.filter(r => r.id !== row.id)); }}>✕</button>
+                                </div>
+                              </div>
+                            ))}
                           </div>
-
+                          {monthlyQueue.length > 20 && (
+                            <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 12 }}>
+                              <button style={{ ...styles.addKeywordBtn, opacity: monthlyQueuePage === 1 ? 0.3 : 1 }} disabled={monthlyQueuePage === 1} onClick={() => setMonthlyQueuePage(p => p - 1)}>← Prev</button>
+                              <span style={{ color: "#555", fontSize: 12, padding: "4px 8px" }}>{monthlyQueuePage} / {Math.ceil(monthlyQueue.length / 20)}</span>
+                              <button style={{ ...styles.addKeywordBtn, opacity: monthlyQueuePage >= Math.ceil(monthlyQueue.length / 20) ? 0.3 : 1 }} disabled={monthlyQueuePage >= Math.ceil(monthlyQueue.length / 20)} onClick={() => setMonthlyQueuePage(p => p + 1)}>Next →</button>
+                            </div>
+                          )}
                         </div>
                       )}
-
-                      {/* ── Inline quick-add row ── */}
-                      <div style={{ borderTop: "1px solid #1a1a1a", padding: "10px 12px", display: "flex", alignItems: "center", gap: 8, background: "#0a0a0a" }}>
-                        <div style={{ flex: "0 0 20px" }}></div>
-                        <input
-                          style={{ ...styles.searchInput, flex: 3, fontSize: 12, padding: "7px 10px" }}
-                          placeholder="Add a keyword to queue..."
-                          value={manualKeywordText}
-                          onChange={e => setManualKeywordText(e.target.value)}
-                          onKeyDown={e => e.key === "Enter" && addManualKeyword()}
-                        />
-                        <select
-                          value={manualKeywordIntent}
-                          onChange={e => setManualKeywordIntent(e.target.value)}
-                          style={{ background: "#111", border: "1px solid #222", color: "#ccc", borderRadius: 4, padding: "7px 10px", fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", flex: 1 }}
-                        >
-                          <option value="Transactional">Transactional</option>
-                          <option value="Informational">Informational</option>
-                          <option value="Navigational">Navigational</option>
-                          <option value="Commercial">Commercial</option>
-                        </select>
-                        <div style={{ flex: 1 }}></div>
-                        <button
-                          style={{ ...styles.addBtn, fontSize: 11, padding: "6px 14px", opacity: addingManualKeyword || !manualKeywordText.trim() ? 0.4 : 1, flex: "0 0 auto" }}
-                          onClick={addManualKeyword}
-                          disabled={addingManualKeyword || !manualKeywordText.trim()}
-                        >
-                          {addingManualKeyword ? "Adding..." : "+ Add"}
-                        </button>
-                      </div>
-
                     </div>
                   )}
-                </div>
 
-                <div style={styles.sectionTitle}>Keyword Queue — {selectedClient.industry}</div>
-                <div style={{ marginTop: 16 }}>
-                  {(library[selectedClient.industry] || []).length > 0 ? (
-                    <div style={styles.table}>
-                      <div style={styles.tableHeader}>
-                        <div style={{ flex: 3 }}>Keyword</div>
-                        <div style={{ flex: 1, textAlign: "center" }}>Volume</div>
-                        <div style={{ flex: 1, textAlign: "center" }}>Intent</div>
-                        <div style={{ flex: 1, textAlign: "center" }}>Action</div>
-                      </div>
-                      {(library[selectedClient.industry] || []).map((row) => (
-                        <div key={row.id} style={styles.tableRow} onMouseEnter={e => e.currentTarget.style.background = "#111"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                          <div style={{ flex: 3, color: "#fff", fontWeight: 500 }}>{row.keyword}</div>
-                          <div style={{ flex: 1, textAlign: "center", color: "#aaa" }}>{(row.volume || 0).toLocaleString()}</div>
-                          <div style={{ flex: 1, textAlign: "center" }}>
-                            <span style={{ ...styles.intentBadge, color: getIntentColor(row.intent), background: getIntentColor(row.intent) + "22", borderColor: getIntentColor(row.intent) + "44" }}>{row.intent}</span>
+                  {/* ── CLIENT LIST TAB ── */}
+                  {clientTab === "clientlist" && (
+                    <div>
+                      <div style={{ ...styles.sectionTitle, marginBottom: 16 }}>Client List — {selectedClient.industry}</div>
+                      <div style={{ fontSize: 11, color: "#555", marginBottom: 16 }}>Keywords assigned to this client from the library. Schedule or generate posts from here.</div>
+                      {(library[selectedClient.industry] || []).length === 0 ? (
+                        <div style={{ color: "#444", fontSize: 13 }}>No keywords in the {selectedClient.industry} library yet. Add some in the Keyword Library tab.</div>
+                      ) : (
+                        <div>
+                          <div style={styles.table}>
+                            <div style={styles.tableHeader}>
+                              <div style={{ flex: 3 }}>Keyword</div>
+                              <div style={{ flex: 1, textAlign: "center" }}>Volume</div>
+                              <div style={{ flex: 1, textAlign: "center" }}>Intent</div>
+                              <div style={{ flex: "0 0 200px", textAlign: "center" }}>Actions</div>
+                            </div>
+                            {(library[selectedClient.industry] || []).slice((clientListPage - 1) * 20, clientListPage * 20).map(row => (
+                              <div key={row.id} style={styles.tableRow} onMouseEnter={e => e.currentTarget.style.background = "#111"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                                <div style={{ flex: 3, color: "#fff", fontWeight: 500 }}>{row.keyword}</div>
+                                <div style={{ flex: 1, textAlign: "center", color: "#aaa" }}>{(row.volume || 0).toLocaleString()}</div>
+                                <div style={{ flex: 1, textAlign: "center" }}>
+                                  <span style={{ ...styles.intentBadge, color: getIntentColor(row.intent), background: getIntentColor(row.intent) + "22", borderColor: getIntentColor(row.intent) + "44" }}>{row.intent}</span>
+                                </div>
+                                <div style={{ flex: "0 0 200px", display: "flex", gap: 4, justifyContent: "center", flexWrap: "wrap" }}>
+                                  <button style={styles.addKeywordBtn} onClick={() => generatePost(row.keyword, selectedClient)}>Generate</button>
+                                  <button
+                                    style={{ ...styles.addKeywordBtn, opacity: monthlyQueue.find(q => q.keyword.toLowerCase() === row.keyword.toLowerCase()) ? 0.35 : 1 }}
+                                    disabled={!!monthlyQueue.find(q => q.keyword.toLowerCase() === row.keyword.toLowerCase())}
+                                    onClick={() => addQueueKeyword(row.keyword, "library", row.intent, row.volume)}
+                                  >{monthlyQueue.find(q => q.keyword.toLowerCase() === row.keyword.toLowerCase()) ? "In Queue" : "+ Queue"}</button>
+                                  <button style={{ ...styles.addKeywordBtn, color: "#ef4444", borderColor: "rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.08)" }} onClick={async () => {
+                                    await authFetch(`${API}/api/keywords/library/${row.id}`, { method: "DELETE" });
+                                    setLibrary(prev => ({ ...prev, [selectedClient.industry]: prev[selectedClient.industry].filter(k => k.id !== row.id) }));
+                                  }}>✕</button>
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                          <div style={{ flex: 1, textAlign: "center", display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
-                            <button style={styles.addKeywordBtn} onClick={() => generatePost(row.keyword, selectedClient)}>Generate Post</button>
-                            <button
-                              style={{ ...styles.addKeywordBtn, background: "transparent", border: "1px solid #d6000033", color: "#d60000", opacity: monthlyQueue.find(q => q.keyword.toLowerCase() === row.keyword.toLowerCase()) ? 0.35 : 1 }}
-                              disabled={!!monthlyQueue.find(q => q.keyword.toLowerCase() === row.keyword.toLowerCase())}
-                              title={monthlyQueue.find(q => q.keyword.toLowerCase() === row.keyword.toLowerCase()) ? "Already in queue" : "Add to monthly queue"}
-                              onClick={() => addQueueKeyword(row.keyword, "library", row.intent, row.volume)}
-                            >{monthlyQueue.find(q => q.keyword.toLowerCase() === row.keyword.toLowerCase()) ? "In Queue" : "+ Queue"}</button>
-                          </div>
+                          {(library[selectedClient.industry] || []).length > 20 && (
+                            <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 12 }}>
+                              <button style={{ ...styles.addKeywordBtn, opacity: clientListPage === 1 ? 0.3 : 1 }} disabled={clientListPage === 1} onClick={() => setClientListPage(p => p - 1)}>← Prev</button>
+                              <span style={{ color: "#555", fontSize: 12, padding: "4px 8px" }}>{clientListPage} / {Math.ceil((library[selectedClient.industry] || []).length / 20)}</span>
+                              <button style={{ ...styles.addKeywordBtn, opacity: clientListPage >= Math.ceil((library[selectedClient.industry] || []).length / 20) ? 0.3 : 1 }} disabled={clientListPage >= Math.ceil((library[selectedClient.industry] || []).length / 20)} onClick={() => setClientListPage(p => p + 1)}>Next →</button>
+                            </div>
+                          )}
                         </div>
-                      ))}
+                      )}
                     </div>
-                  ) : (
-                    <div style={{ color: "#444", fontSize: 13 }}>No keywords in library for {selectedClient.industry} yet. Add some in the Keyword Library tab.</div>
+                  )}
+
+                  {/* ── USED KEYWORDS TAB ── */}
+                  {clientTab === "used" && (
+                    <div>
+                      <div style={{ ...styles.sectionTitle, marginBottom: 8 }}>Used Keywords</div>
+                      <div style={{ fontSize: 11, color: "#555", marginBottom: 16 }}>Keywords published for this client. Added automatically on publish, or manually.</div>
+                      {clientUsedKeywords.length === 0 ? (
+                        <div style={{ color: "#444", fontSize: 13 }}>No used keywords yet. They appear here automatically after a post is published.</div>
+                      ) : (
+                        <div>
+                          <div style={styles.table}>
+                            <div style={styles.tableHeader}>
+                              <div style={{ flex: 3 }}>Keyword</div>
+                              <div style={{ flex: 1, textAlign: "center" }}>Date Used</div>
+                              <div style={{ flex: "0 0 80px", textAlign: "center" }}>Remove</div>
+                            </div>
+                            {clientUsedKeywords.map(kw => (
+                              <div key={kw.id} style={styles.tableRow} onMouseEnter={e => e.currentTarget.style.background = "#111"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                                <div style={{ flex: 3, color: "#fff", fontWeight: 500 }}>{kw.keyword}</div>
+                                <div style={{ flex: 1, textAlign: "center", color: "#555", fontSize: 11 }}>{kw.added_at ? new Date(kw.added_at).toLocaleDateString() : "—"}</div>
+                                <div style={{ flex: "0 0 80px", textAlign: "center" }}>
+                                  <button style={{ ...styles.addKeywordBtn, color: "#ef4444", borderColor: "rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.08)" }} onClick={() => removeClientUsedKeyword(kw.id)}>✕</button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          {clientUsedTotal > 20 && (
+                            <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 12 }}>
+                              <button style={{ ...styles.addKeywordBtn, opacity: clientUsedPage === 1 ? 0.3 : 1 }} disabled={clientUsedPage === 1} onClick={() => loadClientUsedKeywords(selectedClient.id, clientUsedPage - 1)}>← Prev</button>
+                              <span style={{ color: "#555", fontSize: 12, padding: "4px 8px" }}>{clientUsedPage} / {Math.ceil(clientUsedTotal / 20)}</span>
+                              <button style={{ ...styles.addKeywordBtn, opacity: clientUsedPage >= Math.ceil(clientUsedTotal / 20) ? 0.3 : 1 }} disabled={clientUsedPage >= Math.ceil(clientUsedTotal / 20)} onClick={() => loadClientUsedKeywords(selectedClient.id, clientUsedPage + 1)}>Next →</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
 
@@ -2307,68 +2297,9 @@ function App() {
           {/* KEYWORD LIBRARY */}
           {activeTab === "library" && (
             <div>
-              {/* Sub-tabs: Library | Used Keywords */}
-              <div style={{ display: "flex", gap: 2, marginBottom: 20, borderBottom: "1px solid #222", paddingBottom: 12 }}>
-                <button onClick={() => setLibSubTab("library")} style={{ ...styles.industryTab, ...(libSubTab === "library" ? styles.industryTabActive : {}) }}>Keyword Library</button>
-                <button
-                  onClick={() => setLibSubTab("used")}
-                  onDragOver={e => { e.preventDefault(); e.currentTarget.style.background = "rgba(34,197,94,0.2)"; }}
-                  onDragLeave={e => { e.currentTarget.style.background = ""; }}
-                  onDrop={async e => {
-                    e.currentTarget.style.background = "";
-                    const draggedId = e.dataTransfer.getData("kwId");
-                    const allLibKws = library[activeIndustry] || [];
-                    // If dragged item is in selection, move all selected; otherwise just the one
-                    const idsToMove = draggedId && selectedKwIds.has(draggedId) ? [...selectedKwIds] : (draggedId ? [draggedId] : [...selectedKwIds]);
-                    const kws = allLibKws.filter(k => idsToMove.includes(k.id));
-                    await Promise.all(kws.map(k => addUsedKeyword(k.keyword)));
-                    setSelectedKwIds(new Set());
-                    setLibSubTab("used");
-                  }}
-                  style={{ ...styles.industryTab, ...(libSubTab === "used" ? styles.industryTabActive : {}), transition: "background 0.15s" }}
-                  title="Drop keywords here to mark as used"
-                >
-                  Used Keywords{usedKeywords.length > 0 && <span style={styles.industryCount}>{usedKeywords.length}</span>}
-                  {selectedKwIds.size > 0 && libSubTab !== "used" && <span style={{ marginLeft: 4, fontSize: 10, color: "#22c55e" }}>⬇ drop</span>}
-                </button>
-              </div>
 
-              {libSubTab === "used" && (
-                <div>
-                  <div style={{ fontSize: 12, color: "#555", marginBottom: 16 }}>Keywords that have already been used in published posts. Add manually — nothing is added automatically.</div>
-                  <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-                    <input
-                      style={{ ...styles.searchInput, flex: 3 }}
-                      placeholder="Add a used keyword..."
-                      value={newUsedKw}
-                      onChange={e => setNewUsedKw(e.target.value)}
-                      onKeyDown={e => e.key === "Enter" && addUsedKeyword()}
-                    />
-                    <button style={styles.addBtn} onClick={() => addUsedKeyword()}>+ Add</button>
-                  </div>
-                  <div style={styles.table}>
-                    <div style={styles.tableHeader}>
-                      <div style={{ flex: 3 }}>Keyword</div>
-                      <div style={{ flex: 1, textAlign: "center" }}>Added</div>
-                      <div style={{ flex: "0 0 80px", textAlign: "center" }}>Remove</div>
-                    </div>
-                    {usedKeywords.length === 0 && (
-                      <div style={{ padding: "24px 16px", color: "#444", fontSize: 12, textAlign: "center" }}>No used keywords yet. Add them manually after publishing a post.</div>
-                    )}
-                    {usedKeywords.map(kw => (
-                      <div key={kw.id} style={styles.tableRow} onMouseEnter={e => e.currentTarget.style.background = "#111"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                        <div style={{ flex: 3, color: "#fff", fontWeight: 500 }}>{kw.keyword}</div>
-                        <div style={{ flex: 1, textAlign: "center", color: "#555", fontSize: 11 }}>{kw.added_at ? new Date(kw.added_at).toLocaleDateString() : "—"}</div>
-                        <div style={{ flex: "0 0 80px", textAlign: "center" }}>
-                          <button style={{ ...styles.addKeywordBtn, color: "#ef4444", borderColor: "rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.1)" }} onClick={() => removeUsedKeyword(kw.id)}>Remove</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
-              {libSubTab === "library" && (
+              <div>
                 <div>
                   {/* Industry Tabs — drop targets for drag-to-move */}
                   <div style={{ display: "flex", alignItems: "center", gap: 2, marginBottom: 24, flexWrap: "wrap" }}>
@@ -2520,7 +2451,7 @@ function App() {
                     ))}
                   </div>
                 </div>
-              )}
+
             </div>
           )}
 
