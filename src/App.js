@@ -214,6 +214,7 @@ function App() {
   // Content
   const [generatingPost, setGeneratingPost] = useState(null);
   const [generatedPost, setGeneratedPost] = useState(null);
+  const [generatedSchemaHtml, setGeneratedSchemaHtml] = useState(null);
   const [featuredImage, setFeaturedImage] = useState(null);
   const [contentLoading, setContentLoading] = useState(false);
   const [contentError, setContentError] = useState(null);
@@ -1337,6 +1338,7 @@ function App() {
           featuredImageSlug: generatedPost?.slug || null,
           featuredImageId: featuredImage?.id || null,
           industry: activeClient?.industry || "",
+          schemaHtml: generatedSchemaHtml || null,
         }),
       });
       const data = await res.json();
@@ -1380,6 +1382,7 @@ function App() {
       if (data.post) {
         setGeneratedPost(data.post);
         setFeaturedImage(data.featuredImage);
+        setGeneratedSchemaHtml(data.schemaHtml || null);
         loadClients();
       } else {
         setContentError(data.error || "Failed to generate post.");
@@ -2627,7 +2630,7 @@ function App() {
                   <div style={styles.sectionHeader}>
                     <div style={styles.sectionTitle}>Generated Post — {generatingPost}</div>
                     <div style={{ display: "flex", gap: 12 }}>
-                      <button style={{ ...styles.addBtn, background: "none", border: "1px solid #dc2626", color: "#dc2626" }} onClick={() => { setGeneratedPost(null); setGeneratingPost(null); }}>Clear</button>
+                      <button style={{ ...styles.addBtn, background: "none", border: "1px solid #dc2626", color: "#dc2626" }} onClick={() => { setGeneratedPost(null); setGeneratingPost(null); setGeneratedSchemaHtml(null); }}>Clear</button>
                       <button style={{ ...styles.addBtn, opacity: publishLoading ? 0.6 : 1 }} onClick={publishToWordPress} disabled={publishLoading}>
                         {publishLoading ? "Publishing..." : "Publish to WordPress"}
                       </button>
