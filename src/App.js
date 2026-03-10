@@ -189,6 +189,11 @@ function App() {
   const [usedKeywords, setUsedKeywords] = useState([]);
   const [newUsedKw, setNewUsedKw] = useState("");
   const [libSubTab, setLibSubTab] = useState("library");
+  const [showAddToClientModal, setShowAddToClientModal] = useState(false);
+  const [addToClientTargets, setAddToClientTargets] = useState(new Set()); // client ids
+  const [addToClientDest, setAddToClientDest] = useState("queue"); // "queue" | "schedule"
+  const [addToClientBusy, setAddToClientBusy] = useState(false);
+  const [addToClientResult, setAddToClientResult] = useState(null);
 
   // Image Library
   const [images, setImages] = useState([]);
@@ -492,6 +497,42 @@ function App() {
       await authFetch(`${API}/api/keywords/used/${id}`, { method: 'DELETE' });
       setUsedKeywords(prev => prev.filter(k => k.id !== id));
     } catch(e) {}
+  };
+  // Add selected library keywords to one or more clients
+  const addToClients = async () => {
+    if (!addToClientTargets.size || !selectedKwIds.size) return;
+    setAddToClientBusy(true);
+    setAddToClientResult(null);
+    const kws = (library[activeIndustry] || []).filter(k => selectedKwIds.has(k.id));
+    const clientIds = [...addToClientTargets];
+    let successCount = 0, errorCount = 0;
+    for (const clientId of clientIds) {
+      for (const kw of kws) {
+        try {
+          if (addToClientDest === 'queue') {
+            // Add to monthly keyword queue
+            const res = await authFetch(`${API}/api/keywords/queue/add`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ clientId, keyword: kw.keyword, source: 'library', intent: kw.intent || 'Transactional', volume: kw.volume || 0 }),
+            });
+            const d = await res.json();
+            if (d.success) successCount++; else errorCount++;
+          } else {
+            // Add to scheduled queue (schedule_jobs via existing scheduler add endpoint)
+            const res = await authFetch(`${API}/api/schedule/add`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ clientId, keyword: kw.keyword }),
+            });
+            const d = await res.json();
+            if (d.success || d.job) successCount++; else errorCount++;
+          }
+        } catch(e) { errorCount++; }
+      }
+    }
+    setAddToClientBusy(false);
+    setAddToClientResult({ success: successCount, errors: errorCount, dest: addToClientDest });
   };
 
   const importCsv = async (file) => {
@@ -2363,6 +2404,7 @@ function App() {
                         setLibrary(prev => ({ ...prev, [activeIndustry]: (prev[activeIndustry] || []).filter(k => !ids.includes(k.id)) }));
                         setSelectedKwIds(new Set());
                       }}>🗑 Delete Selected</button>
+                      <button style={{ ...styles.addKeywordBtn, color: "#3b82f6", borderColor: "rgba(59,130,246,0.3)", background: "rgba(59,130,246,0.1)" }} onClick={() => { setAddToClientTargets(new Set()); setAddToClientDest('queue'); setAddToClientResult(null); setShowAddToClientModal(true); }}>➕ Add to Client →</button>
                       <button style={{ ...styles.addKeywordBtn, color: "#d60000", borderColor: "rgba(214,0,0,0.3)", background: "rgba(214,0,0,0.1)" }} onClick={() => setSelectedKwIds(new Set())}>✕ Clear</button>
                     </div>
                   )}
@@ -3638,12 +3680,104 @@ function App() {
             </div>
           )}
         </div>
+
+      {/* ADD TO CLIENT MODAL */}
+      {showAddToClientModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={e => { if (e.target === e.currentTarget) setShowAddToClientModal(false); }}>
+          <div style={{ background: '#0d0d0d', border: '1px solid #222', width: '100%', maxWidth: 520, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+            {/* Header */}
+            <div style={{ borderBottom: '3px solid #d60000', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 16, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#fff' }}>Add to Client</div>
+                <div style={{ fontSize: 11, color: '#555', marginTop: 2 }}>{selectedKwIds.size} keyword{selectedKwIds.size !== 1 ? 's' : ''} selected from {activeIndustry}</div>
+              </div>
+              <button onClick={() => setShowAddToClientModal(false)} style={{ background: 'none', border: 'none', color: '#444', fontSize: 18, cursor: 'pointer', padding: '0 4px' }}>✕</button>
+            </div>
+
+            <div style={{ overflowY: 'auto', padding: 20, flex: 1 }}>
+              {/* Selected keywords preview */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 10, color: '#d60000', letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, marginBottom: 8 }}>Keywords Being Added</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {(library[activeIndustry] || []).filter(k => selectedKwIds.has(k.id)).map(k => (
+                    <span key={k.id} style={{ background: '#1a1a1a', border: '1px solid #333', padding: '3px 10px', fontSize: 11, color: '#ccc', fontFamily: "'Barlow', sans-serif" }}>{k.keyword}</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Destination */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 10, color: '#d60000', letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, marginBottom: 10 }}>Add To</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {[
+                    { val: 'queue', label: 'Keyword Queue', desc: 'Adds to the client's keyword pool. Schedule from their queue later, or generate on the fly.' },
+                    { val: 'schedule', label: 'Scheduled Queue', desc: 'Adds directly to the publishing schedule so posts generate automatically.' },
+                  ].map(opt => (
+                    <label key={opt.val} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', cursor: 'pointer', padding: '10px 14px', border: `1px solid ${addToClientDest === opt.val ? '#d60000' : '#222'}`, background: addToClientDest === opt.val ? 'rgba(214,0,0,0.06)' : 'transparent', transition: 'all 0.15s' }}>
+                      <input type='radio' name='dest' value={opt.val} checked={addToClientDest === opt.val} onChange={() => setAddToClientDest(opt.val)} style={{ accentColor: '#d60000', marginTop: 2, flexShrink: 0 }} />
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#fff', fontFamily: "'Barlow', sans-serif" }}>{opt.label}</div>
+                        <div style={{ fontSize: 11, color: '#555', marginTop: 2, fontFamily: "'Barlow', sans-serif" }}>{opt.desc}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Client selection */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 10, color: '#d60000', letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Select Clients</span>
+                  <button style={{ background: 'none', border: 'none', color: '#555', fontSize: 10, cursor: 'pointer', textDecoration: 'underline', fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase', letterSpacing: '0.08em' }}
+                    onClick={() => setAddToClientTargets(addToClientTargets.size === clients.length ? new Set() : new Set(clients.map(c => c.id)))}>
+                    {addToClientTargets.size === clients.length ? 'Deselect All' : 'Select All'}
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {clients.map(c => (
+                    <label key={c.id} style={{ display: 'flex', gap: 12, alignItems: 'center', cursor: 'pointer', padding: '10px 14px', border: `1px solid ${addToClientTargets.has(c.id) ? '#d60000' : '#222'}`, background: addToClientTargets.has(c.id) ? 'rgba(214,0,0,0.06)' : 'transparent', transition: 'all 0.15s' }}>
+                      <input type='checkbox' checked={addToClientTargets.has(c.id)} style={{ accentColor: '#d60000', flexShrink: 0 }}
+                        onChange={e => setAddToClientTargets(prev => { const n = new Set(prev); e.target.checked ? n.add(c.id) : n.delete(c.id); return n; })} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', fontFamily: "'Barlow', sans-serif" }}>{c.name}</div>
+                        <div style={{ fontSize: 10, color: '#444', fontFamily: "'Barlow', sans-serif" }}>{c.industry}{c.domain ? ' · ' + c.domain : ''}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Result */}
+              {addToClientResult && (
+                <div style={{ padding: '10px 14px', background: addToClientResult.errors > 0 && addToClientResult.success === 0 ? 'rgba(239,68,68,0.08)' : 'rgba(34,197,94,0.08)', borderLeft: `3px solid ${addToClientResult.errors > 0 && addToClientResult.success === 0 ? '#ef4444' : '#22c55e'}`, fontSize: 12, color: addToClientResult.errors > 0 && addToClientResult.success === 0 ? '#ef4444' : '#22c55e', marginBottom: 4, fontFamily: "'Barlow', sans-serif" }}>
+                  {addToClientResult.success > 0 && `✓ Added ${addToClientResult.success} keyword${addToClientResult.success !== 1 ? 's' : ''} to ${addToClientResult.dest === 'queue' ? 'keyword queue' : 'scheduled queue'}${addToClientResult.errors > 0 ? ` (${addToClientResult.errors} failed)` : ''}`}
+                  {addToClientResult.success === 0 && `✗ Failed to add keywords. Check that the client has WordPress configured.`}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div style={{ borderTop: '1px solid #1a1a1a', padding: '14px 20px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button style={{ ...styles.backBtn, marginBottom: 0 }} onClick={() => setShowAddToClientModal(false)}>Cancel</button>
+              <button
+                disabled={addToClientTargets.size === 0 || addToClientBusy}
+                style={{ ...styles.addBtn, opacity: addToClientTargets.size === 0 || addToClientBusy ? 0.5 : 1, cursor: addToClientTargets.size === 0 || addToClientBusy ? 'not-allowed' : 'pointer' }}
+                onClick={addToClients}
+              >
+                {addToClientBusy ? 'Adding...' : `Add to ${addToClientTargets.size} Client${addToClientTargets.size !== 1 ? 's' : ''}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       </div>
     </div>
   );
 }
 
-const R = "#d60000";
+const R = #d60000;
 const styles = {
   root: { display: "flex", minHeight: "100vh", background: "#000", fontFamily: "'Barlow', sans-serif", color: "#fff" },
   sidebar: { background: "#0a0a0a", borderRight: "2px solid #1a1a1a", display: "flex", flexDirection: "column", transition: "width 0.2s ease", overflow: "hidden", flexShrink: 0 },
