@@ -3698,8 +3698,8 @@ function App() {
                 <div style={{ fontSize: 10, color: '#d60000', letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, marginBottom: 10 }}>Add To</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {[
-                    { val: 'clientlist', label: 'Client Keywords', desc: "Adds to the client's keyword list. From there you can drag keywords into the Monthly Queue when ready." },
-                    { val: 'queue', label: 'Monthly Queue', desc: 'Adds directly to the client's monthly keyword queue to generate posts from.' },
+                    { val: 'clientlist', label: 'Client Keywords', desc: "Adds to the client keyword list. From there you can drag keywords into the Monthly Queue when ready." },
+                    { val: 'queue', label: 'Monthly Queue', desc: "Adds directly to the client monthly keyword queue to generate posts from." },
                     { val: 'schedule', label: 'Scheduled Queue', desc: 'Adds directly to the publishing schedule so posts generate automatically.' },
                   ].map(opt => (
                     <label key={opt.val} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', cursor: 'pointer', padding: '10px 14px', border: `1px solid ${addToClientDest === opt.val ? '#d60000' : '#222'}`, background: addToClientDest === opt.val ? 'rgba(214,0,0,0.06)' : 'transparent', transition: 'all 0.15s' }}>
