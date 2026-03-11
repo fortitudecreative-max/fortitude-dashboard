@@ -1784,35 +1784,20 @@ function App() {
                   </button>
 
                   {clientProfileExpanded && (
-                    <div style={{ paddingTop: 8 }}>
+                    <div style={{ paddingTop: 4 }}>
                       {editingClient ? (
-                        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
-                          <button style={{ ...styles.addBtn, fontSize: 11, padding: "6px 14px" }} onClick={saveClientEdits} disabled={savingClient}>{savingClient ? "Saving..." : "Save Changes"}</button>
-                          <button style={{ ...styles.addBtn, background: "none", border: "1px solid #d60000", color: "#d60000", fontSize: 11, padding: "6px 14px" }} onClick={() => setEditingClient(false)}>Cancel</button>
-                          <div style={{ flex: 1 }} />
-                          <button style={{ ...styles.connectBtn, fontSize: 11, padding: "6px 14px", borderColor: "#333", color: "#555" }} onClick={() => deleteClient(selectedClient)}>✕ Delete Client</button>
-                        </div>
-                      ) : (
-                        <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                          <button style={{ ...styles.connectBtn, fontSize: 11, padding: "6px 14px" }} onClick={startEditClient}>✎ Edit Client</button>
-                          {editingClient && (
-                            <div style={{ position: "relative", display: "inline-block" }}>
-                              <div style={{ ...styles.clientDetailAvatar, overflow: "hidden", cursor: "pointer", width: 40, height: 40 }}
-                                onClick={() => logoInputRef.current && logoInputRef.current.click()}
-                                title="Click to upload logo">
-                                {logoUploading && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff" }}>...</div>}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {editingClient && (
-                        <div style={{ marginBottom: 14 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                        <>
+                          {/* Edit mode action buttons */}
+                          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
+                            <button style={{ ...styles.addBtn, fontSize: 11, padding: "6px 14px" }} onClick={saveClientEdits} disabled={savingClient}>{savingClient ? "Saving..." : "Save Changes"}</button>
+                            <button style={{ ...styles.addBtn, background: "none", border: "1px solid #d60000", color: "#d60000", fontSize: 11, padding: "6px 14px" }} onClick={() => setEditingClient(false)}>Cancel</button>
+                            <div style={{ flex: 1 }} />
+                            <button style={{ ...styles.connectBtn, fontSize: 11, padding: "6px 14px", borderColor: "#333", color: "#555" }} onClick={() => deleteClient(selectedClient)}>✕ Delete Client</button>
+                          </div>
+                          {/* Logo upload */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
                             <div style={{ position: "relative", cursor: "pointer" }}
-                              onClick={() => logoInputRef.current && logoInputRef.current.click()}
-                              title="Click to upload logo">
+                              onClick={() => logoInputRef.current && logoInputRef.current.click()}>
                               <div style={{ ...styles.clientDetailAvatar, overflow: "hidden", width: 48, height: 48 }}>
                                 {selectedClient.logo_url
                                   ? <img src={selectedClient.logo_url} alt={selectedClient.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
@@ -1825,78 +1810,76 @@ function App() {
                                 onClick={() => logoInputRef.current && logoInputRef.current.click()}>
                                 {logoUploading ? "Uploading..." : "Upload Logo"}
                               </div>
-                              <div style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif" }}>Click avatar to replace</div>
+                              <div style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif" }}>Click to replace</div>
                             </div>
                             <input ref={logoInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => uploadClientLogo(e, selectedClient.id)} />
                           </div>
-                        </div>
-                      )}
-
-
-                {editingClient ? (
-                  <div style={{ background: "#111", border: "1px solid #1f1f1f", borderRadius: 10, padding: 24, marginBottom: 24 }}>
-                    <div style={{ fontSize: 11, color: "#666", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 16 }}>Edit Client Settings</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
-                      <div>
-                        <div style={styles.postMetaLabel}>Domain</div>
-                        <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.domain} onChange={e => setClientEdits({ ...clientEdits, domain: e.target.value })} placeholder="clientsite.com" />
-                      </div>
-                      <div>
-                        <div style={styles.postMetaLabel}>Service Area</div>
-                        <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.service_area} onChange={e => setClientEdits({ ...clientEdits, service_area: e.target.value })} placeholder="City and state (e.g. Charlotte, NC)" />
-                      </div>
-                      <div>
-                        <div style={styles.postMetaLabel}>Industry Tags</div>
-                        <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.industry_tags || ""} onChange={e => setClientEdits({ ...clientEdits, industry_tags: e.target.value })} placeholder="hvac, plumbing, electrical..." />
-                        <div style={{ fontSize: 10, color: "#555", marginTop: 4, fontFamily: "'Barlow', sans-serif" }}>Comma-separated — used to pull matching keywords from the library</div>
-                      </div>
-                      <div>
-                        <div style={styles.postMetaLabel}>WordPress URL</div>
-                        <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.wordpress_url} onChange={e => setClientEdits({ ...clientEdits, wordpress_url: e.target.value })} placeholder="https://clientsite.com" />
-                      </div>
-                      <div>
-                        <div style={styles.postMetaLabel}>WordPress Username</div>
-                        <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.wordpress_username} onChange={e => setClientEdits({ ...clientEdits, wordpress_username: e.target.value })} placeholder="admin username" />
-                      </div>
-                      <div>
-                        <div style={styles.postMetaLabel}>WordPress App Password</div>
-                        <input style={{ ...styles.searchInput, marginTop: 6 }} type="password" value={clientEdits.wordpress_password} onChange={e => setClientEdits({ ...clientEdits, wordpress_password: e.target.value })} placeholder="xxxx xxxx xxxx xxxx" />
-                      </div>
-                    </div>
-                    <div style={{ marginBottom: 16 }}>
-                      <div style={styles.postMetaLabel}>Brand Voice</div>
-                      <textarea style={{ ...styles.textArea, marginTop: 6 }} value={clientEdits.brand_voice} onChange={e => setClientEdits({ ...clientEdits, brand_voice: e.target.value })} placeholder="Describe the client's tone, style, and any specific keywords or phrases to use..." />
-                    </div>
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                        <div style={styles.postMetaLabel}>Competitors</div>
-                        <button style={{ ...styles.connectBtn, fontSize: 10 }} onClick={findCompetitors} disabled={findingCompetitors}>
-                          {findingCompetitors ? "Searching..." : "⟳ Auto-Find"}
-                        </button>
-                      </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                        {competitors.map((comp, i) => (
-                          <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 6, padding: "4px 10px" }}>
-                            <span style={{ fontSize: 12, color: "#ccc" }}>{comp}</span>
-                            <button style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 14, padding: 0, lineHeight: 1 }} onClick={() => { const u=[...competitors]; u.splice(i,1); setCompetitors(u); saveCompetitors(selectedClient.id, u); }}>×</button>
+                          {/* Edit form */}
+                          <div style={{ background: "#111", border: "1px solid #1f1f1f", borderRadius: 10, padding: 20, marginBottom: 16 }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                              <div>
+                                <div style={styles.postMetaLabel}>Domain</div>
+                                <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.domain} onChange={e => setClientEdits(p => ({ ...p, domain: e.target.value }))} />
+                              </div>
+                              <div>
+                                <div style={styles.postMetaLabel}>Service Area</div>
+                                <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.service_area} onChange={e => setClientEdits(p => ({ ...p, service_area: e.target.value }))} />
+                              </div>
+                              <div>
+                                <div style={styles.postMetaLabel}>Industry Tags</div>
+                                <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.industry_tags || ""} onChange={e => setClientEdits(p => ({ ...p, industry_tags: e.target.value }))} />
+                                <div style={{ fontSize: 10, color: "#555", marginTop: 4, fontFamily: "'Barlow', sans-serif" }}>Comma-separated (e.g. hvac, cooling)</div>
+                              </div>
+                              <div>
+                                <div style={styles.postMetaLabel}>WordPress URL</div>
+                                <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.wordpress_url} onChange={e => setClientEdits(p => ({ ...p, wordpress_url: e.target.value }))} />
+                              </div>
+                              <div>
+                                <div style={styles.postMetaLabel}>WordPress Username</div>
+                                <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.wordpress_username} onChange={e => setClientEdits(p => ({ ...p, wordpress_username: e.target.value }))} />
+                              </div>
+                              <div>
+                                <div style={styles.postMetaLabel}>WordPress App Password</div>
+                                <input style={{ ...styles.searchInput, marginTop: 6 }} type="password" value={clientEdits.wordpress_password || ""} onChange={e => setClientEdits(p => ({ ...p, wordpress_password: e.target.value }))} />
+                              </div>
+                            </div>
+                            <div style={{ marginBottom: 16 }}>
+                              <div style={styles.postMetaLabel}>Brand Voice</div>
+                              <textarea style={{ ...styles.textArea, marginTop: 6 }} value={clientEdits.brand_voice} onChange={e => setClientEdits(p => ({ ...p, brand_voice: e.target.value }))} />
+                            </div>
+                            <div>
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                                <div style={styles.postMetaLabel}>Competitors</div>
+                                <button style={{ ...styles.connectBtn, fontSize: 10 }} onClick={findCompetitors} disabled={findingCompetitors}>
+                                  {findingCompetitors ? "Searching..." : "⟳ Auto-Find"}
+                                </button>
+                              </div>
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                                {competitors.map((comp, ci) => (
+                                  <div key={ci} style={{ display: "flex", alignItems: "center", gap: 6, background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 6, padding: "5px 10px" }}>
+                                    <span style={{ fontSize: 12, color: "#ccc" }}>{comp}</span>
+                                    <button style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0 }} onClick={() => { const u = competitors.filter((_, j) => j !== ci); setCompetitors(u); saveCompetitors(selectedClient.id, u); }}>×</button>
+                                  </div>
+                                ))}
+                                {competitors.length < 5 && (
+                                  <button style={{ ...styles.connectBtn, fontSize: 11 }} onClick={() => {
+                                    const domain = prompt("Enter competitor domain (e.g. competitor.com):");
+                                    if (domain && competitors.length < 5) { const updated = [...competitors, domain.trim()]; setCompetitors(updated); saveCompetitors(selectedClient.id, updated); }
+                                  }}>+ Add</button>
+                                )}
+                              </div>
+                              {competitors.length > 0 && <div style={{ fontSize: 11, color: "#444", marginTop: 6 }}>{competitors.length}/5 competitors saved.</div>}
+                            </div>
                           </div>
-                        ))}
-                        {competitors.length < 5 && (
-                          <button style={{ ...styles.connectBtn, fontSize: 11 }} onClick={() => {
-                            const domain = prompt("Enter competitor domain (e.g. competitor.com):");
-                            if (domain && competitors.length < 5) { const updated = [...competitors, domain.trim().replace(/^https?:\/\//,"")]; setCompetitors(updated); saveCompetitors(selectedClient.id, updated); }
-                          }}>+ Add</button>
-                        )}
-                      </div>
-                      {competitors.length > 0 && <div style={{ fontSize: 11, color: "#444", marginTop: 6 }}>{competitors.length}/5 competitors tracked</div>}
-                    </div>
-                  </div>
-                ) : null}
+                        </>
+                      ) : (
+                        <button style={{ ...styles.connectBtn, fontSize: 11, padding: "6px 14px", marginBottom: 8 }} onClick={startEditClient}>✎ Edit Client</button>
+                      )}
                     </div>
                   )}
                 </div>
 
-                {/* ── CONNECTED APPS DROPDOWN ── */}
+                                {/* ── CONNECTED APPS DROPDOWN ── */}
                 <div style={{ marginBottom: 20 }}>
                     <button
                       onClick={() => setProfileExpanded(v => !v)}
