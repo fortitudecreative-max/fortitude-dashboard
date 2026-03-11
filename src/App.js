@@ -2192,7 +2192,6 @@ function App() {
                               const globalIdx = baseOffset + idx;
                               const schedDate = new Date();
                               schedDate.setDate(schedDate.getDate() + globalIdx + 1);
-                              const schedStr = schedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " 8:45am";
                               const isSelected = selectedQueueRowId === row.id;
                               const rowPostData = queueRowPosts[row.id];
                               const hasPost = rowPostData && rowPostData.post;
@@ -2218,7 +2217,18 @@ function App() {
                                   <div style={{ flex: 1, textAlign: "center" }}>
                                     <span style={{ ...styles.intentBadge, color: getIntentColor(row.intent), background: getIntentColor(row.intent) + "22", borderColor: getIntentColor(row.intent) + "44" }}>{row.intent}</span>
                                   </div>
-                                  <div style={{ flex: "0 0 130px", textAlign: "center", color: "#666", fontSize: 11 }}>{row.used ? <span style={{ color: "#555" }}>published</span> : schedStr}</div>
+                                  <div style={{ flex: "0 0 130px", textAlign: "center" }}>
+                                    {row.used ? (
+                                      <span style={{ fontSize: 11, color: "#555", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em" }}>PUBLISHED</span>
+                                    ) : (
+                                      <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                                        <span style={{ fontSize: 12, color: "#ccc", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", fontWeight: 600 }}>
+                                          {schedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                        </span>
+                                        <span style={{ fontSize: 10, color: "#666", fontFamily: "'Barlow', sans-serif" }}>8:45 AM EST</span>
+                                      </div>
+                                    )}
+                                  </div>
                                   <div style={{ flex: "0 0 220px", display: "flex", gap: 4, justifyContent: "center" }} onClick={e => e.stopPropagation()}>
                                     {hasPost ? (
                                       <button style={{ ...styles.addKeywordBtn, color: "#22c55e", borderColor: "rgba(34,197,94,0.3)", background: "rgba(34,197,94,0.08)" }} onClick={() => {
@@ -2250,7 +2260,7 @@ function App() {
                                 <div style={{ border: "1px solid #1a1a1a", borderRadius: 8, overflow: "hidden" }}>
                                   <div style={{ background: "#0a0a0a", padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #1a1a1a" }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                      <span style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", color: "#a78bfa", fontWeight: 600 }}>📚 Keyword Research</span>
+                                      <span style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", color: "#a78bfa", fontWeight: 600 }}>Keyword Research</span>
                                       <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif" }}>{allRows.filter(r => !r.used).length} active</span>
                                     </div>
                                     <button style={{ ...styles.addKeywordBtn, color: "#a78bfa", borderColor: "rgba(167,139,250,0.3)", background: "rgba(167,139,250,0.07)", fontSize: 11 }} onClick={refreshResearchKeywords} disabled={refreshingResearch}>
@@ -2277,7 +2287,7 @@ function App() {
                                 <div style={{ border: "1px solid #1a1a1a", borderRadius: 8, overflow: "hidden" }}>
                                   <div style={{ background: "#0a0a0a", padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #1a1a1a" }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                      <span style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", color: "#f59e0b", fontWeight: 600 }}>🎯 Competitor Gap</span>
+                                      <span style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", color: "#f59e0b", fontWeight: 600 }}>Competitor Gap</span>
                                       <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif" }}>{gapRows.filter(r => !r.used).length} active</span>
                                     </div>
                                     <button style={{ ...styles.addKeywordBtn, color: "#f59e0b", borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.07)", fontSize: 11 }} onClick={refreshGapKeywords} disabled={refreshingGap}>
