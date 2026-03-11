@@ -1755,7 +1755,16 @@ function App() {
             <div>
               <button style={styles.backBtn} onClick={() => setSelectedClient(null)}>← Back to Clients</button>
               <div style={styles.clientDetail} className="f-client-detail-pad">
-                <div style={styles.clientDetailHeader} className="f-client-detail-header">
+                <div style={{ ...styles.clientDetailHeader, position: "relative" }} className="f-client-detail-header">
+                  {!editingClient ? (
+                    <button style={{ ...styles.connectBtn, fontSize: 11, padding: "6px 14px", position: "absolute", top: 0, right: 0 }} onClick={startEditClient}>✎ Edit Client</button>
+                  ) : (
+                    <div style={{ display: "flex", gap: 8, position: "absolute", top: 0, right: 0 }}>
+                      <button style={{ ...styles.connectBtn, fontSize: 11, padding: "6px 14px", borderColor: "#d60000", color: "#d60000" }} onClick={() => deleteClient(selectedClient)}>✕ Delete</button>
+                      <button style={{ ...styles.addBtn, background: "none", border: "1px solid #333", color: "#666", fontSize: 11, padding: "6px 14px" }} onClick={() => setEditingClient(false)}>Cancel</button>
+                      <button style={{ ...styles.addBtn, fontSize: 11, padding: "6px 14px" }} onClick={saveClientEdits} disabled={savingClient}>{savingClient ? "Saving..." : "Save Changes"}</button>
+                    </div>
+                  )}
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
                     <div style={{ ...styles.clientDetailAvatar, overflow: "hidden", position: "relative", cursor: "pointer" }}
                       onClick={() => logoInputRef.current && logoInputRef.current.click()}
@@ -1776,19 +1785,7 @@ function App() {
                     <div style={styles.clientDetailIndustry}>{selectedClient.industry} · {selectedClient.domain || "No domain set"}</div>
                   </div>
                 </div>
-                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16, gap: 8 }}>
-                  {!editingClient ? (
-                    <>
-                      <button style={{ ...styles.connectBtn, fontSize: 12, padding: "8px 16px" }} onClick={startEditClient}>✎ Edit Client</button>
-                      <button style={{ ...styles.connectBtn, fontSize: 12, padding: "8px 16px", borderColor: "#d60000", color: "#d60000" }} onClick={() => deleteClient(selectedClient)}>✕ Delete Client</button>
-                    </>
-                  ) : (
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button style={{ ...styles.addBtn, background: "none", border: "1px solid #333", color: "#666", fontSize: 12 }} onClick={() => setEditingClient(false)}>Cancel</button>
-                      <button style={{ ...styles.addBtn, fontSize: 12 }} onClick={saveClientEdits} disabled={savingClient}>{savingClient ? "Saving..." : "Save Changes"}</button>
-                    </div>
-                  )}
-                </div>
+
 
                 {editingClient ? (
                   <div style={{ background: "#111", border: "1px solid #1f1f1f", borderRadius: 10, padding: 24, marginBottom: 24 }}>
@@ -1827,6 +1824,12 @@ function App() {
                   </div>
                 ) : (
                   <div style={{ marginBottom: 28 }}>
+                    {selectedClient.brand_voice && (
+                      <div style={{ marginBottom: 20, padding: 14, background: "#111", borderRadius: 8, border: "1px solid #1f1f1f" }}>
+                        <div style={styles.postMetaLabel}>Brand Voice</div>
+                        <div style={{ fontSize: 13, color: "#aaa", marginTop: 6, lineHeight: 1.6 }}>{selectedClient.brand_voice}</div>
+                      </div>
+                    )}
                     <button
                       onClick={() => setProfileExpanded(v => !v)}
                       style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: "0 0 12px 0" }}
@@ -1965,13 +1968,6 @@ function App() {
                   </div>
                 )}
 
-                {!editingClient && selectedClient.brand_voice && (
-                  <div style={{ marginBottom: 24, padding: 16, background: "#111", borderRadius: 8, border: "1px solid #1f1f1f" }}>
-                    <div style={styles.postMetaLabel}>Brand Voice</div>
-                    <div style={{ fontSize: 13, color: "#aaa", marginTop: 8, lineHeight: 1.6 }}>{selectedClient.brand_voice}</div>
-                  </div>
-                )}
-
                 {/* SCHEDULING */}
                 <div style={{ marginBottom: 28 }}>
                   <button
@@ -2083,6 +2079,7 @@ function App() {
                   </button>
                   {gbpExpanded && gbpAgencyConnected && (
                   <div>
+                    {showGbpComposer && (
                       <div style={{ background: "#0d0d0d", borderTop: "3px solid #d60000", padding: 24, marginBottom: 16 }}>
                         <div style={{ marginBottom: 12 }}>
                           <div style={{ fontSize: 10, color: "#d60000", letterSpacing: "0.15em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, marginBottom: 8 }}>Post Content</div>
