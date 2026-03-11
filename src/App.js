@@ -294,6 +294,7 @@ function App() {
   const [gbpExpanded, setGbpExpanded] = useState(false);
   const [scheduledPostsExpanded, setScheduledPostsExpanded] = useState(false);
   const [archivedPostsExpanded, setArchivedPostsExpanded] = useState(false);
+  const [scheduledQueueExpanded, setScheduledQueueExpanded] = useState(true);
   const [imageGalleryExpanded, setImageGalleryExpanded] = useState(false);
 
   // SEO Audit
@@ -1817,9 +1818,32 @@ function App() {
                         <input style={{ ...styles.searchInput, marginTop: 6 }} type="password" value={clientEdits.wordpress_password} onChange={e => setClientEdits({ ...clientEdits, wordpress_password: e.target.value })} placeholder="xxxx xxxx xxxx xxxx" />
                       </div>
                     </div>
-                    <div>
+                    <div style={{ marginBottom: 16 }}>
                       <div style={styles.postMetaLabel}>Brand Voice</div>
                       <textarea style={{ ...styles.textArea, marginTop: 6 }} value={clientEdits.brand_voice} onChange={e => setClientEdits({ ...clientEdits, brand_voice: e.target.value })} placeholder="Describe the client's tone, style, and any specific keywords or phrases to use..." />
+                    </div>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                        <div style={styles.postMetaLabel}>Competitors</div>
+                        <button style={{ ...styles.connectBtn, fontSize: 10 }} onClick={findCompetitors} disabled={findingCompetitors}>
+                          {findingCompetitors ? "Searching..." : "⟳ Auto-Find"}
+                        </button>
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        {competitors.map((comp, i) => (
+                          <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 6, padding: "4px 10px" }}>
+                            <span style={{ fontSize: 12, color: "#ccc" }}>{comp}</span>
+                            <button style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 14, padding: 0, lineHeight: 1 }} onClick={() => { const u=[...competitors]; u.splice(i,1); setCompetitors(u); saveCompetitors(selectedClient.id, u); }}>×</button>
+                          </div>
+                        ))}
+                        {competitors.length < 5 && (
+                          <button style={{ ...styles.connectBtn, fontSize: 11 }} onClick={() => {
+                            const domain = prompt("Enter competitor domain (e.g. competitor.com):");
+                            if (domain && competitors.length < 5) { const updated = [...competitors, domain.trim().replace(/^https?:\/\//,"")]; setCompetitors(updated); saveCompetitors(selectedClient.id, updated); }
+                          }}>+ Add</button>
+                        )}
+                      </div>
+                      {competitors.length > 0 && <div style={{ fontSize: 11, color: "#444", marginTop: 6 }}>{competitors.length}/5 competitors tracked</div>}
                     </div>
                   </div>
                 ) : (
@@ -2077,9 +2101,34 @@ function App() {
                       <span style={{ fontSize: 18, color: "#fff", transition: "transform 0.2s", display: "inline-block", transform: gbpExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
                     </div>
                   </button>
-                  {gbpExpanded && gbpAgencyConnected && (
+                  {gbpExpanded && (
                   <div>
-                    {showGbpComposer && (
+                    {!gbpAgencyConnected && (
+                      <div style={{ padding: "20px 0", textAlign: "center" }}>
+                        <div style={{ color: "#555", fontSize: 13, marginBottom: 12 }}>Google account not connected to this agency.</div>
+                        <button style={styles.addBtn} onClick={connectAgencyGbp}>Connect Google Account</button>
+                      </div>
+                    )}
+                    {gbpAgencyConnected && !gbpStatus.connected && (
+                      <div style={{ padding: "16px 0" }}>
+                        <div style={{ color: "#555", fontSize: 12, marginBottom: 12, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>No location assigned — select one to link this client</div>
+                        {gbpLocationsLoading && <div style={{ color: "#555", fontSize: 12 }}>Loading locations...</div>}
+                        {gbpLocationsError && <div style={{ color: "#d60000", fontSize: 12, marginBottom: 10 }}>{gbpLocationsError}</div>}
+                        {!gbpLocationsLoading && gbpLocations.length === 0 && !gbpLocationsError && (
+                          <button style={{ ...styles.connectBtn, marginBottom: 10 }} onClick={loadGbpLocations}>Load Locations</button>
+                        )}
+                        {gbpLocations.length > 0 && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 200, overflowY: "auto" }}>
+                            {gbpLocations.map((loc, i) => (
+                              <button key={i} style={{ ...styles.connectBtn, textAlign: "left", padding: "8px 14px" }} onClick={() => assignGbpLocation(selectedClient.id, loc)}>
+                                {loc.title || loc.name}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {gbpAgencyConnected && gbpStatus.connected && showGbpComposer && (
                       <div style={{ background: "#0d0d0d", borderTop: "3px solid #d60000", padding: 24, marginBottom: 16 }}>
                         <div style={{ marginBottom: 12 }}>
                           <div style={{ fontSize: 10, color: "#d60000", letterSpacing: "0.15em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, marginBottom: 8 }}>Post Content</div>
@@ -2119,6 +2168,9 @@ function App() {
                           {gbpPosting ? "Publishing..." : "Publish to Google Business"}
                         </button>
                       </div>
+                    )}
+                    {gbpAgencyConnected && gbpStatus.connected && gbpPosts.length === 0 && !showGbpComposer && (
+                      <div style={{ padding: "16px 0", color: "#444", fontSize: 12, textAlign: "center", fontFamily: "'Barlow Condensed', sans-serif" }}>No GBP posts yet. Click + New Post above to publish your first update.</div>
                     )}
 
                     {gbpPosts.length > 0 && (
@@ -2234,16 +2286,28 @@ function App() {
                   {/* ── MONTHLY QUEUE TAB ── */}
                   {clientTab === "monthly" && (
                     <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-                        <div style={styles.sectionTitle}>Scheduled Queue {queueMonth ? `— ${queueMonth}` : ""}</div>
-                        <button style={{ ...styles.addBtn, fontSize: 13, padding: "10px 22px" }} onClick={refreshMonthlyQueue} disabled={refreshingQueue}>
-                          {refreshingQueue ? "Regenerating..." : "⟳ Regenerate Queue"}
-                        </button>
-                        <button style={{ ...styles.addBtn, background: "transparent", border: "1px solid #d60000", color: "#d60000", fontSize: 13, padding: "10px 22px" }} onClick={() => { setShowManualKeywordInput(v => !v); setManualKeywordText(""); }}>
-                          {showManualKeywordInput ? "✕ Cancel" : "+ Add Keyword"}
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => setScheduledQueueExpanded(v => !v)}
+                        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: "0 0 12px 0" }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <div style={styles.sectionTitle}>Scheduled Queue</div>
+                          {scheduledQueueExpanded && (
+                            <>
+                              <button style={{ ...styles.addBtn, fontSize: 13, padding: "10px 22px" }} onClick={e => { e.stopPropagation(); refreshMonthlyQueue(); }} disabled={refreshingQueue}>
+                                {refreshingQueue ? "Regenerating..." : "⟳ Regenerate Queue"}
+                              </button>
+                              <button style={{ ...styles.addBtn, background: "transparent", border: "1px solid #d60000", color: "#d60000", fontSize: 13, padding: "10px 22px" }} onClick={e => { e.stopPropagation(); setShowManualKeywordInput(v => !v); setManualKeywordText(""); }}>
+                                {showManualKeywordInput ? "✕ Cancel" : "+ Add Keyword"}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                        <span style={{ fontSize: 18, color: "#fff", transition: "transform 0.2s", display: "inline-block", transform: scheduledQueueExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                      </button>
 
+                      {scheduledQueueExpanded && (
+                      <>
                       {showManualKeywordInput && (
                         <div style={{ background: "#0a0a0a", border: "1px solid #222", borderRadius: 8, padding: "14px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                           <input style={{ ...styles.searchInput, flex: "1 1 200px", minWidth: 160 }} placeholder="Enter keyword..." value={manualKeywordText} onChange={e => setManualKeywordText(e.target.value)} onKeyDown={e => e.key === "Enter" && addManualKeyword()} autoFocus />
@@ -2409,6 +2473,8 @@ function App() {
                             );
                           })()}
                         </div>
+                      )}
+                      </>
                       )}
                     </div>
                   )}
