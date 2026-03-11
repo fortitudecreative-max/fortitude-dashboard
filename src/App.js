@@ -289,6 +289,7 @@ function App() {
   const clientImageInputRef = useRef(null);
   const [queueMonth, setQueueMonth] = useState("");
   // Expandable section states
+  const [clientProfileExpanded, setClientProfileExpanded] = useState(false);
   const [profileExpanded, setProfileExpanded] = useState(false);
   const [scheduleExpanded, setScheduleExpanded] = useState(false);
   const [gbpExpanded, setGbpExpanded] = useState(false);
@@ -1756,36 +1757,73 @@ function App() {
             <div>
               <button style={styles.backBtn} onClick={() => setSelectedClient(null)}>← Back to Clients</button>
               <div style={styles.clientDetail} className="f-client-detail-pad">
-                <div style={{ ...styles.clientDetailHeader, position: "relative" }} className="f-client-detail-header">
-                  {!editingClient ? (
-                    <button style={{ ...styles.connectBtn, fontSize: 11, padding: "6px 14px", position: "absolute", top: 0, right: 0 }} onClick={startEditClient}>✎ Edit Client</button>
-                  ) : (
-                    <div style={{ display: "flex", gap: 8, position: "absolute", top: 0, right: 0 }}>
-                      <button style={{ ...styles.connectBtn, fontSize: 11, padding: "6px 14px", borderColor: "#d60000", color: "#d60000" }} onClick={() => deleteClient(selectedClient)}>✕ Delete</button>
-                      <button style={{ ...styles.addBtn, background: "none", border: "1px solid #333", color: "#666", fontSize: 11, padding: "6px 14px" }} onClick={() => setEditingClient(false)}>Cancel</button>
-                      <button style={{ ...styles.addBtn, fontSize: 11, padding: "6px 14px" }} onClick={saveClientEdits} disabled={savingClient}>{savingClient ? "Saving..." : "Save Changes"}</button>
-                    </div>
-                  )}
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                    <div style={{ ...styles.clientDetailAvatar, overflow: "hidden", position: "relative", cursor: "pointer" }}
-                      onClick={() => logoInputRef.current && logoInputRef.current.click()}
-                      title="Click to upload logo">
+
+                {/* ── CLIENT PROFILE DROPDOWN ── */}
+                <div style={{ marginBottom: 20 }}>
+                  <button
+                    onClick={() => setClientProfileExpanded(v => !v)}
+                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, background: "none", border: "none", cursor: "pointer", padding: "0 0 12px 0" }}
+                  >
+                    <div style={{ ...styles.clientDetailAvatar, overflow: "hidden", flexShrink: 0 }}>
                       {selectedClient.logo_url
                         ? <img src={selectedClient.logo_url} alt={selectedClient.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                         : selectedClient.name.charAt(0)}
-                      {logoUploading && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff" }}>...</div>}
-                      <input ref={logoInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => uploadClientLogo(e, selectedClient.id)} />
                     </div>
-                    <div style={{ fontSize: 9, color: "#d60000", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", cursor: "pointer" }}
-                      onClick={() => logoInputRef.current && logoInputRef.current.click()}>
-                      {logoUploading ? "Uploading..." : "Upload Logo"}
+                    <div style={{ flex: 1, textAlign: "left" }}>
+                      <div style={styles.clientDetailName}>{selectedClient.name}</div>
+                      <div style={styles.clientDetailIndustry}>{selectedClient.industry} · {selectedClient.domain || "No domain set"}</div>
                     </div>
-                  </div>
-                  <div>
-                    <div style={styles.clientDetailName}>{selectedClient.name}</div>
-                    <div style={styles.clientDetailIndustry}>{selectedClient.industry} · {selectedClient.domain || "No domain set"}</div>
-                  </div>
-                </div>
+                    <span style={{ fontSize: 18, color: "#fff", transition: "transform 0.2s", display: "inline-block", transform: clientProfileExpanded ? "rotate(180deg)" : "rotate(0deg)", flexShrink: 0 }}>▾</span>
+                  </button>
+
+                  {clientProfileExpanded && (
+                    <div style={{ paddingTop: 8 }}>
+                      {editingClient ? (
+                        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
+                          <button style={{ ...styles.addBtn, fontSize: 11, padding: "6px 14px" }} onClick={saveClientEdits} disabled={savingClient}>{savingClient ? "Saving..." : "Save Changes"}</button>
+                          <button style={{ ...styles.addBtn, background: "none", border: "1px solid #d60000", color: "#d60000", fontSize: 11, padding: "6px 14px" }} onClick={() => setEditingClient(false)}>Cancel</button>
+                          <div style={{ flex: 1 }} />
+                          <button style={{ ...styles.connectBtn, fontSize: 11, padding: "6px 14px", borderColor: "#333", color: "#555" }} onClick={() => deleteClient(selectedClient)}>✕ Delete Client</button>
+                        </div>
+                      ) : (
+                        <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                          <button style={{ ...styles.connectBtn, fontSize: 11, padding: "6px 14px" }} onClick={startEditClient}>✎ Edit Client</button>
+                          {editingClient && (
+                            <div style={{ position: "relative", display: "inline-block" }}>
+                              <div style={{ ...styles.clientDetailAvatar, overflow: "hidden", cursor: "pointer", width: 40, height: 40 }}
+                                onClick={() => logoInputRef.current && logoInputRef.current.click()}
+                                title="Click to upload logo">
+                                {logoUploading && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff" }}>...</div>}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {editingClient && (
+                        <div style={{ marginBottom: 14 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                            <div style={{ position: "relative", cursor: "pointer" }}
+                              onClick={() => logoInputRef.current && logoInputRef.current.click()}
+                              title="Click to upload logo">
+                              <div style={{ ...styles.clientDetailAvatar, overflow: "hidden", width: 48, height: 48 }}>
+                                {selectedClient.logo_url
+                                  ? <img src={selectedClient.logo_url} alt={selectedClient.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                                  : selectedClient.name.charAt(0)}
+                                {logoUploading && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff" }}>...</div>}
+                              </div>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 9, color: "#d60000", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", cursor: "pointer" }}
+                                onClick={() => logoInputRef.current && logoInputRef.current.click()}>
+                                {logoUploading ? "Uploading..." : "Upload Logo"}
+                              </div>
+                              <div style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif" }}>Click avatar to replace</div>
+                            </div>
+                            <input ref={logoInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => uploadClientLogo(e, selectedClient.id)} />
+                          </div>
+                        </div>
+                      )}
 
 
                 {editingClient ? (
@@ -1846,14 +1884,13 @@ function App() {
                       {competitors.length > 0 && <div style={{ fontSize: 11, color: "#444", marginTop: 6 }}>{competitors.length}/5 competitors tracked</div>}
                     </div>
                   </div>
-                ) : (
-                  <div style={{ marginBottom: 28 }}>
-                    {selectedClient.brand_voice && (
-                      <div style={{ marginBottom: 20, padding: 14, background: "#111", borderRadius: 8, border: "1px solid #1f1f1f" }}>
-                        <div style={styles.postMetaLabel}>Brand Voice</div>
-                        <div style={{ fontSize: 13, color: "#aaa", marginTop: 6, lineHeight: 1.6 }}>{selectedClient.brand_voice}</div>
-                      </div>
-                    )}
+                ) : null}
+                    </div>
+                  )}
+                </div>
+
+                {/* ── CONNECTED APPS DROPDOWN ── */}
+                <div style={{ marginBottom: 20 }}>
                     <button
                       onClick={() => setProfileExpanded(v => !v)}
                       style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: "0 0 12px 0" }}
@@ -1920,8 +1957,7 @@ function App() {
                   </div>
                   </div>
                   )}
-                  </div>
-                )}
+                </div>
 
                 {/* GBP ASSIGN PANEL — dropdown from G tile */}
                 {!editingClient && gbpAgencyConnected && !gbpStatus.connected && showGbpAssignPanel && (
@@ -1993,7 +2029,7 @@ function App() {
                 )}
 
                 {/* SCHEDULING */}
-                <div style={{ marginBottom: 28 }}>
+                <div style={{ marginBottom: 20 }}>
                   <button
                     onClick={() => setScheduleExpanded(v => !v)}
                     style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: scheduleExpanded ? 16 : 0 }}
@@ -2051,7 +2087,7 @@ function App() {
                     </div>
                     <div style={{ marginBottom: 16 }}>
                       <div style={styles.postMetaLabel}>Publish Days</div>
-                      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                      <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
                         {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(day => {
                           const days = scheduleSettings.schedule_days || ["Mon","Tue","Wed","Thu","Fri"];
                           const active = days.includes(day);
@@ -2081,7 +2117,7 @@ function App() {
                 </div>
 
                 {/* GOOGLE BUSINESS PROFILE POSTS */}
-                <div style={{ marginBottom: 28 }}>
+                <div style={{ marginBottom: 20 }}>
                   <button
                     onClick={() => setGbpExpanded(v => !v)}
                     style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: gbpExpanded ? 16 : 0 }}
@@ -2237,41 +2273,12 @@ function App() {
                       </div>
                     )}
 
-                    {/* ARCHIVED POSTS — collapsible, under Scheduled Posts */}
-                    {scheduleJobs.filter(j => j.status === "published").length > 0 && (
-                      <div style={{ marginTop: 12 }}>
-                        <button
-                          onClick={() => setArchivedPostsExpanded(v => !v)}
-                          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: "8px 0 0 0", marginBottom: archivedPostsExpanded ? 8 : 0 }}
-                        >
-                          <div style={styles.sectionTitle}>
-                            Archived Posts <span style={{ fontSize: 13, color: "#555", fontWeight: 400, fontFamily: "'Barlow Condensed', sans-serif" }}>({scheduleJobs.filter(j => j.status === "published").length})</span>
-                          </div>
-                          <span style={{ fontSize: 18, color: "#fff", transition: "transform 0.2s", display: "inline-block", transform: archivedPostsExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
-                        </button>
-                        {archivedPostsExpanded && (
-                          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                            {scheduleJobs.filter(j => j.status === "published").map(job => (
-                              <div key={job.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "#0a0a0a", border: "1px solid #141414", borderRadius: 4 }}>
-                                <span style={{ fontSize: 11, color: "#22c55e", flexShrink: 0 }}>✓</span>
-                                <span style={{ flex: 1, fontSize: 12, color: "#aaa", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.04em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{job.keyword}</span>
-                                {job.published_url ? (
-                                  <a href={job.published_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "#555", textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180, flexShrink: 0 }} onMouseEnter={e => e.currentTarget.style.color = "#d60000"} onMouseLeave={e => e.currentTarget.style.color = "#555"}>{job.published_url.replace(/^https?:\/\//, "")}</a>
-                                ) : (
-                                  <span style={{ fontSize: 11, color: "#333", flexShrink: 0 }}>—</span>
-                                )}
-                                <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", flexShrink: 0, marginLeft: "auto" }}>{new Date(job.scheduled_time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
                 )}
 
-                {/* KEYWORD TABS: Monthly Queue | Client Keywords | Used Keywords */}
-                <div style={{ marginBottom: 28 }}>
+
+                                {/* KEYWORD TABS: Monthly Queue | Client Keywords | Used Keywords */}
+                <div style={{ marginBottom: 20 }}>
                   {/* Tab Bar */}
                   <div style={{ display: "flex", gap: 2, marginBottom: 20, borderBottom: "1px solid #222", paddingBottom: 0 }}>
                     {[
@@ -2587,8 +2594,54 @@ function App() {
                   )}
                 </div>
 
-                {/* CLIENT IMAGE LIBRARY */}
-                <div style={{ marginBottom: 28 }}>
+                {/* ARCHIVED POSTS — standalone section */}
+                {scheduleJobs.filter(j => j.status === "published").length > 0 && (
+                  <div style={{ marginBottom: 20 }}>
+                    <button
+                      onClick={() => setArchivedPostsExpanded(v => !v)}
+                      style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: "0 0 12px 0" }}
+                    >
+                      <div style={styles.sectionTitle}>
+                        Archived Posts <span style={{ fontSize: 12, color: "#555", fontWeight: 400, fontFamily: "'Barlow Condensed', sans-serif" }}>({scheduleJobs.filter(j => j.status === "published").length})</span>
+                      </div>
+                      <span style={{ fontSize: 18, color: "#fff", transition: "transform 0.2s", display: "inline-block", transform: archivedPostsExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                    </button>
+                    {archivedPostsExpanded && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {scheduleJobs.filter(j => j.status === "published").map(job => (
+                          <div key={job.id} style={{ background: "#0a0a0a", border: "1px solid #141414", borderRadius: 6, padding: "10px 14px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: job.published_url ? 6 : 0 }}>
+                              <span style={{ fontSize: 11, color: "#22c55e", flexShrink: 0 }}>✓</span>
+                              <span style={{ flex: 1, fontSize: 12, color: "#fff", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.04em", fontWeight: 600 }}>{job.keyword}</span>
+                              <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", flexShrink: 0 }}>{new Date(job.scheduled_time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                            </div>
+                            {job.published_url && (
+                              <div style={{ display: "flex", alignItems: "center", gap: 10, paddingLeft: 20 }}>
+                                <a href={job.published_url} target="_blank" rel="noopener noreferrer"
+                                  style={{ fontSize: 11, color: "#555", textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}
+                                  onMouseEnter={e => e.currentTarget.style.color = "#d60000"}
+                                  onMouseLeave={e => e.currentTarget.style.color = "#555"}>
+                                  ↗ {job.published_url.replace(/^https?:\/\//, "")}
+                                </a>
+                                {job.wp_post_id && selectedClient.wordpress_url && (
+                                  <a
+                                    href={`${selectedClient.wordpress_url.replace(/\/$/, "")}/wp-admin/post.php?post=${job.wp_post_id}&action=edit`}
+                                    target="_blank" rel="noopener noreferrer"
+                                    style={{ ...styles.connectBtn, fontSize: 9, padding: "3px 10px", textDecoration: "none", display: "inline-block", flexShrink: 0 }}>
+                                    ✎ Yoast Fix
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                                {/* CLIENT IMAGE LIBRARY */}
+                <div style={{ marginBottom: 20 }}>
                   <button
                     onClick={() => setImageGalleryExpanded(v => !v)}
                     style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: imageGalleryExpanded ? 12 : 0 }}
