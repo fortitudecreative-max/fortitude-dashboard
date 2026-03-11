@@ -1392,6 +1392,9 @@ function App() {
       if (data.success) {
         setPublishResult({ success: true, wpPostId: data.wpPostId, url: data.wpPostUrl, qa: data.qa || null, repairHistory: data.repairHistory || [], yoastEdition: data.yoastEdition, longtailKeyphrase: data.longtailKeyphrase, fortitudePlugin: data.fortitudePlugin, canWriteSeoMeta: data.canWriteSeoMeta, yoastOpt: data.yoastOpt || null });
         loadClients();
+        // Reload schedule jobs so published post moves to Archived Posts
+        if (activeClient?.id) loadScheduleJobs(activeClient.id);
+        if (selectedClient?.id) loadScheduleJobs(selectedClient.id);
       } else {
         setPublishResult({ success: false, error: data.detail || data.error });
       }
