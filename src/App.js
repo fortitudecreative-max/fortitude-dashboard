@@ -1660,6 +1660,7 @@ function App() {
                       setScheduledPostsExpanded(false);
                       setArchivedPostsExpanded(false);
                       setScheduledQueueExpanded(false);
+                      setYoastStatuses({});
                       setImageGalleryExpanded(false);
                       setScheduleSettings({
                         schedule_frequency: client.schedule_frequency || "daily",
@@ -1716,6 +1717,7 @@ function App() {
                       setScheduledPostsExpanded(false);
                       setArchivedPostsExpanded(false);
                       setScheduledQueueExpanded(false);
+                      setYoastStatuses({});
                       setImageGalleryExpanded(false);
                       setScheduleSettings({
                         schedule_frequency: client.schedule_frequency || "daily",
@@ -2247,13 +2249,12 @@ function App() {
                   </button>
                   {scheduledQueueExpanded && (
                     <div>
-                      {/* Scheduled Posts pending/processing */}
                       {scheduleJobs.filter(j => j.status !== "published").length > 0 && (
                         <div style={{ marginBottom: 16 }}>
                           <div style={{ fontSize: 10, color: "#555", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>
                             Scheduled Posts ({scheduleJobs.filter(j => j.status !== "published").length})
                           </div>
-                      <div style={styles.table}>
+                          <div style={styles.table}>
                         <div style={styles.tableHeader}>
                           <div style={{ flex: "0 0 20px" }}></div>
                           <div style={{ flex: 3 }}>Keyword</div>
@@ -2281,315 +2282,312 @@ function App() {
                             </div>
                           </div>
                         ))}
+                          </div>
+                        </div>
+                      )}
+                        {/* Tab Bar */}
+                    <div style={{ display: "flex", gap: 2, marginBottom: 20, borderBottom: "1px solid #222", paddingBottom: 0 }}>
+                      {[
+                        { key: "monthly", label: `Scheduled Queue${monthlyQueue.length ? ` (${monthlyQueue.length})` : ""}` },
+                        { key: "clientkeywords", label: `Client Keywords${clientKeywordsTotal ? ` (${clientKeywordsTotal})` : ""}` },
+                        { key: "used", label: `Used Keywords${clientUsedTotal ? ` (${clientUsedTotal})` : ""}` },
+                      ].map(t => (
+                        <button key={t.key} onClick={() => { setClientTab(t.key); if (t.key === "used") loadClientUsedKeywords(selectedClient.id, 1); if (t.key === "clientkeywords") loadClientKeywords(selectedClient.id, 1); }} style={{ ...styles.industryTab, ...(clientTab === t.key ? styles.industryTabActive : {}), marginBottom: -1, borderBottom: clientTab === t.key ? "2px solid #d60000" : "1px solid transparent" }}>{t.label}</button>
+                      ))}
+                    </div>
+
+                    {/* ── MONTHLY QUEUE TAB ── */}
+                    {clientTab === "monthly" && (
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+                          <button style={{ ...styles.addBtn, fontSize: 11, padding: "6px 16px" }} onClick={refreshMonthlyQueue} disabled={refreshingQueue}>
+                            {refreshingQueue ? "Regenerating..." : "⟳ Regenerate Queue"}
+                          </button>
+                          <button style={{ ...styles.addBtn, background: "transparent", border: "1px solid #d60000", color: "#d60000", fontSize: 11, padding: "6px 16px" }} onClick={() => { setShowManualKeywordInput(v => !v); setManualKeywordText(""); }}>
+                            {showManualKeywordInput ? "✕ Cancel" : "+ Add Keyword"}
+                          </button>
+                        </div>
+                        <>
+                        {showManualKeywordInput && (
+                          <div style={{ background: "#0a0a0a", border: "1px solid #222", borderRadius: 8, padding: "14px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                            <input style={{ ...styles.searchInput, flex: "1 1 200px", minWidth: 160 }} placeholder="Enter keyword..." value={manualKeywordText} onChange={e => setManualKeywordText(e.target.value)} onKeyDown={e => e.key === "Enter" && addManualKeyword()} autoFocus />
+                            <select value={manualKeywordIntent} onChange={e => setManualKeywordIntent(e.target.value)} style={{ background: "#111", border: "1px solid #333", color: "#ccc", borderRadius: 6, padding: "8px 12px", fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", cursor: "pointer" }}>
+                              {["Transactional","Informational","Navigational","Commercial"].map(i => <option key={i} value={i}>{i}</option>)}
+                            </select>
+                            <button style={{ ...styles.addBtn, opacity: addingManualKeyword || !manualKeywordText.trim() ? 0.5 : 1 }} onClick={addManualKeyword} disabled={addingManualKeyword || !manualKeywordText.trim()}>{addingManualKeyword ? "Adding..." : "Add to Queue"}</button>
+                          </div>
+                        )}
+
+                        {monthlyQueue.length === 0 && !queueReplacing ? (
+                          <div style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 10, padding: 24, textAlign: "center" }}>
+                            <div style={{ color: "#444", fontSize: 13, marginBottom: 12 }}>No keywords yet. Click "Regenerate Queue" to populate both sections.</div>
+                            {queueError && <div style={{ color: "#d60000", fontSize: 12, marginBottom: 12, background: "#1a0000", border: "1px solid #330000", borderRadius: 6, padding: "8px 12px" }}>{queueError}</div>}
+                          </div>
+                        ) : (
+                          <div>
+                            {queueReplacing && <div style={{ color: "#d60000", fontSize: 12, marginBottom: 12, padding: "8px 12px", background: "#0d0000", border: "1px solid #330000" }}>⟳ Generating new keyword queue...</div>}
+                            {(() => {
+                              const startHour = selectedClient.schedule_start_hour || 9;
+                              const endHour = selectedClient.schedule_end_hour || 12;
+                              const scheduleDays = selectedClient.schedule_days || ["Mon","Tue","Wed","Thu","Fri"];
+                              const dayMap = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+                              const renderQueueRows = (rows, baseOffset) => {
+                                // Build enough scheduled dates for this batch, skipping non-publish days
+                                const scheduledDates = [];
+                                const cursor = new Date();
+                                cursor.setHours(0,0,0,0);
+                                const needed = rows.length + (baseOffset || 0) + 7;
+                                while (scheduledDates.length < needed) {
+                                  cursor.setDate(cursor.getDate() + 1);
+                                  const dayName = dayMap[cursor.getDay()];
+                                  if (scheduleDays.includes(dayName)) scheduledDates.push(new Date(cursor));
+                                }
+                                return rows.map((row, idx) => {
+                                const globalIdx = (baseOffset || 0) + idx;
+                                // Deterministic random minutes per row — seeded from row.id so stable across renders
+                                const seed = row.id ? row.id.split("").reduce((a,c) => a + c.charCodeAt(0), 0) : idx;
+                                const windowMinutes = Math.max(1, (endHour - startHour) * 60);
+                                const randMinutes = seed % windowMinutes;
+                                const schedDate = scheduledDates[globalIdx] || new Date();
+                                const displayHour = startHour + Math.floor(randMinutes / 60);
+                                const displayMin = randMinutes % 60;
+                                const ampm = displayHour >= 12 ? "PM" : "AM";
+                                const h12 = displayHour > 12 ? displayHour - 12 : displayHour === 0 ? 12 : displayHour;
+                                const timeStr = `${h12}:${String(displayMin).padStart(2,"0")} ${ampm} EST`;
+                                const isSelected = selectedQueueRowId === row.id;
+                                const rowPostData = queueRowPosts[row.id];
+                                const hasPost = rowPostData && rowPostData.post;
+                                const isGenerating = rowPostData && rowPostData.loading;
+                                return (
+                                  <div key={row.id}
+                                    draggable
+                                    onDragStart={e => { setDragQueueId(row.id); e.dataTransfer.effectAllowed = "move"; }}
+                                    onDragOver={e => { e.preventDefault(); setDragOverQueueId(row.id); }}
+                                    onDragEnd={() => { setDragQueueId(null); setDragOverQueueId(null); }}
+                                    onDrop={() => reorderQueue(dragQueueId, row.id)}
+                                    onClick={() => setSelectedQueueRowId(isSelected ? null : row.id)}
+                                    style={{ ...styles.tableRow, cursor: "pointer", borderLeft: isSelected ? "2px solid #d60000" : dragOverQueueId === row.id ? "2px solid #555" : "2px solid transparent", opacity: row.used ? 0.4 : 1, background: isSelected ? "rgba(214,0,0,0.07)" : "transparent" }}
+                                    onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = "#111"; }}
+                                    onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
+                                  >
+                                    <div style={{ flex: "0 0 28px", color: "#333", fontSize: 11, textAlign: "center" }}>{globalIdx + 1}</div>
+                                    <div style={{ flex: 3, color: row.used ? "#555" : "#fff", fontWeight: 500 }}>
+                                      {row.keyword}
+                                      {row.used && <span style={{ marginLeft: 8, fontSize: 10, color: "#555" }}>used</span>}
+                                      {hasPost && <span style={{ marginLeft: 8, fontSize: 10, color: "#22c55e" }}>● post ready</span>}
+                                    </div>
+                                    <div style={{ flex: 1, textAlign: "center" }}>
+                                      <span style={{ ...styles.intentBadge, color: getIntentColor(row.intent), background: getIntentColor(row.intent) + "22", borderColor: getIntentColor(row.intent) + "44" }}>{row.intent}</span>
+                                    </div>
+                                    <div style={{ flex: "0 0 130px", textAlign: "center" }}>
+                                      {row.used ? (
+                                        <span style={{ fontSize: 11, color: "#555", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em" }}>PUBLISHED</span>
+                                      ) : (
+                                        <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                                          <span style={{ fontSize: 12, color: "#ccc", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", fontWeight: 600 }}>
+                                            {schedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                          </span>
+                                          <span style={{ fontSize: 10, color: "#666", fontFamily: "'Barlow', sans-serif" }}>{timeStr}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div style={{ flex: "0 0 220px", display: "flex", gap: 4, justifyContent: "center" }} onClick={e => e.stopPropagation()}>
+                                      {hasPost ? (
+                                        <button style={{ ...styles.addKeywordBtn, color: "#22c55e", borderColor: "rgba(34,197,94,0.3)", background: "rgba(34,197,94,0.08)" }} onClick={() => {
+                                          setGeneratedPost(rowPostData.post);
+                                          setGeneratingPost(row.keyword);
+                                          setFeaturedImage(rowPostData.featuredImage || null);
+                                          setGeneratedSchemaHtml(rowPostData.schemaHtml || null);
+                                          setActiveClient(selectedClient);
+                                          setActiveTab("content");
+                                        }}>👁 View Post</button>
+                                      ) : (
+                                        <button style={{ ...styles.addKeywordBtn, opacity: isGenerating ? 0.6 : 1 }} disabled={isGenerating} onClick={() => generateQueueRowPost(row.id, row.keyword, selectedClient)}>{isGenerating ? "⟳ Generating..." : "Generate"}</button>
+                                      )}
+                                      <button style={{ ...styles.addKeywordBtn, color: "#ef4444", borderColor: "rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.08)" }} onClick={async () => { await authFetch(`${API}/api/keywords/queue/${row.id}`, { method: "DELETE" }); setMonthlyQueue(prev => prev.filter(r => r.id !== row.id)); }}>✕</button>
+                                    </div>
+                                  </div>
+                                );
+                              }); }; // end renderQueueRows
+
+                              const researchRows = monthlyQueue.filter(r => r.source === "library" || r.source === "ai");
+                              const gapRows = monthlyQueue.filter(r => r.source === "gap");
+                              const otherRows = monthlyQueue.filter(r => !["library","ai","gap"].includes(r.source));
+                              const allRows = [...researchRows, ...otherRows]; // research section includes manually-added
+
+                              return (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+                                  {/* ── KEYWORD RESEARCH SECTION ── */}
+                                  <div style={{ border: "1px solid #1a1a1a", borderRadius: 8, overflow: "hidden" }}>
+                                    <div style={{ background: "#0a0a0a", padding: "10px 16px", display: "flex", alignItems: "center", gap: 14, borderBottom: "1px solid #1a1a1a", flexWrap: "wrap" }}>
+                                      <span style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", color: "#a78bfa", fontWeight: 600 }}>Keyword Research</span>
+                                      <button style={{ ...styles.addKeywordBtn, fontSize: 13, padding: "8px 18px", color: "#a78bfa", borderColor: "rgba(167,139,250,0.3)", background: "rgba(167,139,250,0.07)" }} onClick={refreshResearchKeywords} disabled={refreshingResearch}>
+                                        {refreshingResearch ? "⟳ Loading..." : "↻ Refresh List"}
+                                      </button>
+                                      <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", marginLeft: "auto" }}>{allRows.filter(r => !r.used).length} active</span>
+                                    </div>
+                                    {allRows.length === 0 ? (
+                                      <div style={{ padding: "20px 16px", color: "#444", fontSize: 12, textAlign: "center" }}>No keyword research yet — click Refresh List or Regenerate Queue</div>
+                                    ) : (
+                                      <div style={styles.table}>
+                                        <div style={styles.tableHeader}>
+                                          <div style={{ flex: "0 0 28px" }}></div>
+                                          <div style={{ flex: 3 }}>Keyword</div>
+                                          <div style={{ flex: 1, textAlign: "center" }}>Intent</div>
+                                          <div style={{ flex: "0 0 130px", textAlign: "center" }}>Scheduled</div>
+                                          <div style={{ flex: "0 0 220px", textAlign: "center" }}>Actions</div>
+                                        </div>
+                                        {renderQueueRows(allRows, 0)}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* ── COMPETITOR GAP SECTION ── */}
+                                  <div style={{ border: "1px solid #1a1a1a", borderRadius: 8, overflow: "hidden" }}>
+                                    <div style={{ background: "#0a0a0a", padding: "10px 16px", display: "flex", alignItems: "center", gap: 14, borderBottom: "1px solid #1a1a1a", flexWrap: "wrap" }}>
+                                      <span style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", color: "#f59e0b", fontWeight: 600 }}>Competitor Gap</span>
+                                      <button style={{ ...styles.addKeywordBtn, fontSize: 13, padding: "8px 18px", color: "#f59e0b", borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.07)" }} onClick={refreshGapKeywords} disabled={refreshingGap}>
+                                        {refreshingGap ? "⟳ Loading..." : "↻ Refresh List"}
+                                      </button>
+                                      <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", marginLeft: "auto" }}>{gapRows.filter(r => !r.used).length} active</span>
+                                    </div>
+                                    {gapRows.length === 0 ? (
+                                      <div style={{ padding: "20px 16px", color: "#444", fontSize: 12, textAlign: "center" }}>No competitor gap keywords — add competitors in Competitors tab, then click Refresh List</div>
+                                    ) : (
+                                      <div style={styles.table}>
+                                        <div style={styles.tableHeader}>
+                                          <div style={{ flex: "0 0 28px" }}></div>
+                                          <div style={{ flex: 3 }}>Keyword</div>
+                                          <div style={{ flex: 1, textAlign: "center" }}>Intent</div>
+                                          <div style={{ flex: "0 0 130px", textAlign: "center" }}>Scheduled</div>
+                                          <div style={{ flex: "0 0 220px", textAlign: "center" }}>Actions</div>
+                                        </div>
+                                        {renderQueueRows(gapRows, allRows.length)}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        )}
+                        </>
                       </div>
                     )}
 
-                  </div>
-                )}
+                    {/* ── CLIENT KEYWORDS TAB ── */}
+                    {clientTab === "clientkeywords" && (
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                          <div style={styles.sectionTitle}>Client Keywords</div>
+                          <div style={{ fontSize: 11, color: "#555" }}>Drag a row or click → Queue to move it to Scheduled Queue • ✕ to remove</div>
                         </div>
-                      )}
-                      {/* Keyword Tabs */}
-                  {/* Tab Bar */}
-                  <div style={{ display: "flex", gap: 2, marginBottom: 20, borderBottom: "1px solid #222", paddingBottom: 0 }}>
-                    {[
-                      { key: "monthly", label: `Scheduled Queue${monthlyQueue.length ? ` (${monthlyQueue.length})` : ""}` },
-                      { key: "clientkeywords", label: `Client Keywords${clientKeywordsTotal ? ` (${clientKeywordsTotal})` : ""}` },
-                      { key: "used", label: `Used Keywords${clientUsedTotal ? ` (${clientUsedTotal})` : ""}` },
-                    ].map(t => (
-                      <button key={t.key} onClick={() => { setClientTab(t.key); if (t.key === "used") loadClientUsedKeywords(selectedClient.id, 1); if (t.key === "clientkeywords") loadClientKeywords(selectedClient.id, 1); }} style={{ ...styles.industryTab, ...(clientTab === t.key ? styles.industryTabActive : {}), marginBottom: -1, borderBottom: clientTab === t.key ? "2px solid #d60000" : "1px solid transparent" }}>{t.label}</button>
-                    ))}
-                  </div>
-
-                  {/* ── MONTHLY QUEUE TAB ── */}
-                  {clientTab === "monthly" && (
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-                        <button style={{ ...styles.addBtn, fontSize: 11, padding: "6px 16px" }} onClick={refreshMonthlyQueue} disabled={refreshingQueue}>
-                          {refreshingQueue ? "Regenerating..." : "⟳ Regenerate Queue"}
-                        </button>
-                        <button style={{ ...styles.addBtn, background: "transparent", border: "1px solid #d60000", color: "#d60000", fontSize: 11, padding: "6px 16px" }} onClick={() => { setShowManualKeywordInput(v => !v); setManualKeywordText(""); }}>
-                          {showManualKeywordInput ? "✕ Cancel" : "+ Add Keyword"}
-                        </button>
-                      </div>
-                      <>
-                      {showManualKeywordInput && (
-                        <div style={{ background: "#0a0a0a", border: "1px solid #222", borderRadius: 8, padding: "14px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                          <input style={{ ...styles.searchInput, flex: "1 1 200px", minWidth: 160 }} placeholder="Enter keyword..." value={manualKeywordText} onChange={e => setManualKeywordText(e.target.value)} onKeyDown={e => e.key === "Enter" && addManualKeyword()} autoFocus />
-                          <select value={manualKeywordIntent} onChange={e => setManualKeywordIntent(e.target.value)} style={{ background: "#111", border: "1px solid #333", color: "#ccc", borderRadius: 6, padding: "8px 12px", fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", cursor: "pointer" }}>
-                            {["Transactional","Informational","Navigational","Commercial"].map(i => <option key={i} value={i}>{i}</option>)}
-                          </select>
-                          <button style={{ ...styles.addBtn, opacity: addingManualKeyword || !manualKeywordText.trim() ? 0.5 : 1 }} onClick={addManualKeyword} disabled={addingManualKeyword || !manualKeywordText.trim()}>{addingManualKeyword ? "Adding..." : "Add to Queue"}</button>
-                        </div>
-                      )}
-
-                      {monthlyQueue.length === 0 && !queueReplacing ? (
-                        <div style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 10, padding: 24, textAlign: "center" }}>
-                          <div style={{ color: "#444", fontSize: 13, marginBottom: 12 }}>No keywords yet. Click "Regenerate Queue" to populate both sections.</div>
-                          {queueError && <div style={{ color: "#d60000", fontSize: 12, marginBottom: 12, background: "#1a0000", border: "1px solid #330000", borderRadius: 6, padding: "8px 12px" }}>{queueError}</div>}
-                        </div>
-                      ) : (
-                        <div>
-                          {queueReplacing && <div style={{ color: "#d60000", fontSize: 12, marginBottom: 12, padding: "8px 12px", background: "#0d0000", border: "1px solid #330000" }}>⟳ Generating new keyword queue...</div>}
-                          {(() => {
-                            const startHour = selectedClient.schedule_start_hour || 9;
-                            const endHour = selectedClient.schedule_end_hour || 12;
-                            const scheduleDays = selectedClient.schedule_days || ["Mon","Tue","Wed","Thu","Fri"];
-                            const dayMap = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-
-                            const renderQueueRows = (rows, baseOffset) => {
-                              // Build enough scheduled dates for this batch, skipping non-publish days
-                              const scheduledDates = [];
-                              const cursor = new Date();
-                              cursor.setHours(0,0,0,0);
-                              const needed = rows.length + (baseOffset || 0) + 7;
-                              while (scheduledDates.length < needed) {
-                                cursor.setDate(cursor.getDate() + 1);
-                                const dayName = dayMap[cursor.getDay()];
-                                if (scheduleDays.includes(dayName)) scheduledDates.push(new Date(cursor));
-                              }
-                              return rows.map((row, idx) => {
-                              const globalIdx = (baseOffset || 0) + idx;
-                              // Deterministic random minutes per row — seeded from row.id so stable across renders
-                              const seed = row.id ? row.id.split("").reduce((a,c) => a + c.charCodeAt(0), 0) : idx;
-                              const windowMinutes = Math.max(1, (endHour - startHour) * 60);
-                              const randMinutes = seed % windowMinutes;
-                              const schedDate = scheduledDates[globalIdx] || new Date();
-                              const displayHour = startHour + Math.floor(randMinutes / 60);
-                              const displayMin = randMinutes % 60;
-                              const ampm = displayHour >= 12 ? "PM" : "AM";
-                              const h12 = displayHour > 12 ? displayHour - 12 : displayHour === 0 ? 12 : displayHour;
-                              const timeStr = `${h12}:${String(displayMin).padStart(2,"0")} ${ampm} EST`;
-                              const isSelected = selectedQueueRowId === row.id;
-                              const rowPostData = queueRowPosts[row.id];
-                              const hasPost = rowPostData && rowPostData.post;
-                              const isGenerating = rowPostData && rowPostData.loading;
-                              return (
+                        {clientKeywords.length === 0 ? (
+                          <div style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 10, padding: 24, textAlign: "center" }}>
+                            <div style={{ color: "#444", fontSize: 13 }}>No keywords assigned to this client yet.</div>
+                            <div style={{ color: "#333", fontSize: 11, marginTop: 6 }}>Go to the Keyword Library, select keywords, click "Add to Client" and choose "Client Keywords".</div>
+                          </div>
+                        ) : (
+                          <div>
+                            <div style={styles.table}>
+                              <div style={styles.tableHeader}>
+                                <div style={{ flex: 3 }}>Keyword</div>
+                                <div style={{ flex: 1, textAlign: "center" }}>Volume</div>
+                                <div style={{ flex: 1, textAlign: "center" }}>Intent</div>
+                                <div style={{ flex: "0 0 120px", textAlign: "center" }}>Actions</div>
+                              </div>
+                              {clientKeywords.map(row => (
                                 <div key={row.id}
                                   draggable
-                                  onDragStart={e => { setDragQueueId(row.id); e.dataTransfer.effectAllowed = "move"; }}
-                                  onDragOver={e => { e.preventDefault(); setDragOverQueueId(row.id); }}
-                                  onDragEnd={() => { setDragQueueId(null); setDragOverQueueId(null); }}
-                                  onDrop={() => reorderQueue(dragQueueId, row.id)}
-                                  onClick={() => setSelectedQueueRowId(isSelected ? null : row.id)}
-                                  style={{ ...styles.tableRow, cursor: "pointer", borderLeft: isSelected ? "2px solid #d60000" : dragOverQueueId === row.id ? "2px solid #555" : "2px solid transparent", opacity: row.used ? 0.4 : 1, background: isSelected ? "rgba(214,0,0,0.07)" : "transparent" }}
-                                  onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = "#111"; }}
-                                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
+                                  onDragStart={e => { e.dataTransfer.setData("clientKwId", row.id); e.dataTransfer.setData("clientKwKeyword", row.keyword); e.dataTransfer.setData("clientKwIntent", row.intent || "Informational"); e.dataTransfer.setData("clientKwVolume", String(row.volume || 0)); e.dataTransfer.effectAllowed = "move"; }}
+                                  style={{ ...styles.tableRow, cursor: "grab" }}
+                                  onMouseEnter={e => e.currentTarget.style.background = "#111"}
+                                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                                 >
-                                  <div style={{ flex: "0 0 28px", color: "#333", fontSize: 11, textAlign: "center" }}>{globalIdx + 1}</div>
-                                  <div style={{ flex: 3, color: row.used ? "#555" : "#fff", fontWeight: 500 }}>
-                                    {row.keyword}
-                                    {row.used && <span style={{ marginLeft: 8, fontSize: 10, color: "#555" }}>used</span>}
-                                    {hasPost && <span style={{ marginLeft: 8, fontSize: 10, color: "#22c55e" }}>● post ready</span>}
+                                  <div style={{ flex: 3, color: "#fff", fontWeight: 500, display: "flex", alignItems: "center", gap: 8 }}>
+                                    <span style={{ color: "#333", fontSize: 13 }}>⠿</span>{row.keyword}
                                   </div>
+                                  <div style={{ flex: 1, textAlign: "center", color: "#aaa" }}>{(row.volume || 0).toLocaleString()}</div>
                                   <div style={{ flex: 1, textAlign: "center" }}>
                                     <span style={{ ...styles.intentBadge, color: getIntentColor(row.intent), background: getIntentColor(row.intent) + "22", borderColor: getIntentColor(row.intent) + "44" }}>{row.intent}</span>
                                   </div>
-                                  <div style={{ flex: "0 0 130px", textAlign: "center" }}>
-                                    {row.used ? (
-                                      <span style={{ fontSize: 11, color: "#555", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em" }}>PUBLISHED</span>
-                                    ) : (
-                                      <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                                        <span style={{ fontSize: 12, color: "#ccc", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", fontWeight: 600 }}>
-                                          {schedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                                        </span>
-                                        <span style={{ fontSize: 10, color: "#666", fontFamily: "'Barlow', sans-serif" }}>{timeStr}</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div style={{ flex: "0 0 220px", display: "flex", gap: 4, justifyContent: "center" }} onClick={e => e.stopPropagation()}>
-                                    {hasPost ? (
-                                      <button style={{ ...styles.addKeywordBtn, color: "#22c55e", borderColor: "rgba(34,197,94,0.3)", background: "rgba(34,197,94,0.08)" }} onClick={() => {
-                                        setGeneratedPost(rowPostData.post);
-                                        setGeneratingPost(row.keyword);
-                                        setFeaturedImage(rowPostData.featuredImage || null);
-                                        setGeneratedSchemaHtml(rowPostData.schemaHtml || null);
-                                        setActiveClient(selectedClient);
-                                        setActiveTab("content");
-                                      }}>👁 View Post</button>
-                                    ) : (
-                                      <button style={{ ...styles.addKeywordBtn, opacity: isGenerating ? 0.6 : 1 }} disabled={isGenerating} onClick={() => generateQueueRowPost(row.id, row.keyword, selectedClient)}>{isGenerating ? "⟳ Generating..." : "Generate"}</button>
-                                    )}
-                                    <button style={{ ...styles.addKeywordBtn, color: "#ef4444", borderColor: "rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.08)" }} onClick={async () => { await authFetch(`${API}/api/keywords/queue/${row.id}`, { method: "DELETE" }); setMonthlyQueue(prev => prev.filter(r => r.id !== row.id)); }}>✕</button>
+                                  <div style={{ flex: "0 0 120px", display: "flex", gap: 4, justifyContent: "center" }}>
+                                    <button style={styles.addKeywordBtn} title="Move to Scheduled Queue" onClick={async () => {
+                                      await addQueueKeyword(row.keyword, "clientlist", row.intent, row.volume);
+                                      await authFetch(`${API}/api/clients/${selectedClient.id}/keywords/${row.id}`, { method: "DELETE" });
+                                      setClientKeywords(prev => prev.filter(k => k.id !== row.id));
+                                      setClientKeywordsTotal(prev => Math.max(0, prev - 1));
+                                    }}>→ Queue</button>
+                                    <button style={{ ...styles.addKeywordBtn, color: "#ef4444", borderColor: "rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.08)" }} onClick={async () => {
+                                      await authFetch(`${API}/api/clients/${selectedClient.id}/keywords/${row.id}`, { method: "DELETE" });
+                                      setClientKeywords(prev => prev.filter(k => k.id !== row.id));
+                                      setClientKeywordsTotal(prev => Math.max(0, prev - 1));
+                                    }}>✕</button>
                                   </div>
                                 </div>
-                              );
-                            }); }; // end renderQueueRows
-
-                            const researchRows = monthlyQueue.filter(r => r.source === "library" || r.source === "ai");
-                            const gapRows = monthlyQueue.filter(r => r.source === "gap");
-                            const otherRows = monthlyQueue.filter(r => !["library","ai","gap"].includes(r.source));
-                            const allRows = [...researchRows, ...otherRows]; // research section includes manually-added
-
-                            return (
-                              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-
-                                {/* ── KEYWORD RESEARCH SECTION ── */}
-                                <div style={{ border: "1px solid #1a1a1a", borderRadius: 8, overflow: "hidden" }}>
-                                  <div style={{ background: "#0a0a0a", padding: "10px 16px", display: "flex", alignItems: "center", gap: 14, borderBottom: "1px solid #1a1a1a", flexWrap: "wrap" }}>
-                                    <span style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", color: "#a78bfa", fontWeight: 600 }}>Keyword Research</span>
-                                    <button style={{ ...styles.addKeywordBtn, fontSize: 13, padding: "8px 18px", color: "#a78bfa", borderColor: "rgba(167,139,250,0.3)", background: "rgba(167,139,250,0.07)" }} onClick={refreshResearchKeywords} disabled={refreshingResearch}>
-                                      {refreshingResearch ? "⟳ Loading..." : "↻ Refresh List"}
-                                    </button>
-                                    <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", marginLeft: "auto" }}>{allRows.filter(r => !r.used).length} active</span>
-                                  </div>
-                                  {allRows.length === 0 ? (
-                                    <div style={{ padding: "20px 16px", color: "#444", fontSize: 12, textAlign: "center" }}>No keyword research yet — click Refresh List or Regenerate Queue</div>
-                                  ) : (
-                                    <div style={styles.table}>
-                                      <div style={styles.tableHeader}>
-                                        <div style={{ flex: "0 0 28px" }}></div>
-                                        <div style={{ flex: 3 }}>Keyword</div>
-                                        <div style={{ flex: 1, textAlign: "center" }}>Intent</div>
-                                        <div style={{ flex: "0 0 130px", textAlign: "center" }}>Scheduled</div>
-                                        <div style={{ flex: "0 0 220px", textAlign: "center" }}>Actions</div>
-                                      </div>
-                                      {renderQueueRows(allRows, 0)}
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* ── COMPETITOR GAP SECTION ── */}
-                                <div style={{ border: "1px solid #1a1a1a", borderRadius: 8, overflow: "hidden" }}>
-                                  <div style={{ background: "#0a0a0a", padding: "10px 16px", display: "flex", alignItems: "center", gap: 14, borderBottom: "1px solid #1a1a1a", flexWrap: "wrap" }}>
-                                    <span style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", color: "#f59e0b", fontWeight: 600 }}>Competitor Gap</span>
-                                    <button style={{ ...styles.addKeywordBtn, fontSize: 13, padding: "8px 18px", color: "#f59e0b", borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.07)" }} onClick={refreshGapKeywords} disabled={refreshingGap}>
-                                      {refreshingGap ? "⟳ Loading..." : "↻ Refresh List"}
-                                    </button>
-                                    <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", marginLeft: "auto" }}>{gapRows.filter(r => !r.used).length} active</span>
-                                  </div>
-                                  {gapRows.length === 0 ? (
-                                    <div style={{ padding: "20px 16px", color: "#444", fontSize: 12, textAlign: "center" }}>No competitor gap keywords — add competitors in Competitors tab, then click Refresh List</div>
-                                  ) : (
-                                    <div style={styles.table}>
-                                      <div style={styles.tableHeader}>
-                                        <div style={{ flex: "0 0 28px" }}></div>
-                                        <div style={{ flex: 3 }}>Keyword</div>
-                                        <div style={{ flex: 1, textAlign: "center" }}>Intent</div>
-                                        <div style={{ flex: "0 0 130px", textAlign: "center" }}>Scheduled</div>
-                                        <div style={{ flex: "0 0 220px", textAlign: "center" }}>Actions</div>
-                                      </div>
-                                      {renderQueueRows(gapRows, allRows.length)}
-                                    </div>
-                                  )}
-                                </div>
-
+                              ))}
+                            </div>
+                            {clientKeywordsTotal > 20 && (
+                              <div style={{ display: "flex", gap: 6, justifyContent: "center", alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
+                                <button style={{ ...styles.addKeywordBtn, opacity: clientKeywordsPage === 1 ? 0.3 : 1 }} disabled={clientKeywordsPage === 1} onClick={() => loadClientKeywords(selectedClient.id, clientKeywordsPage - 1)}>← Prev</button>
+                                {Array.from({ length: Math.ceil(clientKeywordsTotal / 20) }, (_, i) => i + 1).map(p => (
+                                  <button key={p} style={{ ...styles.addKeywordBtn, ...(p === clientKeywordsPage ? { color: "#d60000", borderColor: "#d60000", background: "rgba(214,0,0,0.08)" } : {}) }} onClick={() => loadClientKeywords(selectedClient.id, p)}>{p}</button>
+                                ))}
+                                <button style={{ ...styles.addKeywordBtn, opacity: clientKeywordsPage >= Math.ceil(clientKeywordsTotal / 20) ? 0.3 : 1 }} disabled={clientKeywordsPage >= Math.ceil(clientKeywordsTotal / 20)} onClick={() => loadClientKeywords(selectedClient.id, clientKeywordsPage + 1)}>Next →</button>
                               </div>
-                            );
-                          })()}
-                        </div>
-                      )}
-                      </>
-                      )}
-                    </div>
-                  )}
-
-                  {/* ── CLIENT KEYWORDS TAB ── */}
-                  {clientTab === "clientkeywords" && (
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                        <div style={styles.sectionTitle}>Client Keywords</div>
-                        <div style={{ fontSize: 11, color: "#555" }}>Drag a row or click → Queue to move it to Scheduled Queue • ✕ to remove</div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      {clientKeywords.length === 0 ? (
-                        <div style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 10, padding: 24, textAlign: "center" }}>
-                          <div style={{ color: "#444", fontSize: 13 }}>No keywords assigned to this client yet.</div>
-                          <div style={{ color: "#333", fontSize: 11, marginTop: 6 }}>Go to the Keyword Library, select keywords, click "Add to Client" and choose "Client Keywords".</div>
-                        </div>
-                      ) : (
-                        <div>
-                          <div style={styles.table}>
-                            <div style={styles.tableHeader}>
-                              <div style={{ flex: 3 }}>Keyword</div>
-                              <div style={{ flex: 1, textAlign: "center" }}>Volume</div>
-                              <div style={{ flex: 1, textAlign: "center" }}>Intent</div>
-                              <div style={{ flex: "0 0 120px", textAlign: "center" }}>Actions</div>
-                            </div>
-                            {clientKeywords.map(row => (
-                              <div key={row.id}
-                                draggable
-                                onDragStart={e => { e.dataTransfer.setData("clientKwId", row.id); e.dataTransfer.setData("clientKwKeyword", row.keyword); e.dataTransfer.setData("clientKwIntent", row.intent || "Informational"); e.dataTransfer.setData("clientKwVolume", String(row.volume || 0)); e.dataTransfer.effectAllowed = "move"; }}
-                                style={{ ...styles.tableRow, cursor: "grab" }}
-                                onMouseEnter={e => e.currentTarget.style.background = "#111"}
-                                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                              >
-                                <div style={{ flex: 3, color: "#fff", fontWeight: 500, display: "flex", alignItems: "center", gap: 8 }}>
-                                  <span style={{ color: "#333", fontSize: 13 }}>⠿</span>{row.keyword}
-                                </div>
-                                <div style={{ flex: 1, textAlign: "center", color: "#aaa" }}>{(row.volume || 0).toLocaleString()}</div>
-                                <div style={{ flex: 1, textAlign: "center" }}>
-                                  <span style={{ ...styles.intentBadge, color: getIntentColor(row.intent), background: getIntentColor(row.intent) + "22", borderColor: getIntentColor(row.intent) + "44" }}>{row.intent}</span>
-                                </div>
-                                <div style={{ flex: "0 0 120px", display: "flex", gap: 4, justifyContent: "center" }}>
-                                  <button style={styles.addKeywordBtn} title="Move to Scheduled Queue" onClick={async () => {
-                                    await addQueueKeyword(row.keyword, "clientlist", row.intent, row.volume);
-                                    await authFetch(`${API}/api/clients/${selectedClient.id}/keywords/${row.id}`, { method: "DELETE" });
-                                    setClientKeywords(prev => prev.filter(k => k.id !== row.id));
-                                    setClientKeywordsTotal(prev => Math.max(0, prev - 1));
-                                  }}>→ Queue</button>
-                                  <button style={{ ...styles.addKeywordBtn, color: "#ef4444", borderColor: "rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.08)" }} onClick={async () => {
-                                    await authFetch(`${API}/api/clients/${selectedClient.id}/keywords/${row.id}`, { method: "DELETE" });
-                                    setClientKeywords(prev => prev.filter(k => k.id !== row.id));
-                                    setClientKeywordsTotal(prev => Math.max(0, prev - 1));
-                                  }}>✕</button>
-                                </div>
-                              </div>
-                            ))}
+                    )}
+
+                    {/* ── USED KEYWORDS TAB ── */}
+                    {clientTab === "used" && (
+                      <div>
+                        <div style={{ ...styles.sectionTitle, marginBottom: 8 }}>Used Keywords</div>
+                        <div style={{ fontSize: 11, color: "#555", marginBottom: 16 }}>Keywords published for this client. Added automatically after a post is published.</div>
+                        {clientUsedKeywords.length === 0 ? (
+                          <div style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 10, padding: 24, textAlign: "center" }}>
+                            <div style={{ color: "#444", fontSize: 13 }}>No used keywords yet — they'll appear here automatically after publishing.</div>
                           </div>
-                          {clientKeywordsTotal > 20 && (
-                            <div style={{ display: "flex", gap: 6, justifyContent: "center", alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
-                              <button style={{ ...styles.addKeywordBtn, opacity: clientKeywordsPage === 1 ? 0.3 : 1 }} disabled={clientKeywordsPage === 1} onClick={() => loadClientKeywords(selectedClient.id, clientKeywordsPage - 1)}>← Prev</button>
-                              {Array.from({ length: Math.ceil(clientKeywordsTotal / 20) }, (_, i) => i + 1).map(p => (
-                                <button key={p} style={{ ...styles.addKeywordBtn, ...(p === clientKeywordsPage ? { color: "#d60000", borderColor: "#d60000", background: "rgba(214,0,0,0.08)" } : {}) }} onClick={() => loadClientKeywords(selectedClient.id, p)}>{p}</button>
+                        ) : (
+                          <div>
+                            <div style={styles.table}>
+                              <div style={styles.tableHeader}>
+                                <div style={{ flex: 3 }}>Keyword</div>
+                                <div style={{ flex: 1, textAlign: "center" }}>Date Used</div>
+                                <div style={{ flex: "0 0 80px", textAlign: "center" }}>Remove</div>
+                              </div>
+                              {clientUsedKeywords.map(kw => (
+                                <div key={kw.id} style={styles.tableRow} onMouseEnter={e => e.currentTarget.style.background = "#111"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                                  <div style={{ flex: 3, color: "#fff", fontWeight: 500 }}>{kw.keyword}</div>
+                                  <div style={{ flex: 1, textAlign: "center", color: "#555", fontSize: 11 }}>{kw.added_at ? new Date(kw.added_at).toLocaleDateString() : "—"}</div>
+                                  <div style={{ flex: "0 0 80px", textAlign: "center" }}>
+                                    <button style={{ ...styles.addKeywordBtn, color: "#ef4444", borderColor: "rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.08)" }} onClick={() => removeClientUsedKeyword(kw.id)}>✕</button>
+                                  </div>
+                                </div>
                               ))}
-                              <button style={{ ...styles.addKeywordBtn, opacity: clientKeywordsPage >= Math.ceil(clientKeywordsTotal / 20) ? 0.3 : 1 }} disabled={clientKeywordsPage >= Math.ceil(clientKeywordsTotal / 20)} onClick={() => loadClientKeywords(selectedClient.id, clientKeywordsPage + 1)}>Next →</button>
                             </div>
-                          )}
-                        </div>
-                      )}
+                            {clientUsedTotal > 20 && (
+                              <div style={{ display: "flex", gap: 6, justifyContent: "center", alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
+                                <button style={{ ...styles.addKeywordBtn, opacity: clientUsedPage === 1 ? 0.3 : 1 }} disabled={clientUsedPage === 1} onClick={() => loadClientUsedKeywords(selectedClient.id, clientUsedPage - 1)}>← Prev</button>
+                                {Array.from({ length: Math.ceil(clientUsedTotal / 20) }, (_, i) => i + 1).map(p => (
+                                  <button key={p} style={{ ...styles.addKeywordBtn, ...(p === clientUsedPage ? { color: "#d60000", borderColor: "#d60000", background: "rgba(214,0,0,0.08)" } : {}) }} onClick={() => loadClientUsedKeywords(selectedClient.id, p)}>{p}</button>
+                                ))}
+                                <button style={{ ...styles.addKeywordBtn, opacity: clientUsedPage >= Math.ceil(clientUsedTotal / 20) ? 0.3 : 1 }} disabled={clientUsedPage >= Math.ceil(clientUsedTotal / 20)} onClick={() => loadClientUsedKeywords(selectedClient.id, clientUsedPage + 1)}>Next →</button>
+                              </div>
+                            )}
+                          </div>
+                        )}
                     </div>
                   )}
-
-                  {/* ── USED KEYWORDS TAB ── */}
-                  {clientTab === "used" && (
-                    <div>
-                      <div style={{ ...styles.sectionTitle, marginBottom: 8 }}>Used Keywords</div>
-                      <div style={{ fontSize: 11, color: "#555", marginBottom: 16 }}>Keywords published for this client. Added automatically after a post is published.</div>
-                      {clientUsedKeywords.length === 0 ? (
-                        <div style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 10, padding: 24, textAlign: "center" }}>
-                          <div style={{ color: "#444", fontSize: 13 }}>No used keywords yet — they'll appear here automatically after publishing.</div>
-                        </div>
-                      ) : (
-                        <div>
-                          <div style={styles.table}>
-                            <div style={styles.tableHeader}>
-                              <div style={{ flex: 3 }}>Keyword</div>
-                              <div style={{ flex: 1, textAlign: "center" }}>Date Used</div>
-                              <div style={{ flex: "0 0 80px", textAlign: "center" }}>Remove</div>
-                            </div>
-                            {clientUsedKeywords.map(kw => (
-                              <div key={kw.id} style={styles.tableRow} onMouseEnter={e => e.currentTarget.style.background = "#111"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                                <div style={{ flex: 3, color: "#fff", fontWeight: 500 }}>{kw.keyword}</div>
-                                <div style={{ flex: 1, textAlign: "center", color: "#555", fontSize: 11 }}>{kw.added_at ? new Date(kw.added_at).toLocaleDateString() : "—"}</div>
-                                <div style={{ flex: "0 0 80px", textAlign: "center" }}>
-                                  <button style={{ ...styles.addKeywordBtn, color: "#ef4444", borderColor: "rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.08)" }} onClick={() => removeClientUsedKeyword(kw.id)}>✕</button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                          {clientUsedTotal > 20 && (
-                            <div style={{ display: "flex", gap: 6, justifyContent: "center", alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
-                              <button style={{ ...styles.addKeywordBtn, opacity: clientUsedPage === 1 ? 0.3 : 1 }} disabled={clientUsedPage === 1} onClick={() => loadClientUsedKeywords(selectedClient.id, clientUsedPage - 1)}>← Prev</button>
-                              {Array.from({ length: Math.ceil(clientUsedTotal / 20) }, (_, i) => i + 1).map(p => (
-                                <button key={p} style={{ ...styles.addKeywordBtn, ...(p === clientUsedPage ? { color: "#d60000", borderColor: "#d60000", background: "rgba(214,0,0,0.08)" } : {}) }} onClick={() => loadClientUsedKeywords(selectedClient.id, p)}>{p}</button>
-                              ))}
-                              <button style={{ ...styles.addKeywordBtn, opacity: clientUsedPage >= Math.ceil(clientUsedTotal / 20) ? 0.3 : 1 }} disabled={clientUsedPage >= Math.ceil(clientUsedTotal / 20)} onClick={() => loadClientUsedKeywords(selectedClient.id, clientUsedPage + 1)}>Next →</button>
-                            </div>
-                          )}
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
+
                 {/* ARCHIVED POSTS — standalone section */}
                 {scheduleJobs.filter(j => j.status === "published").length > 0 && (
                   <div style={{ marginBottom: 20 }}>
@@ -2619,7 +2617,7 @@ function App() {
                     {archivedPostsExpanded && (
                       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                         {scheduleJobs.filter(j => j.status === "published").map(job => {
-                          const ys = job.wp_post_id ? (yoastStatuses[job.wp_post_id] || "checking") : null;
+                          const ys = job.wp_post_id ? (yoastStatuses[job.wp_post_id] || null) : null;
                           const handleYoastFix = async () => {
                             setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: "fixing" }));
                             try {
@@ -2643,7 +2641,7 @@ function App() {
                           return (
                             <div key={job.id} style={{ background: "#0a0a0a", border: "1px solid #141414", borderRadius: 6, padding: "10px 14px" }}>
                               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                                <span style={{ fontSize: 11, color: "#22c55e", flexShrink: 0 }}>✓</span>
+                                <span style={{ fontSize: 11, color: "#22c55e", flexShrink: 0 }}>&#x2713;</span>
                                 <span style={{ flex: 1, fontSize: 12, color: "#fff", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.04em", fontWeight: 600 }}>{job.keyword}</span>
                                 <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", flexShrink: 0 }}>{new Date(job.scheduled_time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
                               </div>
@@ -2653,7 +2651,7 @@ function App() {
                                     style={{ fontSize: 11, color: "#555", textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}
                                     onMouseEnter={e => e.currentTarget.style.color = "#d60000"}
                                     onMouseLeave={e => e.currentTarget.style.color = "#555"}>
-                                    ↗ {job.published_url.replace(/^https?:\/\//, "")}
+                                    &#x2197; {job.published_url.replace(/^https?:\/\//, "")}
                                   </a>
                                 ) : (
                                   <span style={{ flex: 1, fontSize: 11, color: "#333" }}>No URL recorded</span>
@@ -2662,11 +2660,11 @@ function App() {
                                   ys === "checking" ? (
                                     <span style={{ fontSize: 9, color: "#555", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", flexShrink: 0 }}>Checking...</span>
                                   ) : ys === "green" ? (
-                                    <span style={{ fontSize: 9, padding: "3px 10px", borderRadius: 4, border: "1px solid #22c55e", color: "#22c55e", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", flexShrink: 0 }}>● Yoast Good</span>
+                                    <span style={{ fontSize: 9, padding: "3px 10px", borderRadius: 4, border: "1px solid #22c55e", color: "#22c55e", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", flexShrink: 0 }}>&#x25cf; Yoast Good</span>
                                   ) : ys === "fixing" ? (
                                     <span style={{ fontSize: 9, color: "#f59e0b", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", flexShrink: 0 }}>Fixing...</span>
                                   ) : ys === "failed" ? (
-                                    <button onClick={handleYoastFix} style={{ ...styles.connectBtn, fontSize: 9, padding: "3px 10px", borderColor: "#555", color: "#555", flexShrink: 0 }}>Fix Failed — Retry</button>
+                                    <button onClick={handleYoastFix} style={{ ...styles.connectBtn, fontSize: 9, padding: "3px 10px", borderColor: "#555", color: "#555", flexShrink: 0 }}>Fix Failed - Retry</button>
                                   ) : (
                                     <button onClick={handleYoastFix} style={{ ...styles.connectBtn, fontSize: 9, padding: "3px 10px", borderColor: "#d60000", color: "#d60000", flexShrink: 0 }}>Fix Yoast</button>
                                   )
