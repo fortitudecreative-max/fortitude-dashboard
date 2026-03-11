@@ -1831,7 +1831,7 @@ function App() {
                       onClick={() => setProfileExpanded(v => !v)}
                       style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: "0 0 12px 0" }}
                     >
-                      <div style={{ fontSize: 10, color: "#555", letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>Connected Apps</div>
+                      <div style={styles.sectionTitle}>Connected Apps</div>
                       <span style={{ fontSize: 14, color: "#555", transition: "transform 0.2s", display: "inline-block", transform: profileExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
                     </button>
                     {profileExpanded && (
@@ -1870,7 +1870,7 @@ function App() {
                   {/* COMPETITORS - inside Connected Apps area */}
                   <div style={{ marginTop: 16, marginBottom: 4 }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                      <div style={{ fontSize: 10, color: "#555", letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>Competitors</div>
+                      <div style={styles.sectionTitle}>Competitors</div>
                       <button style={styles.connectBtn} onClick={findCompetitors} disabled={findingCompetitors}>
                         {findingCompetitors ? "Searching..." : "⟳ Auto-Find"}
                       </button>
@@ -2195,8 +2195,8 @@ function App() {
                           onClick={() => setArchivedPostsExpanded(v => !v)}
                           style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: "8px 0 0 0", marginBottom: archivedPostsExpanded ? 8 : 0 }}
                         >
-                          <div style={{ fontSize: 11, color: "#444", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
-                            Archived Posts <span style={{ color: "#333" }}>({scheduleJobs.filter(j => j.status === "published").length})</span>
+                          <div style={styles.sectionTitle}>
+                            Archived Posts <span style={{ fontSize: 13, color: "#555", fontWeight: 400, fontFamily: "'Barlow Condensed', sans-serif" }}>({scheduleJobs.filter(j => j.status === "published").length})</span>
                           </div>
                           <span style={{ fontSize: 13, color: "#444", transition: "transform 0.2s", display: "inline-block", transform: archivedPostsExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
                         </button>
@@ -4153,7 +4153,7 @@ const styles = {
   statValue: { fontSize: 36, fontWeight: 700, color: "#fff", fontFamily: "'Oswald', sans-serif", lineHeight: 1 },
   statLabel: { fontSize: 10, color: "#555", letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif" },
   sectionHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 },
-  sectionTitle: { fontSize: 12, fontWeight: 600, letterSpacing: "0.2em", color: "#d60000", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif" },
+  sectionTitle: { fontSize: 20, fontWeight: 700, color: "#fff", fontFamily: "'Oswald', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" },
   addBtn: { padding: "10px 20px", background: "#d60000", border: "none", color: "#fff", fontSize: 11, cursor: "pointer", letterSpacing: "0.12em", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, textTransform: "uppercase" },
   addClientForm: { background: "#0d0d0d", border: "1px solid #1a1a1a", borderTop: "3px solid #d60000", padding: 24, marginBottom: 24 },
   formGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 },
