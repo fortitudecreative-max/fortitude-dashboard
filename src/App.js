@@ -1835,7 +1835,7 @@ function App() {
                       style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: "0 0 12px 0" }}
                     >
                       <div style={styles.sectionTitle}>Connected Apps</div>
-                      <span style={{ fontSize: 14, color: "#555", transition: "transform 0.2s", display: "inline-block", transform: profileExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                      <span style={{ fontSize: 18, color: "#fff", transition: "transform 0.2s", display: "inline-block", transform: profileExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
                     </button>
                     {profileExpanded && (
                   <div>
@@ -1979,7 +1979,7 @@ function App() {
                       <span style={{ fontSize: 12, color: selectedClient.schedule_enabled ? "#22c55e" : "#555" }}>
                         {selectedClient.schedule_enabled ? "● Active" : "○ Inactive"}
                       </span>
-                      <span style={{ fontSize: 14, color: "#555", transition: "transform 0.2s", display: "inline-block", transform: scheduleExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                      <span style={{ fontSize: 18, color: "#fff", transition: "transform 0.2s", display: "inline-block", transform: scheduleExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
                     </div>
                   </button>
                   {scheduleExpanded && (
@@ -2074,7 +2074,7 @@ function App() {
                           {showGbpComposer ? "Cancel" : "+ New Post"}
                         </button>
                       )}
-                      <span style={{ fontSize: 14, color: "#555", transition: "transform 0.2s", display: "inline-block", transform: gbpExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                      <span style={{ fontSize: 18, color: "#fff", transition: "transform 0.2s", display: "inline-block", transform: gbpExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
                     </div>
                   </button>
                   {gbpExpanded && gbpAgencyConnected && (
@@ -2151,7 +2151,7 @@ function App() {
                       <div style={styles.sectionTitle}>
                         Scheduled Posts <span style={{ fontSize: 12, color: "#333", fontWeight: 400 }}>({scheduleJobs.filter(j => j.status !== "published").length})</span>
                       </div>
-                      <span style={{ fontSize: 14, color: "#555", transition: "transform 0.2s", display: "inline-block", transform: scheduledPostsExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                      <span style={{ fontSize: 18, color: "#fff", transition: "transform 0.2s", display: "inline-block", transform: scheduledPostsExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
                     </button>
                     {scheduledPostsExpanded && (
                       <div style={styles.table}>
@@ -2195,7 +2195,7 @@ function App() {
                           <div style={styles.sectionTitle}>
                             Archived Posts <span style={{ fontSize: 13, color: "#555", fontWeight: 400, fontFamily: "'Barlow Condensed', sans-serif" }}>({scheduleJobs.filter(j => j.status === "published").length})</span>
                           </div>
-                          <span style={{ fontSize: 13, color: "#444", transition: "transform 0.2s", display: "inline-block", transform: archivedPostsExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                          <span style={{ fontSize: 18, color: "#fff", transition: "transform 0.2s", display: "inline-block", transform: archivedPostsExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
                         </button>
                         {archivedPostsExpanded && (
                           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -2234,16 +2234,14 @@ function App() {
                   {/* ── MONTHLY QUEUE TAB ── */}
                   {clientTab === "monthly" && (
                     <div>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
                         <div style={styles.sectionTitle}>Scheduled Queue {queueMonth ? `— ${queueMonth}` : ""}</div>
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <button style={{ ...styles.addBtn, background: "transparent", border: "1px solid #d60000", color: "#d60000" }} onClick={() => { setShowManualKeywordInput(v => !v); setManualKeywordText(""); }}>
-                            {showManualKeywordInput ? "✕ Cancel" : "+ Add Keyword"}
-                          </button>
-                          <button style={styles.addBtn} onClick={refreshMonthlyQueue} disabled={refreshingQueue}>
-                            {refreshingQueue ? "Regenerating..." : "⟳ Regenerate Queue"}
-                          </button>
-                        </div>
+                        <button style={{ ...styles.addBtn, fontSize: 13, padding: "10px 22px" }} onClick={refreshMonthlyQueue} disabled={refreshingQueue}>
+                          {refreshingQueue ? "Regenerating..." : "⟳ Regenerate Queue"}
+                        </button>
+                        <button style={{ ...styles.addBtn, background: "transparent", border: "1px solid #d60000", color: "#d60000", fontSize: 13, padding: "10px 22px" }} onClick={() => { setShowManualKeywordInput(v => !v); setManualKeywordText(""); }}>
+                          {showManualKeywordInput ? "✕ Cancel" : "+ Add Keyword"}
+                        </button>
                       </div>
 
                       {showManualKeywordInput && (
@@ -2359,14 +2357,12 @@ function App() {
 
                                 {/* ── KEYWORD RESEARCH SECTION ── */}
                                 <div style={{ border: "1px solid #1a1a1a", borderRadius: 8, overflow: "hidden" }}>
-                                  <div style={{ background: "#0a0a0a", padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #1a1a1a" }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                      <span style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", color: "#a78bfa", fontWeight: 600 }}>Keyword Research</span>
-                                      <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif" }}>{allRows.filter(r => !r.used).length} active</span>
-                                    </div>
-                                    <button style={{ ...styles.addKeywordBtn, color: "#a78bfa", borderColor: "rgba(167,139,250,0.3)", background: "rgba(167,139,250,0.07)", fontSize: 11 }} onClick={refreshResearchKeywords} disabled={refreshingResearch}>
+                                  <div style={{ background: "#0a0a0a", padding: "10px 16px", display: "flex", alignItems: "center", gap: 14, borderBottom: "1px solid #1a1a1a", flexWrap: "wrap" }}>
+                                    <span style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", color: "#a78bfa", fontWeight: 600 }}>Keyword Research</span>
+                                    <button style={{ ...styles.addKeywordBtn, fontSize: 13, padding: "8px 18px", color: "#a78bfa", borderColor: "rgba(167,139,250,0.3)", background: "rgba(167,139,250,0.07)" }} onClick={refreshResearchKeywords} disabled={refreshingResearch}>
                                       {refreshingResearch ? "⟳ Loading..." : "↻ Refresh List"}
                                     </button>
+                                    <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", marginLeft: "auto" }}>{allRows.filter(r => !r.used).length} active</span>
                                   </div>
                                   {allRows.length === 0 ? (
                                     <div style={{ padding: "20px 16px", color: "#444", fontSize: 12, textAlign: "center" }}>No keyword research yet — click Refresh List or Regenerate Queue</div>
@@ -2386,14 +2382,12 @@ function App() {
 
                                 {/* ── COMPETITOR GAP SECTION ── */}
                                 <div style={{ border: "1px solid #1a1a1a", borderRadius: 8, overflow: "hidden" }}>
-                                  <div style={{ background: "#0a0a0a", padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #1a1a1a" }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                      <span style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", color: "#f59e0b", fontWeight: 600 }}>Competitor Gap</span>
-                                      <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif" }}>{gapRows.filter(r => !r.used).length} active</span>
-                                    </div>
-                                    <button style={{ ...styles.addKeywordBtn, color: "#f59e0b", borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.07)", fontSize: 11 }} onClick={refreshGapKeywords} disabled={refreshingGap}>
+                                  <div style={{ background: "#0a0a0a", padding: "10px 16px", display: "flex", alignItems: "center", gap: 14, borderBottom: "1px solid #1a1a1a", flexWrap: "wrap" }}>
+                                    <span style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", color: "#f59e0b", fontWeight: 600 }}>Competitor Gap</span>
+                                    <button style={{ ...styles.addKeywordBtn, fontSize: 13, padding: "8px 18px", color: "#f59e0b", borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.07)" }} onClick={refreshGapKeywords} disabled={refreshingGap}>
                                       {refreshingGap ? "⟳ Loading..." : "↻ Refresh List"}
                                     </button>
+                                    <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", marginLeft: "auto" }}>{gapRows.filter(r => !r.used).length} active</span>
                                   </div>
                                   {gapRows.length === 0 ? (
                                     <div style={{ padding: "20px 16px", color: "#444", fontSize: 12, textAlign: "center" }}>No competitor gap keywords — add competitors in Competitors tab, then click Refresh List</div>
@@ -2534,7 +2528,7 @@ function App() {
                     style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: imageGalleryExpanded ? 12 : 0 }}
                   >
                     <div style={styles.sectionTitle}>Client Image Library</div>
-                    <span style={{ fontSize: 14, color: "#555", transition: "transform 0.2s", display: "inline-block", transform: imageGalleryExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                    <span style={{ fontSize: 18, color: "#fff", transition: "transform 0.2s", display: "inline-block", transform: imageGalleryExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
                   </button>
                   {imageGalleryExpanded && (
                   <div>
@@ -2911,7 +2905,7 @@ function App() {
                             onClick={() => { setIsEditingPost(false); setShowLinkInput(false); setShowHtmlInput(false); }}>✕ Cancel</button>
                         </>
                       ) : (
-                        <button style={{ ...styles.addKeywordBtn, color: "#f59e0b", borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.07)", fontSize: 12, padding: "6px 14px" }}
+                        <button style={{ ...styles.addKeywordBtn, fontSize: 13, padding: "8px 18px", color: "#f59e0b", borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.07)", fontSize: 12, padding: "6px 14px" }}
                           onClick={() => setIsEditingPost(true)}>✎ Edit</button>
                       )}
                       <button style={{ ...styles.addBtn, background: "none", border: "1px solid #dc2626", color: "#dc2626" }} onClick={() => { setGeneratedPost(null); setGeneratingPost(null); setGeneratedSchemaHtml(null); setIsEditingPost(false); }}>Clear</button>
