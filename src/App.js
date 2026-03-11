@@ -215,6 +215,12 @@ function App() {
   const [generatingPost, setGeneratingPost] = useState(null);
   const [generatedPost, setGeneratedPost] = useState(null);
   const [generatedSchemaHtml, setGeneratedSchemaHtml] = useState(null);
+  const [isEditingPost, setIsEditingPost] = useState(false);
+  const [editLinkUrl, setEditLinkUrl] = useState("");
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [showHtmlInput, setShowHtmlInput] = useState(false);
+  const [htmlInsertText, setHtmlInsertText] = useState("");
+  const [savedSelection, setSavedSelection] = useState(null);
   const [selectedQueueRowId, setSelectedQueueRowId] = useState(null);
   const [queueRowPosts, setQueueRowPosts] = useState({}); // { [rowId]: { post, featuredImage, loading, error } }
   const [featuredImage, setFeaturedImage] = useState(null);
@@ -2684,17 +2690,89 @@ function App() {
                 <div>
                   <div style={styles.sectionHeader}>
                     <div style={styles.sectionTitle}>Generated Post — {generatingPost}</div>
-                    <div style={{ display: "flex", gap: 12 }}>
-                      <button style={{ ...styles.addBtn, background: "none", border: "1px solid #dc2626", color: "#dc2626" }} onClick={() => { setGeneratedPost(null); setGeneratingPost(null); setGeneratedSchemaHtml(null); }}>Clear</button>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      {isEditingPost ? (
+                        <>
+                          <button style={{ ...styles.addKeywordBtn, color: "#22c55e", borderColor: "rgba(34,197,94,0.3)", background: "rgba(34,197,94,0.08)", fontSize: 12, padding: "6px 14px" }}
+                            onClick={() => {
+                              const el = document.getElementById("post-editor-body");
+                              if (el) setGeneratedPost(prev => ({ ...prev, content: el.innerHTML }));
+                              setIsEditingPost(false);
+                              setShowLinkInput(false);
+                              setShowHtmlInput(false);
+                            }}>✓ Save Edits</button>
+                          <button style={{ ...styles.addKeywordBtn, color: "#888", fontSize: 12, padding: "6px 14px" }}
+                            onClick={() => { setIsEditingPost(false); setShowLinkInput(false); setShowHtmlInput(false); }}>✕ Cancel</button>
+                        </>
+                      ) : (
+                        <button style={{ ...styles.addKeywordBtn, color: "#f59e0b", borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.07)", fontSize: 12, padding: "6px 14px" }}
+                          onClick={() => setIsEditingPost(true)}>✎ Edit</button>
+                      )}
+                      <button style={{ ...styles.addBtn, background: "none", border: "1px solid #dc2626", color: "#dc2626" }} onClick={() => { setGeneratedPost(null); setGeneratingPost(null); setGeneratedSchemaHtml(null); setIsEditingPost(false); }}>Clear</button>
                       <button style={{ ...styles.addBtn, opacity: publishLoading ? 0.6 : 1 }} onClick={publishToWordPress} disabled={publishLoading}>
                         {publishLoading ? "Publishing..." : "Publish to WordPress"}
                       </button>
                     </div>
                   </div>
                   <div style={styles.postPreview}>
+                    {/* ── Formatting toolbar (edit mode only) ── */}
+                    {isEditingPost && (() => {
+                      const exec = (cmd, val) => { document.getElementById("post-editor-body")?.focus(); document.execCommand(cmd, false, val || null); };
+                      const btnStyle = (active) => ({ background: active ? "rgba(214,0,0,0.15)" : "transparent", border: "1px solid " + (active ? "#d60000" : "#2a2a2a"), color: active ? "#d60000" : "#aaa", borderRadius: 4, cursor: "pointer", padding: "4px 10px", fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", whiteSpace: "nowrap" });
+                      return (
+                        <div style={{ padding: "10px 16px", background: "#0a0a0a", borderBottom: "1px solid #1a1a1a", display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                          <button style={btnStyle(false)} onMouseDown={e => { e.preventDefault(); exec("bold"); }} title="Bold"><strong>B</strong></button>
+                          <button style={btnStyle(false)} onMouseDown={e => { e.preventDefault(); exec("italic"); }} title="Italic"><em>I</em></button>
+                          <button style={btnStyle(false)} onMouseDown={e => { e.preventDefault(); exec("underline"); }} title="Underline"><u>U</u></button>
+                          <div style={{ width: 1, height: 18, background: "#2a2a2a", margin: "0 4px" }} />
+                          <button style={btnStyle(false)} onMouseDown={e => { e.preventDefault(); exec("formatBlock", "h2"); }} title="Heading 2">H2</button>
+                          <button style={btnStyle(false)} onMouseDown={e => { e.preventDefault(); exec("formatBlock", "h3"); }} title="Heading 3">H3</button>
+                          <button style={btnStyle(false)} onMouseDown={e => { e.preventDefault(); exec("formatBlock", "h4"); }} title="Heading 4">H4</button>
+                          <button style={btnStyle(false)} onMouseDown={e => { e.preventDefault(); exec("formatBlock", "p"); }} title="Paragraph">¶</button>
+                          <div style={{ width: 1, height: 18, background: "#2a2a2a", margin: "0 4px" }} />
+                          <button style={btnStyle(false)} onMouseDown={e => { e.preventDefault(); exec("insertUnorderedList"); }} title="Bullet List">• List</button>
+                          <button style={btnStyle(false)} onMouseDown={e => { e.preventDefault(); exec("insertOrderedList"); }} title="Numbered List">1. List</button>
+                          <div style={{ width: 1, height: 18, background: "#2a2a2a", margin: "0 4px" }} />
+                          <button style={btnStyle(showLinkInput)} onMouseDown={e => { e.preventDefault(); const sel = window.getSelection(); if (sel && sel.rangeCount) setSavedSelection(sel.getRangeAt(0).cloneRange()); setShowLinkInput(v => !v); setShowHtmlInput(false); }} title="Insert Link">🔗 Link</button>
+                          <button style={btnStyle(showHtmlInput)} onMouseDown={e => { e.preventDefault(); setShowHtmlInput(v => !v); setShowLinkInput(false); }} title="Insert HTML">&lt;/&gt; HTML</button>
+                          <div style={{ width: 1, height: 18, background: "#2a2a2a", margin: "0 4px" }} />
+                          <button style={btnStyle(false)} onMouseDown={e => { e.preventDefault(); exec("removeFormat"); }} title="Clear Formatting">✕ Format</button>
+                          <button style={btnStyle(false)} onMouseDown={e => { e.preventDefault(); exec("undo"); }} title="Undo">↩ Undo</button>
+                          <button style={btnStyle(false)} onMouseDown={e => { e.preventDefault(); exec("redo"); }} title="Redo">↪ Redo</button>
+                          {showLinkInput && (
+                            <div style={{ width: "100%", display: "flex", gap: 6, marginTop: 6, alignItems: "center" }}>
+                              <input style={{ ...styles.searchInput, flex: 1, fontSize: 12 }} placeholder="https://..." value={editLinkUrl} onChange={e => setEditLinkUrl(e.target.value)}
+                                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); const ed = document.getElementById("post-editor-body"); if (ed && savedSelection) { const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(savedSelection); } exec("createLink", editLinkUrl); setShowLinkInput(false); setEditLinkUrl(""); setSavedSelection(null); }}} autoFocus />
+                              <button style={{ ...btnStyle(true), padding: "4px 14px" }} onMouseDown={e => { e.preventDefault(); const ed = document.getElementById("post-editor-body"); if (ed && savedSelection) { const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(savedSelection); } exec("createLink", editLinkUrl); setShowLinkInput(false); setEditLinkUrl(""); setSavedSelection(null); }}>Apply</button>
+                              <button style={{ ...btnStyle(false), padding: "4px 10px" }} onMouseDown={e => { e.preventDefault(); exec("unlink"); }}>Unlink</button>
+                            </div>
+                          )}
+                          {showHtmlInput && (
+                            <div style={{ width: "100%", display: "flex", gap: 6, marginTop: 6, alignItems: "flex-start" }}>
+                              <textarea style={{ ...styles.searchInput, flex: 1, fontSize: 12, minHeight: 60, resize: "vertical", fontFamily: "monospace" }} placeholder="Paste raw HTML to insert at cursor..." value={htmlInsertText} onChange={e => setHtmlInsertText(e.target.value)} autoFocus />
+                              <button style={{ ...btnStyle(true), padding: "4px 14px", alignSelf: "flex-start" }} onMouseDown={e => { e.preventDefault(); document.getElementById("post-editor-body")?.focus(); exec("insertHTML", htmlInsertText); setShowHtmlInput(false); setHtmlInsertText(""); }}>Insert</button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                     <div style={styles.postMeta}>
-                      <div style={styles.postMetaItem}><div style={styles.postMetaLabel}>Title</div><div style={styles.postMetaValue}>{generatedPost.title}</div></div>
-                      <div style={styles.postMetaItem}><div style={styles.postMetaLabel}>Meta Description</div><div style={styles.postMetaValue}>{generatedPost.metaDescription}</div></div>
+                      <div style={styles.postMetaItem}>
+                        <div style={styles.postMetaLabel}>Title</div>
+                        {isEditingPost ? (
+                          <input style={{ ...styles.searchInput, marginTop: 4, fontSize: 13, fontWeight: 600, color: "#fff" }} value={generatedPost.title} onChange={e => setGeneratedPost(prev => ({ ...prev, title: e.target.value }))} />
+                        ) : (
+                          <div style={styles.postMetaValue}>{generatedPost.title}</div>
+                        )}
+                      </div>
+                      <div style={styles.postMetaItem}>
+                        <div style={styles.postMetaLabel}>Meta Description</div>
+                        {isEditingPost ? (
+                          <textarea style={{ ...styles.searchInput, marginTop: 4, fontSize: 12, resize: "vertical", minHeight: 48, fontFamily: "'Barlow', sans-serif" }} value={generatedPost.metaDescription} onChange={e => setGeneratedPost(prev => ({ ...prev, metaDescription: e.target.value }))} />
+                        ) : (
+                          <div style={styles.postMetaValue}>{generatedPost.metaDescription}</div>
+                        )}
+                      </div>
                       <div style={styles.postMetaItem}><div style={styles.postMetaLabel}>Slug</div><div style={styles.postMetaValue}>/{generatedPost.slug}</div></div>
                       <div style={styles.postMetaItem}><div style={styles.postMetaLabel}>Word Count</div><div style={styles.postMetaValue}>{generatedPost.wordCount} words</div></div>
                     </div>
@@ -2707,7 +2785,18 @@ function App() {
                         </div>
                       </div>
                     )}
-                    <div style={styles.postContent} dangerouslySetInnerHTML={{ __html: generatedPost.content }} />
+                    {isEditingPost ? (
+                      <div
+                        id="post-editor-body"
+                        contentEditable
+                        suppressContentEditableWarning
+                        dangerouslySetInnerHTML={{ __html: generatedPost.content }}
+                        style={{ ...styles.postContent, outline: "none", minHeight: 400, borderTop: "1px solid #1a1a1a", caretColor: "#d60000" }}
+                        onInput={() => {}} // handled on save
+                      />
+                    ) : (
+                      <div style={styles.postContent} dangerouslySetInnerHTML={{ __html: generatedPost.content }} />
+                    )}
                   </div>
                   {publishResult && (
                     <div style={{ marginTop: 16 }}>
