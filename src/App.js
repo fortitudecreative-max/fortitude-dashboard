@@ -2601,7 +2601,15 @@ function App() {
                           scheduleJobs.filter(j => j.status === "published" && j.wp_post_id).forEach(job => {
                             if (!yoastStatuses[job.wp_post_id]) {
                               setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: "checking" }));
-                              authFetch(`${API}/api/yoast-check/${selectedClient.id}/${job.wp_post_id}`)
+                              // Trigger recalc first so WP computes scores, then check result
+                              authFetch(`${API}/api/yoast-recalc`, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ clientId: selectedClient.id, wpPostId: job.wp_post_id }),
+                              })
+                                .then(r => r.json())
+                                .then(() => new Promise(res => setTimeout(res, 2000)))
+                                .then(() => authFetch(`${API}/api/yoast-check/${selectedClient.id}/${job.wp_post_id}`))
                                 .then(r => r.json())
                                 .then(d => setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: d.green ? "green" : "fix" })))
                                 .catch(() => setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: "fix" })));
@@ -2626,13 +2634,16 @@ function App() {
                           const handleYoastFix = async () => {
                             setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: "fixing" }));
                             try {
-                              const r = await authFetch(`${API}/api/yoast-optimize`, {
+                              // Step 1: trigger no-op PUT to force Yoast to recalculate all scores
+                              const r = await authFetch(`${API}/api/yoast-recalc`, {
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ clientId: selectedClient.id, wpPostId: job.wp_post_id, keyword: job.keyword }),
+                                body: JSON.stringify({ clientId: selectedClient.id, wpPostId: job.wp_post_id }),
                               });
                               const d = await r.json();
                               if (d.success) {
+                                // Wait 2s for WP to finish recalculating before checking
+                                await new Promise(res => setTimeout(res, 2000));
                                 const check = await authFetch(`${API}/api/yoast-check/${selectedClient.id}/${job.wp_post_id}`);
                                 const cd = await check.json();
                                 setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: cd.green ? "green" : "failed" }));
