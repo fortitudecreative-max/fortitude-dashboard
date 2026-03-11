@@ -2592,8 +2592,7 @@ function App() {
                 </div>
 
                 {/* ARCHIVED POSTS — standalone section */}
-                {scheduleJobs.filter(j => j.status === "published").length > 0 && (
-                  <div style={{ marginBottom: 20 }}>
+                <div style={{ marginBottom: 20 }}>
                     <button
                       onClick={() => {
                         const opening = !archivedPostsExpanded;
@@ -2619,6 +2618,9 @@ function App() {
                     </button>
                     {archivedPostsExpanded && (
                       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {scheduleJobs.filter(j => j.status === "published").length === 0 && (
+                          <div style={{ fontSize: 12, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.05em", padding: "10px 0" }}>No published posts yet.</div>
+                        )}
                         {scheduleJobs.filter(j => j.status === "published").map(job => {
                           const ys = job.wp_post_id ? (yoastStatuses[job.wp_post_id] || null) : null;
                           const handleYoastFix = async () => {
@@ -2646,7 +2648,7 @@ function App() {
                               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                                 <span style={{ fontSize: 11, color: "#22c55e", flexShrink: 0 }}>&#x2713;</span>
                                 <span style={{ flex: 1, fontSize: 12, color: "#fff", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.04em", fontWeight: 600 }}>{job.keyword}</span>
-                                <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", flexShrink: 0 }}>{new Date(job.scheduled_time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                                <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", flexShrink: 0 }}>{new Date(job.published_at || job.scheduled_time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
                               </div>
                               <div style={{ display: "flex", alignItems: "center", gap: 10, paddingLeft: 20 }}>
                                 {job.published_url ? (
@@ -2678,8 +2680,7 @@ function App() {
                         })}
                       </div>
                     )}
-                  </div>
-                )}
+                </div>
 
                                 {/* CLIENT IMAGE LIBRARY */}
                 <div style={{ marginBottom: 20 }}>
