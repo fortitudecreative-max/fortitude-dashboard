@@ -2349,7 +2349,7 @@ function App() {
                                 return rows.map((row, idx) => {
                                 const globalIdx = (baseOffset || 0) + idx;
                                 // Deterministic random minutes per row — seeded from row.id so stable across renders
-                                const seed = row.id ? row.id.split("").reduce((a,c) => a + c.charCodeAt(0), 0) : idx;
+                                const seed = row.id ? String(row.id).split("").reduce((a,c) => a + c.charCodeAt(0), 0) : idx;
                                 const windowMinutes = Math.max(1, (endHour - startHour) * 60);
                                 const randMinutes = seed % windowMinutes;
                                 const schedDate = scheduledDates[globalIdx] || new Date();
