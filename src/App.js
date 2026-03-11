@@ -1748,7 +1748,7 @@ function App() {
                       </div>
                       <div>
                         <div style={styles.postMetaLabel}>Service Area</div>
-                        <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.service_area} onChange={e => setClientEdits({ ...clientEdits, service_area: e.target.value })} placeholder="e.g. Charlotte, NC" />
+                        <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.service_area} onChange={e => setClientEdits({ ...clientEdits, service_area: e.target.value })} placeholder="City and state (e.g. Charlotte, NC)" />
                       </div>
                       <div>
                         <div style={styles.postMetaLabel}>WordPress URL</div>
