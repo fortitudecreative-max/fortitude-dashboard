@@ -253,6 +253,8 @@ function App() {
   const [monthlyQueuePage, setMonthlyQueuePage] = useState(1);
   const [clientTab, setClientTab] = useState('monthly'); // 'monthly' | 'clientlist' | 'used'
   const [refreshingQueue, setRefreshingQueue] = useState(false);
+  const [refreshingResearch, setRefreshingResearch] = useState(false);
+  const [refreshingGap, setRefreshingGap] = useState(false);
   const [queueError, setQueueError] = useState(null);
   const [queueReplacing, setQueueReplacing] = useState(null); // id of row being replaced
   const [gapSuggestions, setGapSuggestions] = useState([]);
@@ -763,6 +765,32 @@ function App() {
     setRefreshingQueue(false);
   };
 
+
+  const refreshResearchKeywords = async () => {
+    if (!selectedClient) return;
+    setRefreshingResearch(true);
+    try {
+      const res = await authFetch(`${API}/api/keywords/queue/refresh-research/${selectedClient.id}`, { method: "POST" });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      const newKws = (data.keywords || []).map(k => ({ ...k, id: k.id || Date.now() + Math.random() }));
+      setMonthlyQueue(prev => [...prev, ...newKws]);
+    } catch(e) { console.error("Refresh research error:", e); }
+    finally { setRefreshingResearch(false); }
+  };
+
+  const refreshGapKeywords = async () => {
+    if (!selectedClient) return;
+    setRefreshingGap(true);
+    try {
+      const res = await authFetch(`${API}/api/keywords/queue/refresh-gap/${selectedClient.id}`, { method: "POST" });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      const newKws = (data.keywords || []).map(k => ({ ...k, id: k.id || Date.now() + Math.random() }));
+      setMonthlyQueue(prev => [...prev, ...newKws]);
+    } catch(e) { console.error("Refresh gap error:", e); }
+    finally { setRefreshingGap(false); }
+  };
   const addManualKeyword = async () => {
     if (!manualKeywordText.trim() || !selectedClient) return;
     setAddingManualKeyword(true);
@@ -1252,6 +1280,7 @@ function App() {
       brand_voice: selectedClient.brand_voice || "",
       domain: selectedClient.domain || "",
       service_area: selectedClient.service_area || "",
+      industry_tags: selectedClient.industry_tags || "",
     });
     setEditingClient(true);
   };
@@ -1757,6 +1786,11 @@ function App() {
                         <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.service_area} onChange={e => setClientEdits({ ...clientEdits, service_area: e.target.value })} placeholder="City and state (e.g. Charlotte, NC)" />
                       </div>
                       <div>
+                        <div style={styles.postMetaLabel}>Industry Tags</div>
+                        <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.industry_tags || ""} onChange={e => setClientEdits({ ...clientEdits, industry_tags: e.target.value })} placeholder="hvac, plumbing, electrical..." />
+                        <div style={{ fontSize: 10, color: "#555", marginTop: 4, fontFamily: "'Barlow', sans-serif" }}>Comma-separated — used to pull matching keywords from the library</div>
+                      </div>
+                      <div>
                         <div style={styles.postMetaLabel}>WordPress URL</div>
                         <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.wordpress_url} onChange={e => setClientEdits({ ...clientEdits, wordpress_url: e.target.value })} placeholder="https://clientsite.com" />
                       </div>
@@ -2112,7 +2146,7 @@ function App() {
                   {/* Tab Bar */}
                   <div style={{ display: "flex", gap: 2, marginBottom: 20, borderBottom: "1px solid #222", paddingBottom: 0 }}>
                     {[
-                      { key: "monthly", label: `Monthly Queue${monthlyQueue.length ? ` (${monthlyQueue.length})` : ""}` },
+                      { key: "monthly", label: `Scheduled Queue${monthlyQueue.length ? ` (${monthlyQueue.length})` : ""}` },
                       { key: "clientkeywords", label: `Client Keywords${clientKeywordsTotal ? ` (${clientKeywordsTotal})` : ""}` },
                       { key: "used", label: `Used Keywords${clientUsedTotal ? ` (${clientUsedTotal})` : ""}` },
                     ].map(t => (
@@ -2124,13 +2158,13 @@ function App() {
                   {clientTab === "monthly" && (
                     <div>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                        <div style={styles.sectionTitle}>Monthly Keyword Queue {queueMonth ? `— ${queueMonth}` : ""}</div>
+                        <div style={styles.sectionTitle}>Scheduled Queue {queueMonth ? `— ${queueMonth}` : ""}</div>
                         <div style={{ display: "flex", gap: 8 }}>
                           <button style={{ ...styles.addBtn, background: "transparent", border: "1px solid #d60000", color: "#d60000" }} onClick={() => { setShowManualKeywordInput(v => !v); setManualKeywordText(""); }}>
                             {showManualKeywordInput ? "✕ Cancel" : "+ Add Keyword"}
                           </button>
                           <button style={styles.addBtn} onClick={refreshMonthlyQueue} disabled={refreshingQueue}>
-                            {refreshingQueue ? "Refreshing..." : "⟳ Refresh Queue"}
+                            {refreshingQueue ? "Regenerating..." : "⟳ Regenerate Queue"}
                           </button>
                         </div>
                       </div>
@@ -2147,22 +2181,15 @@ function App() {
 
                       {monthlyQueue.length === 0 && !queueReplacing ? (
                         <div style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 10, padding: 24, textAlign: "center" }}>
-                          <div style={{ color: "#444", fontSize: 13, marginBottom: 12 }}>No monthly queue yet. Click "Refresh Queue" to generate keywords.</div>
+                          <div style={{ color: "#444", fontSize: 13, marginBottom: 12 }}>No keywords yet. Click "Regenerate Queue" to populate both sections.</div>
                           {queueError && <div style={{ color: "#d60000", fontSize: 12, marginBottom: 12, background: "#1a0000", border: "1px solid #330000", borderRadius: 6, padding: "8px 12px" }}>{queueError}</div>}
                         </div>
                       ) : (
                         <div>
                           {queueReplacing && <div style={{ color: "#d60000", fontSize: 12, marginBottom: 12, padding: "8px 12px", background: "#0d0000", border: "1px solid #330000" }}>⟳ Generating new keyword queue...</div>}
-                          <div style={styles.table}>
-                            <div style={styles.tableHeader}>
-                              <div style={{ flex: "0 0 28px" }}></div>
-                              <div style={{ flex: 3 }}>Keyword</div>
-                              <div style={{ flex: 1, textAlign: "center" }}>Intent</div>
-                              <div style={{ flex: "0 0 130px", textAlign: "center" }}>Scheduled</div>
-                              <div style={{ flex: "0 0 220px", textAlign: "center" }}>Actions</div>
-                            </div>
-                            {monthlyQueue.slice((monthlyQueuePage - 1) * 20, monthlyQueuePage * 20).map((row, idx) => {
-                              const globalIdx = (monthlyQueuePage - 1) * 20 + idx;
+                          {(() => {
+                            const renderQueueRows = (rows, baseOffset) => rows.map((row, idx) => {
+                              const globalIdx = baseOffset + idx;
                               const schedDate = new Date();
                               schedDate.setDate(schedDate.getDate() + globalIdx + 1);
                               const schedStr = schedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " 8:45am";
@@ -2171,53 +2198,111 @@ function App() {
                               const hasPost = rowPostData && rowPostData.post;
                               const isGenerating = rowPostData && rowPostData.loading;
                               return (
-                              <div key={row.id}
-                                draggable
-                                onDragStart={e => { setDragQueueId(row.id); e.dataTransfer.effectAllowed = "move"; }}
-                                onDragOver={e => { e.preventDefault(); setDragOverQueueId(row.id); }}
-                                onDragEnd={() => { setDragQueueId(null); setDragOverQueueId(null); }}
-                                onDrop={() => reorderQueue(dragQueueId, row.id)}
-                                onClick={() => setSelectedQueueRowId(isSelected ? null : row.id)}
-                                style={{ ...styles.tableRow, cursor: "pointer", borderLeft: isSelected ? "2px solid #d60000" : dragOverQueueId === row.id ? "2px solid #555" : "2px solid transparent", opacity: row.used ? 0.4 : 1, background: isSelected ? "rgba(214,0,0,0.07)" : "transparent" }}
-                                onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = "#111"; }}
-                                onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
-                              >
-                                <div style={{ flex: "0 0 28px", color: "#333", fontSize: 11, textAlign: "center" }}>{globalIdx + 1}</div>
-                                <div style={{ flex: 3, color: row.used ? "#555" : "#fff", fontWeight: 500 }}>
-                                  {row.keyword}
-                                  {row.used && <span style={{ marginLeft: 8, fontSize: 10, color: "#555" }}>used</span>}
-                                  {hasPost && <span style={{ marginLeft: 8, fontSize: 10, color: "#22c55e" }}>● post ready</span>}
+                                <div key={row.id}
+                                  draggable
+                                  onDragStart={e => { setDragQueueId(row.id); e.dataTransfer.effectAllowed = "move"; }}
+                                  onDragOver={e => { e.preventDefault(); setDragOverQueueId(row.id); }}
+                                  onDragEnd={() => { setDragQueueId(null); setDragOverQueueId(null); }}
+                                  onDrop={() => reorderQueue(dragQueueId, row.id)}
+                                  onClick={() => setSelectedQueueRowId(isSelected ? null : row.id)}
+                                  style={{ ...styles.tableRow, cursor: "pointer", borderLeft: isSelected ? "2px solid #d60000" : dragOverQueueId === row.id ? "2px solid #555" : "2px solid transparent", opacity: row.used ? 0.4 : 1, background: isSelected ? "rgba(214,0,0,0.07)" : "transparent" }}
+                                  onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = "#111"; }}
+                                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
+                                >
+                                  <div style={{ flex: "0 0 28px", color: "#333", fontSize: 11, textAlign: "center" }}>{globalIdx + 1}</div>
+                                  <div style={{ flex: 3, color: row.used ? "#555" : "#fff", fontWeight: 500 }}>
+                                    {row.keyword}
+                                    {row.used && <span style={{ marginLeft: 8, fontSize: 10, color: "#555" }}>used</span>}
+                                    {hasPost && <span style={{ marginLeft: 8, fontSize: 10, color: "#22c55e" }}>● post ready</span>}
+                                  </div>
+                                  <div style={{ flex: 1, textAlign: "center" }}>
+                                    <span style={{ ...styles.intentBadge, color: getIntentColor(row.intent), background: getIntentColor(row.intent) + "22", borderColor: getIntentColor(row.intent) + "44" }}>{row.intent}</span>
+                                  </div>
+                                  <div style={{ flex: "0 0 130px", textAlign: "center", color: "#666", fontSize: 11 }}>{row.used ? <span style={{ color: "#555" }}>published</span> : schedStr}</div>
+                                  <div style={{ flex: "0 0 220px", display: "flex", gap: 4, justifyContent: "center" }} onClick={e => e.stopPropagation()}>
+                                    {hasPost ? (
+                                      <button style={{ ...styles.addKeywordBtn, color: "#22c55e", borderColor: "rgba(34,197,94,0.3)", background: "rgba(34,197,94,0.08)" }} onClick={() => {
+                                        setGeneratedPost(rowPostData.post);
+                                        setGeneratingPost(row.keyword);
+                                        setFeaturedImage(rowPostData.featuredImage || null);
+                                        setGeneratedSchemaHtml(rowPostData.schemaHtml || null);
+                                        setActiveClient(selectedClient);
+                                        setActiveTab("content");
+                                      }}>👁 View Post</button>
+                                    ) : (
+                                      <button style={{ ...styles.addKeywordBtn, opacity: isGenerating ? 0.6 : 1 }} disabled={isGenerating} onClick={() => generateQueueRowPost(row.id, row.keyword, selectedClient)}>{isGenerating ? "⟳ Generating..." : "Generate"}</button>
+                                    )}
+                                    <button style={{ ...styles.addKeywordBtn, color: "#ef4444", borderColor: "rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.08)" }} onClick={async () => { await authFetch(`${API}/api/keywords/queue/${row.id}`, { method: "DELETE" }); setMonthlyQueue(prev => prev.filter(r => r.id !== row.id)); }}>✕</button>
+                                  </div>
                                 </div>
-                                <div style={{ flex: 1, textAlign: "center" }}>
-                                  <span style={{ ...styles.intentBadge, color: getIntentColor(row.intent), background: getIntentColor(row.intent) + "22", borderColor: getIntentColor(row.intent) + "44" }}>{row.intent}</span>
-                                </div>
-                                <div style={{ flex: "0 0 130px", textAlign: "center", color: "#666", fontSize: 11 }}>{row.used ? <span style={{ color: "#555" }}>published</span> : schedStr}</div>
-                                <div style={{ flex: "0 0 220px", display: "flex", gap: 4, justifyContent: "center" }} onClick={e => e.stopPropagation()}>
-                                  {hasPost ? (
-                                    <button style={{ ...styles.addKeywordBtn, color: "#22c55e", borderColor: "rgba(34,197,94,0.3)", background: "rgba(34,197,94,0.08)" }} onClick={() => {
-                                      setGeneratedPost(rowPostData.post);
-                                      setGeneratingPost(row.keyword);
-                                      setFeaturedImage(rowPostData.featuredImage || null);
-                                      setGeneratedSchemaHtml(rowPostData.schemaHtml || null);
-                                      setActiveClient(selectedClient);
-                                      setActiveTab("content");
-                                    }}>👁 View Post</button>
-                                  ) : (
-                                    <button style={{ ...styles.addKeywordBtn, opacity: isGenerating ? 0.6 : 1 }} disabled={isGenerating} onClick={() => generateQueueRowPost(row.id, row.keyword, selectedClient)}>{isGenerating ? "⟳ Generating..." : "Generate"}</button>
-                                  )}
-                                  <button style={{ ...styles.addKeywordBtn, color: "#ef4444", borderColor: "rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.08)" }} onClick={async () => { await authFetch(`${API}/api/keywords/queue/${row.id}`, { method: "DELETE" }); setMonthlyQueue(prev => prev.filter(r => r.id !== row.id)); }}>✕</button>
-                                </div>
-                              </div>
                               );
-                            })}
-                          </div>
-                          {monthlyQueue.length > 20 && (
-                            <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 12 }}>
-                              <button style={{ ...styles.addKeywordBtn, opacity: monthlyQueuePage === 1 ? 0.3 : 1 }} disabled={monthlyQueuePage === 1} onClick={() => setMonthlyQueuePage(p => p - 1)}>← Prev</button>
-                              <span style={{ color: "#555", fontSize: 12, padding: "4px 8px" }}>{monthlyQueuePage} / {Math.ceil(monthlyQueue.length / 20)}</span>
-                              <button style={{ ...styles.addKeywordBtn, opacity: monthlyQueuePage >= Math.ceil(monthlyQueue.length / 20) ? 0.3 : 1 }} disabled={monthlyQueuePage >= Math.ceil(monthlyQueue.length / 20)} onClick={() => setMonthlyQueuePage(p => p + 1)}>Next →</button>
-                            </div>
-                          )}
+                            });
+
+                            const researchRows = monthlyQueue.filter(r => r.source === "library" || r.source === "ai");
+                            const gapRows = monthlyQueue.filter(r => r.source === "gap");
+                            const otherRows = monthlyQueue.filter(r => !["library","ai","gap"].includes(r.source));
+                            const allRows = [...researchRows, ...otherRows]; // research section includes manually-added
+
+                            return (
+                              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+                                {/* ── KEYWORD RESEARCH SECTION ── */}
+                                <div style={{ border: "1px solid #1a1a1a", borderRadius: 8, overflow: "hidden" }}>
+                                  <div style={{ background: "#0a0a0a", padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #1a1a1a" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                      <span style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", color: "#a78bfa", fontWeight: 600 }}>📚 Keyword Research</span>
+                                      <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif" }}>{allRows.filter(r => !r.used).length} active</span>
+                                    </div>
+                                    <button style={{ ...styles.addKeywordBtn, color: "#a78bfa", borderColor: "rgba(167,139,250,0.3)", background: "rgba(167,139,250,0.07)", fontSize: 11 }} onClick={refreshResearchKeywords} disabled={refreshingResearch}>
+                                      {refreshingResearch ? "⟳ Loading..." : "↻ Refresh List"}
+                                    </button>
+                                  </div>
+                                  {allRows.length === 0 ? (
+                                    <div style={{ padding: "20px 16px", color: "#444", fontSize: 12, textAlign: "center" }}>No keyword research yet — click Refresh List or Regenerate Queue</div>
+                                  ) : (
+                                    <div style={styles.table}>
+                                      <div style={styles.tableHeader}>
+                                        <div style={{ flex: "0 0 28px" }}></div>
+                                        <div style={{ flex: 3 }}>Keyword</div>
+                                        <div style={{ flex: 1, textAlign: "center" }}>Intent</div>
+                                        <div style={{ flex: "0 0 130px", textAlign: "center" }}>Scheduled</div>
+                                        <div style={{ flex: "0 0 220px", textAlign: "center" }}>Actions</div>
+                                      </div>
+                                      {renderQueueRows(allRows, 0)}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* ── COMPETITOR GAP SECTION ── */}
+                                <div style={{ border: "1px solid #1a1a1a", borderRadius: 8, overflow: "hidden" }}>
+                                  <div style={{ background: "#0a0a0a", padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #1a1a1a" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                      <span style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", color: "#f59e0b", fontWeight: 600 }}>🎯 Competitor Gap</span>
+                                      <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif" }}>{gapRows.filter(r => !r.used).length} active</span>
+                                    </div>
+                                    <button style={{ ...styles.addKeywordBtn, color: "#f59e0b", borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.07)", fontSize: 11 }} onClick={refreshGapKeywords} disabled={refreshingGap}>
+                                      {refreshingGap ? "⟳ Loading..." : "↻ Refresh List"}
+                                    </button>
+                                  </div>
+                                  {gapRows.length === 0 ? (
+                                    <div style={{ padding: "20px 16px", color: "#444", fontSize: 12, textAlign: "center" }}>No competitor gap keywords — add competitors in Competitors tab, then click Refresh List</div>
+                                  ) : (
+                                    <div style={styles.table}>
+                                      <div style={styles.tableHeader}>
+                                        <div style={{ flex: "0 0 28px" }}></div>
+                                        <div style={{ flex: 3 }}>Keyword</div>
+                                        <div style={{ flex: 1, textAlign: "center" }}>Intent</div>
+                                        <div style={{ flex: "0 0 130px", textAlign: "center" }}>Scheduled</div>
+                                        <div style={{ flex: "0 0 220px", textAlign: "center" }}>Actions</div>
+                                      </div>
+                                      {renderQueueRows(gapRows, allRows.length)}
+                                    </div>
+                                  )}
+                                </div>
+
+                              </div>
+                            );
+                          })()}
                         </div>
                       )}
                     </div>
@@ -2228,7 +2313,7 @@ function App() {
                     <div>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                         <div style={styles.sectionTitle}>Client Keywords</div>
-                        <div style={{ fontSize: 11, color: "#555" }}>Drag a row or click → Queue to move it to Monthly Queue • ✕ to remove</div>
+                        <div style={{ fontSize: 11, color: "#555" }}>Drag a row or click → Queue to move it to Scheduled Queue • ✕ to remove</div>
                       </div>
                       {clientKeywords.length === 0 ? (
                         <div style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 10, padding: 24, textAlign: "center" }}>
@@ -2260,7 +2345,7 @@ function App() {
                                   <span style={{ ...styles.intentBadge, color: getIntentColor(row.intent), background: getIntentColor(row.intent) + "22", borderColor: getIntentColor(row.intent) + "44" }}>{row.intent}</span>
                                 </div>
                                 <div style={{ flex: "0 0 120px", display: "flex", gap: 4, justifyContent: "center" }}>
-                                  <button style={styles.addKeywordBtn} title="Move to Monthly Queue" onClick={async () => {
+                                  <button style={styles.addKeywordBtn} title="Move to Scheduled Queue" onClick={async () => {
                                     await addQueueKeyword(row.keyword, "clientlist", row.intent, row.volume);
                                     await authFetch(`${API}/api/clients/${selectedClient.id}/keywords/${row.id}`, { method: "DELETE" });
                                     setClientKeywords(prev => prev.filter(k => k.id !== row.id));
