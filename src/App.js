@@ -217,7 +217,6 @@ function App() {
   const [generatedSchemaHtml, setGeneratedSchemaHtml] = useState(null);
   const [selectedQueueRowId, setSelectedQueueRowId] = useState(null);
   const [queueRowPosts, setQueueRowPosts] = useState({}); // { [rowId]: { post, featuredImage, loading, error } }
-  const [viewPostModal, setViewPostModal] = useState(null); // post object to view
   const [featuredImage, setFeaturedImage] = useState(null);
   const [contentLoading, setContentLoading] = useState(false);
   const [contentError, setContentError] = useState(null);
@@ -2189,11 +2188,17 @@ function App() {
                                 <div style={{ flex: "0 0 130px", textAlign: "center", color: "#666", fontSize: 11 }}>{row.used ? <span style={{ color: "#555" }}>published</span> : schedStr}</div>
                                 <div style={{ flex: "0 0 220px", display: "flex", gap: 4, justifyContent: "center" }} onClick={e => e.stopPropagation()}>
                                   {hasPost ? (
-                                    <button style={{ ...styles.addKeywordBtn, color: "#22c55e", borderColor: "rgba(34,197,94,0.3)", background: "rgba(34,197,94,0.08)" }} onClick={() => setViewPostModal({ ...rowPostData.post, keyword: row.keyword })}>👁 View Post</button>
+                                    <button style={{ ...styles.addKeywordBtn, color: "#22c55e", borderColor: "rgba(34,197,94,0.3)", background: "rgba(34,197,94,0.08)" }} onClick={() => {
+                                      setGeneratedPost(rowPostData.post);
+                                      setGeneratingPost(row.keyword);
+                                      setFeaturedImage(rowPostData.featuredImage || null);
+                                      setGeneratedSchemaHtml(rowPostData.schemaHtml || null);
+                                      setActiveClient(selectedClient);
+                                      setActiveTab("content");
+                                    }}>👁 View Post</button>
                                   ) : (
                                     <button style={{ ...styles.addKeywordBtn, opacity: isGenerating ? 0.6 : 1 }} disabled={isGenerating} onClick={() => generateQueueRowPost(row.id, row.keyword, selectedClient)}>{isGenerating ? "⟳ Generating..." : "Generate"}</button>
                                   )}
-                                  <button style={styles.addKeywordBtn} onClick={() => generatePost(row.keyword, selectedClient)}>→ Content Tab</button>
                                   <button style={{ ...styles.addKeywordBtn, color: "#ef4444", borderColor: "rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.08)" }} onClick={async () => { await authFetch(`${API}/api/keywords/queue/${row.id}`, { method: "DELETE" }); setMonthlyQueue(prev => prev.filter(r => r.id !== row.id)); }}>✕</button>
                                 </div>
                               </div>
@@ -3722,37 +3727,7 @@ function App() {
           )}
         </div>
 
-      {/* VIEW QUEUE POST MODAL */}
-      {viewPostModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
-          onClick={e => { if (e.target === e.currentTarget) setViewPostModal(null); }}>
-          <div style={{ background: "#0d0d0d", border: "1px solid #222", width: "100%", maxWidth: 780, maxHeight: "90vh", display: "flex", flexDirection: "column", borderRadius: 8, overflow: "hidden" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid #1a1a1a", background: "#0a0a0a" }}>
-              <div>
-                <div style={{ color: "#fff", fontWeight: 700, fontSize: 15, fontFamily: "'Oswald', sans-serif" }}>{viewPostModal.title}</div>
-                <div style={{ color: "#666", fontSize: 11, marginTop: 2 }}>Keyword: <span style={{ color: "#d60000" }}>{viewPostModal.keyword}</span> · {viewPostModal.wordCount || "—"} words</div>
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button style={{ ...styles.addKeywordBtn, color: "#22c55e", borderColor: "rgba(34,197,94,0.3)", background: "rgba(34,197,94,0.08)" }}
-                  onClick={() => { generatePost(viewPostModal.keyword, selectedClient); setViewPostModal(null); }}>→ Load into Content Tab</button>
-                <button style={{ ...styles.addKeywordBtn, color: "#888" }} onClick={() => setViewPostModal(null)}>✕ Close</button>
-              </div>
-            </div>
-            <div style={{ padding: 20, overflowY: "auto", flex: 1 }}>
-              {viewPostModal.metaDescription && (
-                <div style={{ background: "#0a0a0a", border: "1px solid #1a1a1a", borderRadius: 6, padding: "10px 14px", marginBottom: 16 }}>
-                  <span style={{ color: "#555", fontSize: 11 }}>META: </span>
-                  <span style={{ color: "#aaa", fontSize: 12 }}>{viewPostModal.metaDescription}</span>
-                </div>
-              )}
-              <div style={{ color: "#ccc", fontSize: 13, lineHeight: 1.7, fontFamily: "Georgia, serif" }}
-                dangerouslySetInnerHTML={{ __html: viewPostModal.content }} />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ADD TO CLIENT MODAL */}
+            {/* ADD TO CLIENT MODAL */}
       {showAddToClientModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
           onClick={e => { if (e.target === e.currentTarget) setShowAddToClientModal(false); }}>
