@@ -2664,12 +2664,42 @@ function App() {
                               setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: "failed" }));
                             }
                           };
+                          const handleDelete = async (trashWp) => {
+                            if (!window.confirm(trashWp ? "Remove from dashboard AND trash the WordPress post?" : "Remove this entry from the dashboard? (WordPress post will NOT be deleted)")) return;
+                            try {
+                              const r = await authFetch(`${API}/api/schedule/${job.id}?trashWp=${trashWp ? 1 : 0}`, { method: "DELETE" });
+                              const d = await r.json();
+                              if (d.success) {
+                                setScheduleJobs(prev => prev.filter(j => j.id !== job.id));
+                              } else {
+                                alert("Delete failed: " + (d.error || "Unknown error"));
+                              }
+                            } catch(err) {
+                              alert("Delete failed: " + err.message);
+                            }
+                          };
                           return (
                             <div key={job.id} style={{ background: "#0a0a0a", border: "1px solid #141414", borderRadius: 6, padding: "10px 14px" }}>
                               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                                 <span style={{ fontSize: 11, color: "#22c55e", flexShrink: 0 }}>&#x2713;</span>
                                 <span style={{ flex: 1, fontSize: 12, color: "#fff", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.04em", fontWeight: 600 }}>{job.keyword}</span>
                                 <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", flexShrink: 0 }}>{new Date(job.published_at || job.scheduled_time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                                <div style={{ position: "relative", flexShrink: 0 }} className="delete-menu-wrap">
+                                  <button
+                                    onClick={e => { e.stopPropagation(); const m = e.currentTarget.nextSibling; m.style.display = m.style.display === "block" ? "none" : "block"; }}
+                                    style={{ background: "none", border: "none", cursor: "pointer", color: "#333", fontSize: 14, padding: "0 4px", lineHeight: 1 }}
+                                    title="Delete">&#x2715;</button>
+                                  <div style={{ display: "none", position: "absolute", right: 0, top: "100%", background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 6, zIndex: 100, minWidth: 180, padding: 4 }}>
+                                    <button onClick={() => handleDelete(false)} style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: "none", cursor: "pointer", color: "#ccc", fontSize: 11, padding: "6px 10px", fontFamily: "'Barlow Condensed', sans-serif" }}
+                                      onMouseEnter={e => e.currentTarget.style.color = "#fff"} onMouseLeave={e => e.currentTarget.style.color = "#ccc"}>
+                                      Remove from dashboard only
+                                    </button>
+                                    <button onClick={() => handleDelete(true)} style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: "none", cursor: "pointer", color: "#d60000", fontSize: 11, padding: "6px 10px", fontFamily: "'Barlow Condensed', sans-serif" }}
+                                      onMouseEnter={e => e.currentTarget.style.color = "#ff4444"} onMouseLeave={e => e.currentTarget.style.color = "#d60000"}>
+                                      Remove + trash WordPress post
+                                    </button>
+                                  </div>
+                                </div>
                               </div>
                               <div style={{ display: "flex", alignItems: "center", gap: 10, paddingLeft: 20 }}>
                                 {job.published_url ? (
