@@ -2188,10 +2188,34 @@ function App() {
                         <div>
                           {queueReplacing && <div style={{ color: "#d60000", fontSize: 12, marginBottom: 12, padding: "8px 12px", background: "#0d0000", border: "1px solid #330000" }}>⟳ Generating new keyword queue...</div>}
                           {(() => {
-                            const renderQueueRows = (rows, baseOffset) => rows.map((row, idx) => {
-                              const globalIdx = baseOffset + idx;
-                              const schedDate = new Date();
-                              schedDate.setDate(schedDate.getDate() + globalIdx + 1);
+                            const startHour = selectedClient.schedule_start_hour || 9;
+                            const endHour = selectedClient.schedule_end_hour || 12;
+                            const scheduleDays = selectedClient.schedule_days || ["Mon","Tue","Wed","Thu","Fri"];
+                            const dayMap = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+                            const renderQueueRows = (rows, baseOffset) => {
+                              // Build enough scheduled dates for this batch, skipping non-publish days
+                              const scheduledDates = [];
+                              const cursor = new Date();
+                              cursor.setHours(0,0,0,0);
+                              const needed = rows.length + (baseOffset || 0) + 7;
+                              while (scheduledDates.length < needed) {
+                                cursor.setDate(cursor.getDate() + 1);
+                                const dayName = dayMap[cursor.getDay()];
+                                if (scheduleDays.includes(dayName)) scheduledDates.push(new Date(cursor));
+                              }
+                              return rows.map((row, idx) => {
+                              const globalIdx = (baseOffset || 0) + idx;
+                              // Deterministic random minutes per row — seeded from row.id so stable across renders
+                              const seed = row.id ? row.id.split("").reduce((a,c) => a + c.charCodeAt(0), 0) : idx;
+                              const windowMinutes = Math.max(1, (endHour - startHour) * 60);
+                              const randMinutes = seed % windowMinutes;
+                              const schedDate = scheduledDates[globalIdx] || new Date();
+                              const displayHour = startHour + Math.floor(randMinutes / 60);
+                              const displayMin = randMinutes % 60;
+                              const ampm = displayHour >= 12 ? "PM" : "AM";
+                              const h12 = displayHour > 12 ? displayHour - 12 : displayHour === 0 ? 12 : displayHour;
+                              const timeStr = `${h12}:${String(displayMin).padStart(2,"0")} ${ampm} EST`;
                               const isSelected = selectedQueueRowId === row.id;
                               const rowPostData = queueRowPosts[row.id];
                               const hasPost = rowPostData && rowPostData.post;
@@ -2225,7 +2249,7 @@ function App() {
                                         <span style={{ fontSize: 12, color: "#ccc", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", fontWeight: 600 }}>
                                           {schedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                                         </span>
-                                        <span style={{ fontSize: 10, color: "#666", fontFamily: "'Barlow', sans-serif" }}>8:45 AM EST</span>
+                                        <span style={{ fontSize: 10, color: "#666", fontFamily: "'Barlow', sans-serif" }}>{timeStr}</span>
                                       </div>
                                     )}
                                   </div>
@@ -2246,7 +2270,7 @@ function App() {
                                   </div>
                                 </div>
                               );
-                            });
+                            }); }; // end renderQueueRows
 
                             const researchRows = monthlyQueue.filter(r => r.source === "library" || r.source === "ai");
                             const gapRows = monthlyQueue.filter(r => r.source === "gap");
