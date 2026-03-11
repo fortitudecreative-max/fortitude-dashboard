@@ -2131,12 +2131,7 @@ function App() {
                     onClick={() => setGbpExpanded(v => !v)}
                     style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: gbpExpanded ? 16 : 0 }}
                   >
-                    <div>
-                      <div style={styles.sectionTitle}>Google Business Profile</div>
-                      <div style={{ fontSize: 11, color: "#555", marginTop: 4, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em" }}>
-                        {gbpStatus.connected ? gbpStatus.locationTitle : gbpAgencyConnected ? "No location assigned" : "Not connected"}
-                      </div>
-                    </div>
+                    <div style={styles.sectionTitle}>Google Business Profile</div>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       {gbpStatus.connected && gbpExpanded && (
                         <button style={styles.addBtn} onClick={e => { e.stopPropagation(); setShowGbpComposer(!showGbpComposer); setGbpPostResult(null); }}>
@@ -2148,6 +2143,11 @@ function App() {
                   </button>
                   {gbpExpanded && (
                   <div>
+                    {gbpStatus.connected && gbpStatus.locationTitle && (
+                      <div style={{ fontSize: 11, color: "#555", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", marginBottom: 10, paddingTop: 4 }}>
+                        {gbpStatus.locationTitle}
+                      </div>
+                    )}
                     {!gbpAgencyConnected && (
                       <div style={{ padding: "20px 0", textAlign: "center" }}>
                         <div style={{ color: "#555", fontSize: 13, marginBottom: 12 }}>Google account not connected to this agency.</div>
