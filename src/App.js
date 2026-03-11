@@ -215,6 +215,9 @@ function App() {
   const [generatingPost, setGeneratingPost] = useState(null);
   const [generatedPost, setGeneratedPost] = useState(null);
   const [generatedSchemaHtml, setGeneratedSchemaHtml] = useState(null);
+  const [selectedQueueRowId, setSelectedQueueRowId] = useState(null);
+  const [queueRowPosts, setQueueRowPosts] = useState({}); // { [rowId]: { post, featuredImage, loading, error } }
+  const [viewPostModal, setViewPostModal] = useState(null); // post object to view
   const [featuredImage, setFeaturedImage] = useState(null);
   const [contentLoading, setContentLoading] = useState(false);
   const [contentError, setContentError] = useState(null);
@@ -1394,6 +1397,33 @@ function App() {
     }
   };
 
+  // Generate a post for a specific queue row and store it in queueRowPosts state
+  const generateQueueRowPost = async (rowId, keyword, client) => {
+    setQueueRowPosts(prev => ({ ...prev, [rowId]: { loading: true, error: null, post: null } }));
+    try {
+      const res = await authFetch(`${API}/api/content/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          keyword,
+          industry: client.industry,
+          clientName: client.name,
+          clientId: client.id,
+          brandVoice: client.brand_voice || "",
+          wordpressUrl: client.wordpress_url || "",
+        }),
+      });
+      const data = await res.json();
+      if (data.post) {
+        setQueueRowPosts(prev => ({ ...prev, [rowId]: { loading: false, post: data.post, featuredImage: data.featuredImage, schemaHtml: data.schemaHtml, error: null } }));
+      } else {
+        setQueueRowPosts(prev => ({ ...prev, [rowId]: { loading: false, post: null, error: data.error || "Failed to generate" } }));
+      }
+    } catch (e) {
+      setQueueRowPosts(prev => ({ ...prev, [rowId]: { loading: false, post: null, error: "Connection error" } }));
+    }
+  };
+
   const handleLibSort = (field) => {
     if (libSortField === field) setLibSortDir(libSortDir === "asc" ? "desc" : "asc");
     else { setLibSortField(field); setLibSortDir("desc"); }
@@ -2123,32 +2153,52 @@ function App() {
                               <div style={{ flex: "0 0 28px" }}></div>
                               <div style={{ flex: 3 }}>Keyword</div>
                               <div style={{ flex: 1, textAlign: "center" }}>Intent</div>
-                              <div style={{ flex: 1, textAlign: "center" }}>Source</div>
-                              <div style={{ flex: "0 0 160px", textAlign: "center" }}>Actions</div>
+                              <div style={{ flex: "0 0 130px", textAlign: "center" }}>Scheduled</div>
+                              <div style={{ flex: "0 0 220px", textAlign: "center" }}>Actions</div>
                             </div>
-                            {monthlyQueue.slice((monthlyQueuePage - 1) * 20, monthlyQueuePage * 20).map((row, idx) => (
+                            {monthlyQueue.slice((monthlyQueuePage - 1) * 20, monthlyQueuePage * 20).map((row, idx) => {
+                              const globalIdx = (monthlyQueuePage - 1) * 20 + idx;
+                              const schedDate = new Date();
+                              schedDate.setDate(schedDate.getDate() + globalIdx + 1);
+                              const schedStr = schedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " 8:45am";
+                              const isSelected = selectedQueueRowId === row.id;
+                              const rowPostData = queueRowPosts[row.id];
+                              const hasPost = rowPostData && rowPostData.post;
+                              const isGenerating = rowPostData && rowPostData.loading;
+                              return (
                               <div key={row.id}
                                 draggable
                                 onDragStart={e => { setDragQueueId(row.id); e.dataTransfer.effectAllowed = "move"; }}
                                 onDragOver={e => { e.preventDefault(); setDragOverQueueId(row.id); }}
                                 onDragEnd={() => { setDragQueueId(null); setDragOverQueueId(null); }}
                                 onDrop={() => reorderQueue(dragQueueId, row.id)}
-                                style={{ ...styles.tableRow, cursor: "grab", borderLeft: dragOverQueueId === row.id ? "2px solid #d60000" : "2px solid transparent", opacity: row.used ? 0.4 : 1 }}
-                                onMouseEnter={e => e.currentTarget.style.background = "#111"}
-                                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                                onClick={() => setSelectedQueueRowId(isSelected ? null : row.id)}
+                                style={{ ...styles.tableRow, cursor: "pointer", borderLeft: isSelected ? "2px solid #d60000" : dragOverQueueId === row.id ? "2px solid #555" : "2px solid transparent", opacity: row.used ? 0.4 : 1, background: isSelected ? "rgba(214,0,0,0.07)" : "transparent" }}
+                                onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = "#111"; }}
+                                onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
                               >
-                                <div style={{ flex: "0 0 28px", color: "#333", fontSize: 11, textAlign: "center" }}>{(monthlyQueuePage - 1) * 20 + idx + 1}</div>
-                                <div style={{ flex: 3, color: row.used ? "#555" : "#fff", fontWeight: 500 }}>{row.keyword}{row.used && <span style={{ marginLeft: 8, fontSize: 10, color: "#555" }}>used</span>}</div>
+                                <div style={{ flex: "0 0 28px", color: "#333", fontSize: 11, textAlign: "center" }}>{globalIdx + 1}</div>
+                                <div style={{ flex: 3, color: row.used ? "#555" : "#fff", fontWeight: 500 }}>
+                                  {row.keyword}
+                                  {row.used && <span style={{ marginLeft: 8, fontSize: 10, color: "#555" }}>used</span>}
+                                  {hasPost && <span style={{ marginLeft: 8, fontSize: 10, color: "#22c55e" }}>● post ready</span>}
+                                </div>
                                 <div style={{ flex: 1, textAlign: "center" }}>
                                   <span style={{ ...styles.intentBadge, color: getIntentColor(row.intent), background: getIntentColor(row.intent) + "22", borderColor: getIntentColor(row.intent) + "44" }}>{row.intent}</span>
                                 </div>
-                                <div style={{ flex: 1, textAlign: "center", color: "#555", fontSize: 11 }}>{row.source || "—"}</div>
-                                <div style={{ flex: "0 0 160px", display: "flex", gap: 4, justifyContent: "center" }}>
-                                  <button style={styles.addKeywordBtn} onClick={() => generatePost(row.keyword, selectedClient)}>Generate</button>
+                                <div style={{ flex: "0 0 130px", textAlign: "center", color: "#666", fontSize: 11 }}>{row.used ? <span style={{ color: "#555" }}>published</span> : schedStr}</div>
+                                <div style={{ flex: "0 0 220px", display: "flex", gap: 4, justifyContent: "center" }} onClick={e => e.stopPropagation()}>
+                                  {hasPost ? (
+                                    <button style={{ ...styles.addKeywordBtn, color: "#22c55e", borderColor: "rgba(34,197,94,0.3)", background: "rgba(34,197,94,0.08)" }} onClick={() => setViewPostModal({ ...rowPostData.post, keyword: row.keyword })}>👁 View Post</button>
+                                  ) : (
+                                    <button style={{ ...styles.addKeywordBtn, opacity: isGenerating ? 0.6 : 1 }} disabled={isGenerating} onClick={() => generateQueueRowPost(row.id, row.keyword, selectedClient)}>{isGenerating ? "⟳ Generating..." : "Generate"}</button>
+                                  )}
+                                  <button style={styles.addKeywordBtn} onClick={() => generatePost(row.keyword, selectedClient)}>→ Content Tab</button>
                                   <button style={{ ...styles.addKeywordBtn, color: "#ef4444", borderColor: "rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.08)" }} onClick={async () => { await authFetch(`${API}/api/keywords/queue/${row.id}`, { method: "DELETE" }); setMonthlyQueue(prev => prev.filter(r => r.id !== row.id)); }}>✕</button>
                                 </div>
                               </div>
-                            ))}
+                              );
+                            })}
                           </div>
                           {monthlyQueue.length > 20 && (
                             <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 12 }}>
@@ -3671,6 +3721,36 @@ function App() {
             </div>
           )}
         </div>
+
+      {/* VIEW QUEUE POST MODAL */}
+      {viewPostModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+          onClick={e => { if (e.target === e.currentTarget) setViewPostModal(null); }}>
+          <div style={{ background: "#0d0d0d", border: "1px solid #222", width: "100%", maxWidth: 780, maxHeight: "90vh", display: "flex", flexDirection: "column", borderRadius: 8, overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid #1a1a1a", background: "#0a0a0a" }}>
+              <div>
+                <div style={{ color: "#fff", fontWeight: 700, fontSize: 15, fontFamily: "'Oswald', sans-serif" }}>{viewPostModal.title}</div>
+                <div style={{ color: "#666", fontSize: 11, marginTop: 2 }}>Keyword: <span style={{ color: "#d60000" }}>{viewPostModal.keyword}</span> · {viewPostModal.wordCount || "—"} words</div>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button style={{ ...styles.addKeywordBtn, color: "#22c55e", borderColor: "rgba(34,197,94,0.3)", background: "rgba(34,197,94,0.08)" }}
+                  onClick={() => { generatePost(viewPostModal.keyword, selectedClient); setViewPostModal(null); }}>→ Load into Content Tab</button>
+                <button style={{ ...styles.addKeywordBtn, color: "#888" }} onClick={() => setViewPostModal(null)}>✕ Close</button>
+              </div>
+            </div>
+            <div style={{ padding: 20, overflowY: "auto", flex: 1 }}>
+              {viewPostModal.metaDescription && (
+                <div style={{ background: "#0a0a0a", border: "1px solid #1a1a1a", borderRadius: 6, padding: "10px 14px", marginBottom: 16 }}>
+                  <span style={{ color: "#555", fontSize: 11 }}>META: </span>
+                  <span style={{ color: "#aaa", fontSize: 12 }}>{viewPostModal.metaDescription}</span>
+                </div>
+              )}
+              <div style={{ color: "#ccc", fontSize: 13, lineHeight: 1.7, fontFamily: "Georgia, serif" }}
+                dangerouslySetInnerHTML={{ __html: viewPostModal.content }} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ADD TO CLIENT MODAL */}
       {showAddToClientModal && (
