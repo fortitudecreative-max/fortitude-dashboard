@@ -1798,17 +1798,27 @@ function App() {
                           <button style={{ ...styles.connectBtn, fontSize: 11, padding: "6px 14px", borderColor: "#333", color: "#555" }} onClick={() => deleteClient(selectedClient)}>✕ Delete Client</button>
                         </div>
                       ) : (
-                        <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                          <button style={{ ...styles.connectBtn, fontSize: 11, padding: "6px 14px" }} onClick={startEditClient}>✎ Edit Client</button>
-                          {editingClient && (
-                            <div style={{ position: "relative", display: "inline-block" }}>
-                              <div style={{ ...styles.clientDetailAvatar, overflow: "hidden", cursor: "pointer", width: 40, height: 40 }}
-                                onClick={() => logoInputRef.current && logoInputRef.current.click()}
-                                title="Click to upload logo">
-                                {logoUploading && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff" }}>...</div>}
+                        <div style={{ marginBottom: 14 }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+                            {[
+                              { label: "Domain", value: selectedClient.domain },
+                              { label: "Service Area", value: selectedClient.service_area },
+                              { label: "Industry", value: selectedClient.industry },
+                              { label: "Industry Tags", value: Array.isArray(selectedClient.industry_tags) ? selectedClient.industry_tags.join(", ") : selectedClient.industry_tags },
+                              { label: "WordPress URL", value: selectedClient.wordpress_url },
+                              { label: "WP Username", value: selectedClient.wordpress_username },
+                            ].map(({ label, value }) => (
+                              <div key={label}>
+                                <div style={{ fontSize: 9, color: "#555", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", marginBottom: 3 }}>{label}</div>
+                                <div style={{ fontSize: 12, color: value ? "#ccc" : "#333", fontFamily: "'Barlow Condensed', sans-serif" }}>{value || "Not set"}</div>
                               </div>
+                            ))}
+                            <div style={{ gridColumn: "1 / -1" }}>
+                              <div style={{ fontSize: 9, color: "#555", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", marginBottom: 3 }}>Brand Voice</div>
+                              <div style={{ fontSize: 12, color: selectedClient.brand_voice ? "#ccc" : "#333", fontFamily: "'Barlow Condensed', sans-serif", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{selectedClient.brand_voice || "Not set"}</div>
                             </div>
-                          )}
+                          </div>
+                          <button style={{ ...styles.connectBtn, fontSize: 11, padding: "6px 14px" }} onClick={startEditClient}>✎ Edit Client</button>
                         </div>
                       )}
 
