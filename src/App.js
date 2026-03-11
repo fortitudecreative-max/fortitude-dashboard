@@ -288,6 +288,13 @@ function App() {
   const [imageDragOver, setImageDragOver] = useState(false);
   const clientImageInputRef = useRef(null);
   const [queueMonth, setQueueMonth] = useState("");
+  // Expandable section states
+  const [profileExpanded, setProfileExpanded] = useState(false);
+  const [scheduleExpanded, setScheduleExpanded] = useState(false);
+  const [gbpExpanded, setGbpExpanded] = useState(false);
+  const [scheduledPostsExpanded, setScheduledPostsExpanded] = useState(false);
+  const [archivedPostsExpanded, setArchivedPostsExpanded] = useState(false);
+  const [imageGalleryExpanded, setImageGalleryExpanded] = useState(false);
 
   // SEO Audit
   const [seoUrl, setSeoUrl] = useState("");
@@ -1641,8 +1648,13 @@ function App() {
                       loadClientImages(client.id);
                       setGbpPostResult(null);
                       setShowGbpComposer(false);
-      setShowGbpAssignPanel(false);
+                      setShowGbpAssignPanel(false);
                       setCompetitors(client.competitors || []);
+                      setProfileExpanded(false);
+                      setScheduleExpanded(false);
+                      setGbpExpanded(false);
+                      setScheduledPostsExpanded(false);
+                      setImageGalleryExpanded(false);
                       setScheduleSettings({
                         schedule_frequency: client.schedule_frequency || "daily",
                         schedule_days: client.schedule_days || ["Mon","Tue","Wed","Thu","Fri"],
@@ -1689,8 +1701,13 @@ function App() {
                       loadGbpStatus(client.id);
                       setGbpPostResult(null);
                       setShowGbpComposer(false);
-      setShowGbpAssignPanel(false);
+                      setShowGbpAssignPanel(false);
                       setCompetitors(client.competitors || []);
+                      setProfileExpanded(false);
+                      setScheduleExpanded(false);
+                      setGbpExpanded(false);
+                      setScheduledPostsExpanded(false);
+                      setImageGalleryExpanded(false);
                       setScheduleSettings({
                         schedule_frequency: client.schedule_frequency || "daily",
                         schedule_days: client.schedule_days || ["Mon","Tue","Wed","Thu","Fri"],
@@ -1809,18 +1826,27 @@ function App() {
                     </div>
                   </div>
                 ) : (
-                  <div className="f-detail-grid" style={styles.detailGrid}>
+                  <div style={{ marginBottom: 28 }}>
+                    <button
+                      onClick={() => setProfileExpanded(v => !v)}
+                      style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: "0 0 12px 0" }}
+                    >
+                      <div style={{ fontSize: 10, color: "#555", letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>Connected Apps</div>
+                      <span style={{ fontSize: 14, color: "#555", transition: "transform 0.2s", display: "inline-block", transform: profileExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                    </button>
+                    {profileExpanded && (
+                  <div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 8 }}>
                     {[
                       { label: "WordPress", status: selectedClient.wordpress_url && selectedClient.wordpress_username ? "Connected" : "Not Connected", icon: "W" },
                       { label: "Google Business", status: gbpStatus.connected ? "Connected" : "Not Connected", icon: "G", gbp: true },
                       { label: "Brand Voice", status: selectedClient.brand_voice ? "Set" : "Not Set", icon: "✦" },
-                      { label: "SEMrush", status: "Ready", icon: "S" },
                     ].map((item) => (
-                      <div key={item.label} style={styles.integrationCard}>
-                        <div style={styles.integrationIcon}>{item.icon}</div>
-                        <div style={styles.integrationLabel}>{item.label}</div>
-                        <div style={{ ...styles.integrationStatus, color: item.status === "Connected" || item.status === "Ready" || item.status === "Set" ? "#22c55e" : "#666" }}>{item.status}</div>
-                        <button style={styles.connectBtn} onClick={() => {
+                      <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "#111", border: "1px solid #1a1a1a", borderRadius: 6 }}>
+                        <div style={{ width: 24, height: 24, background: "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#888", fontFamily: "'Oswald', sans-serif", borderRadius: 3, flexShrink: 0 }}>{item.icon}</div>
+                        <div style={{ flex: 1, fontSize: 11, color: "#fff", fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>{item.label}</div>
+                        <div style={{ fontSize: 10, letterSpacing: "0.06em", fontFamily: "'Barlow Condensed', sans-serif", textTransform: "uppercase", color: item.status === "Connected" || item.status === "Set" ? "#22c55e" : "#444" }}>{item.status}</div>
+                        <button style={{ ...styles.connectBtn, fontSize: 9, padding: "4px 10px" }} onClick={() => {
                           if (item.gbp) {
                             if (!gbpAgencyConnected) {
                               connectAgencyGbp();
@@ -1834,11 +1860,39 @@ function App() {
                           }
                         }}>
                           {item.gbp
-                            ? (!gbpAgencyConnected ? "Connect Google" : gbpStatus.connected ? "Unassign" : "Assign Location")
+                            ? (!gbpAgencyConnected ? "Connect" : gbpStatus.connected ? "Unassign" : "Assign")
                             : (item.status === "Not Connected" || item.status === "Not Set" ? "Connect" : "Configure")}
                         </button>
                       </div>
                     ))}
+                  </div>
+
+                  {/* COMPETITORS - inside Connected Apps area */}
+                  <div style={{ marginTop: 16, marginBottom: 4 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, color: "#555", letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>Competitors</div>
+                      <button style={styles.connectBtn} onClick={findCompetitors} disabled={findingCompetitors}>
+                        {findingCompetitors ? "Searching..." : "⟳ Auto-Find"}
+                      </button>
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+                      {competitors.map((comp, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, background: "#111", border: "1px solid #1f1f1f", borderRadius: 6, padding: "5px 10px" }}>
+                          <span style={{ fontSize: 12, color: "#ccc" }}>{comp}</span>
+                          <button style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 14, lineHeight: 1 }} onClick={() => { const updated = competitors.filter((_, idx) => idx !== i); setCompetitors(updated); saveCompetitors(updated); }}>×</button>
+                        </div>
+                      ))}
+                      {competitors.length < 5 && (
+                        <button style={{ ...styles.connectBtn, fontSize: 11 }} onClick={() => {
+                          const domain = prompt("Enter competitor domain (e.g. competitor.com):");
+                          if (domain && competitors.length < 5) { const updated = [...competitors, domain.trim()]; setCompetitors(updated); saveCompetitors(updated); }
+                        }}>+ Add</button>
+                      )}
+                    </div>
+                    {competitors.length > 0 && <div style={{ fontSize: 11, color: "#444" }}>{competitors.length}/5 competitors saved.</div>}
+                  </div>
+                  </div>
+                  )}
                   </div>
                 )}
 
@@ -1920,19 +1974,27 @@ function App() {
 
                 {/* SCHEDULING */}
                 <div style={{ marginBottom: 28 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                  <button
+                    onClick={() => setScheduleExpanded(v => !v)}
+                    style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: scheduleExpanded ? 16 : 0 }}
+                  >
                     <div style={styles.sectionTitle}>Publishing Schedule</div>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <span style={{ fontSize: 12, color: selectedClient.schedule_enabled ? "#22c55e" : "#555" }}>
                         {selectedClient.schedule_enabled ? "● Active" : "○ Inactive"}
                       </span>
+                      <span style={{ fontSize: 14, color: "#555", transition: "transform 0.2s", display: "inline-block", transform: scheduleExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                    </div>
+                  </button>
+                  {scheduleExpanded && (
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
                       <button style={{ ...styles.connectBtn, background: selectedClient.schedule_enabled ? "rgba(239,68,68,0.1)" : "rgba(34,197,94,0.1)", borderColor: selectedClient.schedule_enabled ? "rgba(239,68,68,0.3)" : "rgba(34,197,94,0.3)", color: selectedClient.schedule_enabled ? "#ef4444" : "#22c55e" }}
                         onClick={() => toggleSchedule(selectedClient.id, !selectedClient.schedule_enabled)}>
                         {selectedClient.schedule_enabled ? "Disable" : "Enable"}
                       </button>
                     </div>
-                  </div>
-                  <div style={{ background: "#111", border: "1px solid #1f1f1f", borderRadius: 10, padding: 20, marginBottom: 16 }}>
+                    <div style={{ background: "#111", border: "1px solid #1f1f1f", borderRadius: 10, padding: 20, marginBottom: 16 }}>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
                       <div>
                         <div style={styles.postMetaLabel}>Frequency</div>
@@ -1993,94 +2055,34 @@ function App() {
                     </div>
                     <div style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", marginTop: 4 }}>✓ Changes save automatically</div>
                   </div>
-
-                  {scheduleJobs.length > 0 && (
-                    <div>
-                      <div style={{ fontSize: 11, color: "#555", letterSpacing: "0.08em", marginBottom: 10 }}>SCHEDULED JOBS</div>
-                      <div style={styles.table}>
-                        <div style={styles.tableHeader}>
-                          <div style={{ flex: "0 0 20px" }}></div>
-                          <div style={{ flex: 3 }}>Keyword</div>
-                          <div style={{ flex: 2 }}>Scheduled Time</div>
-                          <div style={{ flex: 1, textAlign: "center" }}>Status</div>
-                        </div>
-                        {scheduleJobs.map(job => (
-                          <div
-                            key={job.id}
-                            draggable={job.status === "pending"}
-                            onDragStart={() => { if (job.status === "pending") setDragJobId(job.id); }}
-                            onDragOver={e => { e.preventDefault(); if (job.status === "pending") setDragOverJobId(job.id); }}
-                            onDragLeave={() => setDragOverJobId(null)}
-                            onDrop={() => { reorderScheduleJobs(dragJobId, job.id); setDragJobId(null); setDragOverJobId(null); }}
-                            onDragEnd={() => { setDragJobId(null); setDragOverJobId(null); }}
-                            style={{
-                              ...styles.tableRow,
-                              cursor: job.status === "pending" ? "grab" : "default",
-                              borderLeft: dragOverJobId === job.id && dragJobId !== job.id ? "2px solid #d60000" : "2px solid transparent",
-                              opacity: dragJobId === job.id ? 0.4 : 1,
-                              transition: "border-color 0.1s, opacity 0.1s",
-                            }}
-                          >
-                            <div style={{ flex: "0 0 20px", color: job.status === "pending" ? "#333" : "transparent", fontSize: 13, userSelect: "none" }}>⠿</div>
-                            <div style={{ flex: 3, color: "#fff" }}>{job.keyword}</div>
-                            <div style={{ flex: 2, color: "#aaa" }}>{new Date(job.scheduled_time).toLocaleString()}</div>
-                            <div style={{ flex: 1, textAlign: "center" }}>
-                              <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20, border: "1px solid", color: job.status === "published" ? "#22c55e" : job.status === "failed" ? "#ef4444" : job.status === "running" ? "#f59e0b" : "#555", background: job.status === "published" ? "rgba(34,197,94,0.1)" : job.status === "failed" ? "rgba(239,68,68,0.1)" : job.status === "running" ? "rgba(245,158,11,0.1)" : "#111", borderColor: job.status === "published" ? "rgba(34,197,94,0.2)" : job.status === "failed" ? "rgba(239,68,68,0.2)" : "#1f1f1f" }}>
-                                {job.status}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                  </div>
                   )}
-                </div>
 
-                {/* COMPETITORS */}
-                <div style={{ marginBottom: 28 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                    <div style={styles.sectionTitle}>Competitors</div>
-                    <button style={styles.connectBtn} onClick={findCompetitors} disabled={findingCompetitors}>
-                      {findingCompetitors ? "Searching..." : "⟳ Auto-Find"}
-                    </button>
-                  </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-                    {competitors.map((comp, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, background: "#111", border: "1px solid #1f1f1f", borderRadius: 6, padding: "6px 12px" }}>
-                        <span style={{ fontSize: 12, color: "#ccc" }}>{comp}</span>
-                        <button style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 14, lineHeight: 1 }} onClick={() => { const updated = competitors.filter((_, idx) => idx !== i); setCompetitors(updated); saveCompetitors(updated); }}>×</button>
-                      </div>
-                    ))}
-                    {competitors.length < 5 && (
-                      <button style={{ ...styles.connectBtn, fontSize: 11 }} onClick={() => {
-                        const domain = prompt("Enter competitor domain (e.g. competitor.com):");
-                        if (domain && competitors.length < 5) { const updated = [...competitors, domain.trim()]; setCompetitors(updated); saveCompetitors(updated); }
-                      }}>+ Add</button>
-                    )}
-                  </div>
-                  {competitors.length > 0 && <div style={{ fontSize: 11, color: "#444" }}>{competitors.length}/5 competitors saved. Monthly keyword refresh uses these to find gaps.</div>}
                 </div>
 
                 {/* GOOGLE BUSINESS PROFILE POSTS */}
-                {gbpAgencyConnected && (
-                  <div style={{ marginBottom: 28 }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                      <div>
-                        <div style={styles.sectionTitle}>Google Business Profile</div>
-                        <div style={{ fontSize: 11, color: "#555", marginTop: 4, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em" }}>
-                          {gbpStatus.connected ? gbpStatus.locationTitle : "No location assigned"}
-                        </div>
+                <div style={{ marginBottom: 28 }}>
+                  <button
+                    onClick={() => setGbpExpanded(v => !v)}
+                    style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: gbpExpanded ? 16 : 0 }}
+                  >
+                    <div>
+                      <div style={styles.sectionTitle}>Google Business Profile</div>
+                      <div style={{ fontSize: 11, color: "#555", marginTop: 4, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em" }}>
+                        {gbpStatus.connected ? gbpStatus.locationTitle : gbpAgencyConnected ? "No location assigned" : "Not connected"}
                       </div>
-                      {gbpStatus.connected && (
-                        <button style={styles.addBtn} onClick={() => { setShowGbpComposer(!showGbpComposer); setGbpPostResult(null); }}>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      {gbpStatus.connected && gbpExpanded && (
+                        <button style={styles.addBtn} onClick={e => { e.stopPropagation(); setShowGbpComposer(!showGbpComposer); setGbpPostResult(null); }}>
                           {showGbpComposer ? "Cancel" : "+ New Post"}
                         </button>
                       )}
+                      <span style={{ fontSize: 14, color: "#555", transition: "transform 0.2s", display: "inline-block", transform: gbpExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
                     </div>
-
-
-
-                    {showGbpComposer && gbpStatus.connected && (
+                  </button>
+                  {gbpExpanded && gbpAgencyConnected && (
+                  <div>
                       <div style={{ background: "#0d0d0d", borderTop: "3px solid #d60000", padding: 24, marginBottom: 16 }}>
                         <div style={{ marginBottom: 12 }}>
                           <div style={{ fontSize: 10, color: "#d60000", letterSpacing: "0.15em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, marginBottom: 8 }}>Post Content</div>
@@ -2136,6 +2138,84 @@ function App() {
                             <span style={{ flex: 1, color: "#555", fontSize: 11 }}>{post.createTime ? new Date(post.createTime).toLocaleDateString() : "—"}</span>
                           </div>
                         ))}
+                      </div>
+                    )}
+                  </div>
+                  )}
+                </div>
+
+                {/* SCHEDULED POSTS — collapsible, pending only */}
+                {scheduleJobs.filter(j => j.status !== "published").length > 0 && (
+                  <div style={{ marginBottom: 12 }}>
+                    <button
+                      onClick={() => setScheduledPostsExpanded(v => !v)}
+                      style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: "0 0 0 0", marginBottom: scheduledPostsExpanded ? 10 : 0 }}
+                    >
+                      <div style={styles.sectionTitle}>
+                        Scheduled Posts <span style={{ fontSize: 12, color: "#333", fontWeight: 400 }}>({scheduleJobs.filter(j => j.status !== "published").length})</span>
+                      </div>
+                      <span style={{ fontSize: 14, color: "#555", transition: "transform 0.2s", display: "inline-block", transform: scheduledPostsExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                    </button>
+                    {scheduledPostsExpanded && (
+                      <div style={styles.table}>
+                        <div style={styles.tableHeader}>
+                          <div style={{ flex: "0 0 20px" }}></div>
+                          <div style={{ flex: 3 }}>Keyword</div>
+                          <div style={{ flex: 2 }}>Scheduled Time</div>
+                          <div style={{ flex: 1, textAlign: "center" }}>Status</div>
+                        </div>
+                        {scheduleJobs.filter(j => j.status !== "published").map(job => (
+                          <div
+                            key={job.id}
+                            draggable={job.status === "pending"}
+                            onDragStart={() => { if (job.status === "pending") setDragJobId(job.id); }}
+                            onDragOver={e => { e.preventDefault(); if (job.status === "pending") setDragOverJobId(job.id); }}
+                            onDragLeave={() => setDragOverJobId(null)}
+                            onDrop={() => { reorderScheduleJobs(dragJobId, job.id); setDragJobId(null); setDragOverJobId(null); }}
+                            onDragEnd={() => { setDragJobId(null); setDragOverJobId(null); }}
+                            style={{ ...styles.tableRow, cursor: job.status === "pending" ? "grab" : "default", borderLeft: dragOverJobId === job.id && dragJobId !== job.id ? "2px solid #d60000" : "2px solid transparent", opacity: dragJobId === job.id ? 0.4 : 1, transition: "border-color 0.1s, opacity 0.1s" }}
+                          >
+                            <div style={{ flex: "0 0 20px", color: job.status === "pending" ? "#333" : "transparent", fontSize: 13, userSelect: "none" }}>⠿</div>
+                            <div style={{ flex: 3, color: "#fff" }}>{job.keyword}</div>
+                            <div style={{ flex: 2, color: "#aaa" }}>{new Date(job.scheduled_time).toLocaleString()}</div>
+                            <div style={{ flex: 1, textAlign: "center" }}>
+                              <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20, border: "1px solid", color: job.status === "failed" ? "#ef4444" : job.status === "running" ? "#f59e0b" : "#555", background: job.status === "failed" ? "rgba(239,68,68,0.1)" : job.status === "running" ? "rgba(245,158,11,0.1)" : "#111", borderColor: job.status === "failed" ? "rgba(239,68,68,0.2)" : "#1f1f1f" }}>
+                                {job.status}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* ARCHIVED POSTS — collapsible, under Scheduled Posts */}
+                    {scheduleJobs.filter(j => j.status === "published").length > 0 && (
+                      <div style={{ marginTop: 12 }}>
+                        <button
+                          onClick={() => setArchivedPostsExpanded(v => !v)}
+                          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: "8px 0 0 0", marginBottom: archivedPostsExpanded ? 8 : 0 }}
+                        >
+                          <div style={{ fontSize: 11, color: "#444", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
+                            Archived Posts <span style={{ color: "#333" }}>({scheduleJobs.filter(j => j.status === "published").length})</span>
+                          </div>
+                          <span style={{ fontSize: 13, color: "#444", transition: "transform 0.2s", display: "inline-block", transform: archivedPostsExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                        </button>
+                        {archivedPostsExpanded && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                            {scheduleJobs.filter(j => j.status === "published").map(job => (
+                              <div key={job.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "#0a0a0a", border: "1px solid #141414", borderRadius: 4 }}>
+                                <span style={{ fontSize: 11, color: "#22c55e", flexShrink: 0 }}>✓</span>
+                                <span style={{ flex: 1, fontSize: 12, color: "#aaa", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.04em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{job.keyword}</span>
+                                {job.published_url ? (
+                                  <a href={job.published_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "#555", textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180, flexShrink: 0 }} onMouseEnter={e => e.currentTarget.style.color = "#d60000"} onMouseLeave={e => e.currentTarget.style.color = "#555"}>{job.published_url.replace(/^https?:\/\//, "")}</a>
+                                ) : (
+                                  <span style={{ fontSize: 11, color: "#333", flexShrink: 0 }}>—</span>
+                                )}
+                                <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", flexShrink: 0, marginLeft: "auto" }}>{new Date(job.scheduled_time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -2452,7 +2532,15 @@ function App() {
 
                 {/* CLIENT IMAGE LIBRARY */}
                 <div style={{ marginBottom: 28 }}>
-                  <div style={{ ...styles.sectionTitle, marginBottom: 16 }}>Client Image Library</div>
+                  <button
+                    onClick={() => setImageGalleryExpanded(v => !v)}
+                    style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: imageGalleryExpanded ? 12 : 0 }}
+                  >
+                    <div style={styles.sectionTitle}>Client Image Library</div>
+                    <span style={{ fontSize: 14, color: "#555", transition: "transform 0.2s", display: "inline-block", transform: imageGalleryExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                  </button>
+                  {imageGalleryExpanded && (
+                  <div>
                   <div style={{ fontSize: 11, color: "#555", letterSpacing: "0.08em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", marginBottom: 12 }}>
                     These images are used as featured images when generating posts.
                   </div>
@@ -2520,6 +2608,8 @@ function App() {
                         </div>
                       ))}
                     </div>
+                  )}
+                  </div>
                   )}
                 </div>
               </div>
