@@ -3024,7 +3024,7 @@ function App() {
                             onClick={() => { setIsEditingPost(false); setShowLinkInput(false); setShowHtmlInput(false); }}>✕ Cancel</button>
                         </>
                       ) : (
-                        <button style={{ ...styles.addKeywordBtn, fontSize: 13, padding: "8px 18px", color: "#f59e0b", borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.07)", fontSize: 12, padding: "6px 14px" }}
+                        <button style={{ ...styles.addKeywordBtn, fontSize: 12, padding: "6px 14px", color: "#f59e0b", borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.07)" }}
                           onClick={() => setIsEditingPost(true)}>✎ Edit</button>
                       )}
                       <button style={{ ...styles.addBtn, background: "none", border: "1px solid #dc2626", color: "#dc2626" }} onClick={() => { setGeneratedPost(null); setGeneratingPost(null); setGeneratedSchemaHtml(null); setIsEditingPost(false); }}>Clear</button>
