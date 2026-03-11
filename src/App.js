@@ -295,7 +295,8 @@ function App() {
   const [gbpExpanded, setGbpExpanded] = useState(false);
   const [scheduledPostsExpanded, setScheduledPostsExpanded] = useState(false);
   const [archivedPostsExpanded, setArchivedPostsExpanded] = useState(false);
-  const [scheduledQueueExpanded, setScheduledQueueExpanded] = useState(true);
+  const [yoastStatuses, setYoastStatuses] = useState({}); // { [postId]: 'checking'|'green'|'fix'|'fixing'|'failed' }
+  const [scheduledQueueExpanded, setScheduledQueueExpanded] = useState(false);
   const [imageGalleryExpanded, setImageGalleryExpanded] = useState(false);
 
   // SEO Audit
@@ -1652,10 +1653,13 @@ function App() {
                       setShowGbpComposer(false);
                       setShowGbpAssignPanel(false);
                       setCompetitors(client.competitors || []);
+                      setClientProfileExpanded(false);
                       setProfileExpanded(false);
                       setScheduleExpanded(false);
                       setGbpExpanded(false);
                       setScheduledPostsExpanded(false);
+                      setArchivedPostsExpanded(false);
+                      setScheduledQueueExpanded(false);
                       setImageGalleryExpanded(false);
                       setScheduleSettings({
                         schedule_frequency: client.schedule_frequency || "daily",
@@ -1705,10 +1709,13 @@ function App() {
                       setShowGbpComposer(false);
                       setShowGbpAssignPanel(false);
                       setCompetitors(client.competitors || []);
+                      setClientProfileExpanded(false);
                       setProfileExpanded(false);
                       setScheduleExpanded(false);
                       setGbpExpanded(false);
                       setScheduledPostsExpanded(false);
+                      setArchivedPostsExpanded(false);
+                      setScheduledQueueExpanded(false);
                       setImageGalleryExpanded(false);
                       setScheduleSettings({
                         schedule_frequency: client.schedule_frequency || "daily",
@@ -2229,19 +2236,23 @@ function App() {
                   )}
                 </div>
 
-                {/* SCHEDULED POSTS — collapsible, pending only */}
-                {scheduleJobs.filter(j => j.status !== "published").length > 0 && (
-                  <div style={{ marginBottom: 12 }}>
-                    <button
-                      onClick={() => setScheduledPostsExpanded(v => !v)}
-                      style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: "0 0 0 0", marginBottom: scheduledPostsExpanded ? 10 : 0 }}
-                    >
-                      <div style={styles.sectionTitle}>
-                        Scheduled Posts <span style={{ fontSize: 12, color: "#333", fontWeight: 400 }}>({scheduleJobs.filter(j => j.status !== "published").length})</span>
-                      </div>
-                      <span style={{ fontSize: 18, color: "#fff", transition: "transform 0.2s", display: "inline-block", transform: scheduledPostsExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
-                    </button>
-                    {scheduledPostsExpanded && (
+                    {/* ── KEYWORD QUEUE SECTION ── */}
+                <div style={{ marginBottom: 20 }}>
+                  <button
+                    onClick={() => setScheduledQueueExpanded(v => !v)}
+                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: "0 0 12px 0" }}
+                  >
+                    <div style={styles.sectionTitle}>Keyword Queue</div>
+                    <span style={{ fontSize: 18, color: "#fff", transition: "transform 0.2s", display: "inline-block", transform: scheduledQueueExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                  </button>
+                  {scheduledQueueExpanded && (
+                    <div>
+                      {/* Scheduled Posts (pending/processing) */}
+                      {scheduleJobs.filter(j => j.status !== "published").length > 0 && (
+                        <div style={{ marginBottom: 16 }}>
+                          <div style={{ fontSize: 10, color: "#555", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>
+                            Scheduled Posts ({scheduleJobs.filter(j => j.status !== "published").length})
+                          </div>
                       <div style={styles.table}>
                         <div style={styles.tableHeader}>
                           <div style={{ flex: "0 0 20px" }}></div>
@@ -2271,14 +2282,10 @@ function App() {
                           </div>
                         ))}
                       </div>
-                    )}
+                        </div>
+                      )}
 
-                  </div>
-                )}
-
-
-                                {/* KEYWORD TABS: Monthly Queue | Client Keywords | Used Keywords */}
-                <div style={{ marginBottom: 20 }}>
+                      {/* Tab Bar + Tab Content */}
                   {/* Tab Bar */}
                   <div style={{ display: "flex", gap: 2, marginBottom: 20, borderBottom: "1px solid #222", paddingBottom: 0 }}>
                     {[
@@ -2592,14 +2599,32 @@ function App() {
                       )}
                     </div>
                   )}
+
+                    </div>
+                  )}
                 </div>
 
                 {/* ARCHIVED POSTS — standalone section */}
                 {scheduleJobs.filter(j => j.status === "published").length > 0 && (
                   <div style={{ marginBottom: 20 }}>
                     <button
-                      onClick={() => setArchivedPostsExpanded(v => !v)}
-                      style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: "0 0 12px 0" }}
+                      onClick={() => {
+                        const opening = !archivedPostsExpanded;
+                        setArchivedPostsExpanded(v => !v);
+                        // Auto-check all posts when opening
+                        if (opening) {
+                          scheduleJobs.filter(j => j.status === "published" && j.wp_post_id).forEach(job => {
+                            if (!yoastStatuses[job.wp_post_id]) {
+                              setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: "checking" }));
+                              authFetch(`${API}/api/yoast-check/${selectedClient.id}/${job.wp_post_id}`)
+                                .then(r => r.json())
+                                .then(d => setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: d.green ? "green" : "fix" })))
+                                .catch(() => setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: "fix" })));
+                            }
+                          });
+                        }
+                      }}
+                      style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: "0 0 12px 0" }}
                     >
                       <div style={styles.sectionTitle}>
                         Archived Posts <span style={{ fontSize: 12, color: "#555", fontWeight: 400, fontFamily: "'Barlow Condensed', sans-serif" }}>({scheduleJobs.filter(j => j.status === "published").length})</span>
@@ -2608,33 +2633,66 @@ function App() {
                     </button>
                     {archivedPostsExpanded && (
                       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                        {scheduleJobs.filter(j => j.status === "published").map(job => (
-                          <div key={job.id} style={{ background: "#0a0a0a", border: "1px solid #141414", borderRadius: 6, padding: "10px 14px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: job.published_url ? 6 : 0 }}>
-                              <span style={{ fontSize: 11, color: "#22c55e", flexShrink: 0 }}>✓</span>
-                              <span style={{ flex: 1, fontSize: 12, color: "#fff", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.04em", fontWeight: 600 }}>{job.keyword}</span>
-                              <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", flexShrink: 0 }}>{new Date(job.scheduled_time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
-                            </div>
-                            {job.published_url && (
+                        {scheduleJobs.filter(j => j.status === "published").map(job => {
+                          const ys = job.wp_post_id ? (yoastStatuses[job.wp_post_id] || "checking") : null;
+                          const handleYoastFix = async () => {
+                            setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: "fixing" }));
+                            try {
+                              const r = await authFetch(`${API}/api/yoast-optimize`, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ clientId: selectedClient.id, wpPostId: job.wp_post_id, keyword: job.keyword }),
+                              });
+                              const d = await r.json();
+                              if (d.success) {
+                                // Re-check after fix
+                                const check = await authFetch(`${API}/api/yoast-check/${selectedClient.id}/${job.wp_post_id}`);
+                                const cd = await check.json();
+                                setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: cd.green ? "green" : "failed" }));
+                              } else {
+                                setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: "failed" }));
+                              }
+                            } catch {
+                              setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: "failed" }));
+                            }
+                          };
+                          return (
+                            <div key={job.id} style={{ background: "#0a0a0a", border: "1px solid #141414", borderRadius: 6, padding: "10px 14px" }}>
+                              {/* Row 1: keyword + date */}
+                              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                                <span style={{ fontSize: 11, color: "#22c55e", flexShrink: 0 }}>✓</span>
+                                <span style={{ flex: 1, fontSize: 12, color: "#fff", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.04em", fontWeight: 600 }}>{job.keyword}</span>
+                                <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", flexShrink: 0 }}>{new Date(job.scheduled_time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                              </div>
+                              {/* Row 2: URL + Yoast button */}
                               <div style={{ display: "flex", alignItems: "center", gap: 10, paddingLeft: 20 }}>
-                                <a href={job.published_url} target="_blank" rel="noopener noreferrer"
-                                  style={{ fontSize: 11, color: "#555", textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}
-                                  onMouseEnter={e => e.currentTarget.style.color = "#d60000"}
-                                  onMouseLeave={e => e.currentTarget.style.color = "#555"}>
-                                  ↗ {job.published_url.replace(/^https?:\/\//, "")}
-                                </a>
-                                {job.wp_post_id && selectedClient.wordpress_url && (
-                                  <a
-                                    href={`${selectedClient.wordpress_url.replace(/\/$/, "")}/wp-admin/post.php?post=${job.wp_post_id}&action=edit`}
-                                    target="_blank" rel="noopener noreferrer"
-                                    style={{ ...styles.connectBtn, fontSize: 9, padding: "3px 10px", textDecoration: "none", display: "inline-block", flexShrink: 0 }}>
-                                    ✎ Yoast Fix
+                                {job.published_url ? (
+                                  <a href={job.published_url} target="_blank" rel="noopener noreferrer"
+                                    style={{ fontSize: 11, color: "#555", textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}
+                                    onMouseEnter={e => e.currentTarget.style.color = "#d60000"}
+                                    onMouseLeave={e => e.currentTarget.style.color = "#555"}>
+                                    ↗ {job.published_url.replace(/^https?:\/\//, "")}
                                   </a>
+                                ) : (
+                                  <span style={{ flex: 1, fontSize: 11, color: "#333" }}>No URL recorded</span>
+                                )}
+                                {job.wp_post_id && (
+                                  ys === "checking" ? (
+                                    <span style={{ fontSize: 9, color: "#555", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", flexShrink: 0 }}>Checking...</span>
+                                  ) : ys === "green" ? (
+                                    <span style={{ fontSize: 9, padding: "3px 10px", borderRadius: 4, border: "1px solid #22c55e", color: "#22c55e", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", flexShrink: 0 }}>● Yoast Good</span>
+                                  ) : ys === "fixing" ? (
+                                    <span style={{ fontSize: 9, color: "#f59e0b", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", flexShrink: 0 }}>Fixing...</span>
+                                  ) : ys === "failed" ? (
+                                    <button onClick={handleYoastFix} style={{ ...styles.connectBtn, fontSize: 9, padding: "3px 10px", borderColor: "#555", color: "#555", flexShrink: 0 }}>Fix Failed — Retry</button>
+                                  ) : (
+                                    <button onClick={handleYoastFix} style={{ ...styles.connectBtn, fontSize: 9, padding: "3px 10px", borderColor: "#d60000", color: "#d60000", flexShrink: 0 }}>Fix Yoast</button>
+                                  )
                                 )}
                               </div>
-                            )}
-                          </div>
-                        ))}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
