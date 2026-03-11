@@ -2300,27 +2300,14 @@ function App() {
                   {/* ── MONTHLY QUEUE TAB ── */}
                   {clientTab === "monthly" && (
                     <div>
-                      <button
-                        onClick={() => setScheduledQueueExpanded(v => !v)}
-                        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: "0 0 12px 0" }}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                          <div style={styles.sectionTitle}>Scheduled Queue</div>
-                          {scheduledQueueExpanded && (
-                            <>
-                              <button style={{ ...styles.addBtn, fontSize: 13, padding: "10px 22px" }} onClick={e => { e.stopPropagation(); refreshMonthlyQueue(); }} disabled={refreshingQueue}>
-                                {refreshingQueue ? "Regenerating..." : "⟳ Regenerate Queue"}
-                              </button>
-                              <button style={{ ...styles.addBtn, background: "transparent", border: "1px solid #d60000", color: "#d60000", fontSize: 13, padding: "10px 22px" }} onClick={e => { e.stopPropagation(); setShowManualKeywordInput(v => !v); setManualKeywordText(""); }}>
-                                {showManualKeywordInput ? "✕ Cancel" : "+ Add Keyword"}
-                              </button>
-                            </>
-                          )}
-                        </div>
-                        <span style={{ fontSize: 18, color: "#fff", transition: "transform 0.2s", display: "inline-block", transform: scheduledQueueExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
-                      </button>
-
-                      {scheduledQueueExpanded && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+                        <button style={{ ...styles.addBtn, fontSize: 11, padding: "6px 14px" }} onClick={refreshMonthlyQueue} disabled={refreshingQueue}>
+                          {refreshingQueue ? "Regenerating..." : "⟳ Regenerate Queue"}
+                        </button>
+                        <button style={{ ...styles.addBtn, background: "transparent", border: "1px solid #d60000", color: "#d60000", fontSize: 11, padding: "6px 14px" }} onClick={() => { setShowManualKeywordInput(v => !v); setManualKeywordText(""); }}>
+                          {showManualKeywordInput ? "✕ Cancel" : "+ Add Keyword"}
+                        </button>
+                      </div>
                       <>
                       {showManualKeywordInput && (
                         <div style={{ background: "#0a0a0a", border: "1px solid #222", borderRadius: 8, padding: "14px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -2489,7 +2476,6 @@ function App() {
                         </div>
                       )}
                       </>
-                      )}
                     </div>
                   )}
 
