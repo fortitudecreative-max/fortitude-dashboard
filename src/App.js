@@ -295,7 +295,7 @@ function App() {
   const [gbpExpanded, setGbpExpanded] = useState(false);
   const [scheduledPostsExpanded, setScheduledPostsExpanded] = useState(false);
   const [archivedPostsExpanded, setArchivedPostsExpanded] = useState(false);
-  const [yoastStatuses, setYoastStatuses] = useState({}); // { [postId]: 'checking'|'green'|'fix'|'fixing'|'failed' }
+  const [yoastStatuses, setYoastStatuses] = useState({});
   const [scheduledQueueExpanded, setScheduledQueueExpanded] = useState(false);
   const [imageGalleryExpanded, setImageGalleryExpanded] = useState(false);
 
@@ -1784,20 +1784,35 @@ function App() {
                   </button>
 
                   {clientProfileExpanded && (
-                    <div style={{ paddingTop: 4 }}>
+                    <div style={{ paddingTop: 8 }}>
                       {editingClient ? (
-                        <>
-                          {/* Edit mode action buttons */}
-                          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
-                            <button style={{ ...styles.addBtn, fontSize: 11, padding: "6px 14px" }} onClick={saveClientEdits} disabled={savingClient}>{savingClient ? "Saving..." : "Save Changes"}</button>
-                            <button style={{ ...styles.addBtn, background: "none", border: "1px solid #d60000", color: "#d60000", fontSize: 11, padding: "6px 14px" }} onClick={() => setEditingClient(false)}>Cancel</button>
-                            <div style={{ flex: 1 }} />
-                            <button style={{ ...styles.connectBtn, fontSize: 11, padding: "6px 14px", borderColor: "#333", color: "#555" }} onClick={() => deleteClient(selectedClient)}>✕ Delete Client</button>
-                          </div>
-                          {/* Logo upload */}
-                          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
+                          <button style={{ ...styles.addBtn, fontSize: 11, padding: "6px 14px" }} onClick={saveClientEdits} disabled={savingClient}>{savingClient ? "Saving..." : "Save Changes"}</button>
+                          <button style={{ ...styles.addBtn, background: "none", border: "1px solid #d60000", color: "#d60000", fontSize: 11, padding: "6px 14px" }} onClick={() => setEditingClient(false)}>Cancel</button>
+                          <div style={{ flex: 1 }} />
+                          <button style={{ ...styles.connectBtn, fontSize: 11, padding: "6px 14px", borderColor: "#333", color: "#555" }} onClick={() => deleteClient(selectedClient)}>✕ Delete Client</button>
+                        </div>
+                      ) : (
+                        <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                          <button style={{ ...styles.connectBtn, fontSize: 11, padding: "6px 14px" }} onClick={startEditClient}>✎ Edit Client</button>
+                          {editingClient && (
+                            <div style={{ position: "relative", display: "inline-block" }}>
+                              <div style={{ ...styles.clientDetailAvatar, overflow: "hidden", cursor: "pointer", width: 40, height: 40 }}
+                                onClick={() => logoInputRef.current && logoInputRef.current.click()}
+                                title="Click to upload logo">
+                                {logoUploading && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff" }}>...</div>}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {editingClient && (
+                        <div style={{ marginBottom: 14 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
                             <div style={{ position: "relative", cursor: "pointer" }}
-                              onClick={() => logoInputRef.current && logoInputRef.current.click()}>
+                              onClick={() => logoInputRef.current && logoInputRef.current.click()}
+                              title="Click to upload logo">
                               <div style={{ ...styles.clientDetailAvatar, overflow: "hidden", width: 48, height: 48 }}>
                                 {selectedClient.logo_url
                                   ? <img src={selectedClient.logo_url} alt={selectedClient.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
@@ -1810,80 +1825,82 @@ function App() {
                                 onClick={() => logoInputRef.current && logoInputRef.current.click()}>
                                 {logoUploading ? "Uploading..." : "Upload Logo"}
                               </div>
-                              <div style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif" }}>Click to replace</div>
+                              <div style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif" }}>Click avatar to replace</div>
                             </div>
                             <input ref={logoInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => uploadClientLogo(e, selectedClient.id)} />
                           </div>
-                          {/* Edit form */}
-                          <div style={{ background: "#111", border: "1px solid #1f1f1f", borderRadius: 10, padding: 20, marginBottom: 16 }}>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
-                              <div>
-                                <div style={styles.postMetaLabel}>Domain</div>
-                                <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.domain} onChange={e => setClientEdits(p => ({ ...p, domain: e.target.value }))} />
-                              </div>
-                              <div>
-                                <div style={styles.postMetaLabel}>Service Area</div>
-                                <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.service_area} onChange={e => setClientEdits(p => ({ ...p, service_area: e.target.value }))} />
-                              </div>
-                              <div>
-                                <div style={styles.postMetaLabel}>Industry Tags</div>
-                                <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.industry_tags || ""} onChange={e => setClientEdits(p => ({ ...p, industry_tags: e.target.value }))} />
-                                <div style={{ fontSize: 10, color: "#555", marginTop: 4, fontFamily: "'Barlow', sans-serif" }}>Comma-separated (e.g. hvac, cooling)</div>
-                              </div>
-                              <div>
-                                <div style={styles.postMetaLabel}>WordPress URL</div>
-                                <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.wordpress_url} onChange={e => setClientEdits(p => ({ ...p, wordpress_url: e.target.value }))} />
-                              </div>
-                              <div>
-                                <div style={styles.postMetaLabel}>WordPress Username</div>
-                                <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.wordpress_username} onChange={e => setClientEdits(p => ({ ...p, wordpress_username: e.target.value }))} />
-                              </div>
-                              <div>
-                                <div style={styles.postMetaLabel}>WordPress App Password</div>
-                                <input style={{ ...styles.searchInput, marginTop: 6 }} type="password" value={clientEdits.wordpress_password || ""} onChange={e => setClientEdits(p => ({ ...p, wordpress_password: e.target.value }))} />
-                              </div>
-                            </div>
-                            <div style={{ marginBottom: 16 }}>
-                              <div style={styles.postMetaLabel}>Brand Voice</div>
-                              <textarea style={{ ...styles.textArea, marginTop: 6 }} value={clientEdits.brand_voice} onChange={e => setClientEdits(p => ({ ...p, brand_voice: e.target.value }))} />
-                            </div>
-                            <div>
-                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                                <div style={styles.postMetaLabel}>Competitors</div>
-                                <button style={{ ...styles.connectBtn, fontSize: 10 }} onClick={findCompetitors} disabled={findingCompetitors}>
-                                  {findingCompetitors ? "Searching..." : "⟳ Auto-Find"}
-                                </button>
-                              </div>
-                              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                                {competitors.map((comp, ci) => (
-                                  <div key={ci} style={{ display: "flex", alignItems: "center", gap: 6, background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 6, padding: "5px 10px" }}>
-                                    <span style={{ fontSize: 12, color: "#ccc" }}>{comp}</span>
-                                    <button style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0 }} onClick={() => { const u = competitors.filter((_, j) => j !== ci); setCompetitors(u); saveCompetitors(selectedClient.id, u); }}>×</button>
-                                  </div>
-                                ))}
-                                {competitors.length < 5 && (
-                                  <button style={{ ...styles.connectBtn, fontSize: 11 }} onClick={() => {
-                                    const domain = prompt("Enter competitor domain (e.g. competitor.com):");
-                                    if (domain && competitors.length < 5) { const updated = [...competitors, domain.trim()]; setCompetitors(updated); saveCompetitors(selectedClient.id, updated); }
-                                  }}>+ Add</button>
-                                )}
-                              </div>
-                              {competitors.length > 0 && <div style={{ fontSize: 11, color: "#444", marginTop: 6 }}>{competitors.length}/5 competitors saved.</div>}
-                            </div>
-                          </div>
-                        </>
-                      ) : (
-                        <button style={{ ...styles.connectBtn, fontSize: 11, padding: "6px 14px", marginBottom: 8 }} onClick={startEditClient}>✎ Edit Client</button>
+                        </div>
                       )}
+
+
+                {editingClient ? (
+                  <div style={{ background: "#111", border: "1px solid #1f1f1f", borderRadius: 10, padding: 24, marginBottom: 24 }}>
+                    <div style={{ fontSize: 11, color: "#666", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 16 }}>Edit Client Settings</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                      <div>
+                        <div style={styles.postMetaLabel}>Domain</div>
+                        <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.domain} onChange={e => setClientEdits({ ...clientEdits, domain: e.target.value })} placeholder="clientsite.com" />
+                      </div>
+                      <div>
+                        <div style={styles.postMetaLabel}>Service Area</div>
+                        <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.service_area} onChange={e => setClientEdits({ ...clientEdits, service_area: e.target.value })} placeholder="City and state (e.g. Charlotte, NC)" />
+                      </div>
+                      <div>
+                        <div style={styles.postMetaLabel}>Industry Tags</div>
+                        <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.industry_tags || ""} onChange={e => setClientEdits({ ...clientEdits, industry_tags: e.target.value })} placeholder="hvac, plumbing, electrical..." />
+                        <div style={{ fontSize: 10, color: "#555", marginTop: 4, fontFamily: "'Barlow', sans-serif" }}>Comma-separated — used to pull matching keywords from the library</div>
+                      </div>
+                      <div>
+                        <div style={styles.postMetaLabel}>WordPress URL</div>
+                        <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.wordpress_url} onChange={e => setClientEdits({ ...clientEdits, wordpress_url: e.target.value })} placeholder="https://clientsite.com" />
+                      </div>
+                      <div>
+                        <div style={styles.postMetaLabel}>WordPress Username</div>
+                        <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.wordpress_username} onChange={e => setClientEdits({ ...clientEdits, wordpress_username: e.target.value })} placeholder="admin username" />
+                      </div>
+                      <div>
+                        <div style={styles.postMetaLabel}>WordPress App Password</div>
+                        <input style={{ ...styles.searchInput, marginTop: 6 }} type="password" value={clientEdits.wordpress_password} onChange={e => setClientEdits({ ...clientEdits, wordpress_password: e.target.value })} placeholder="xxxx xxxx xxxx xxxx" />
+                      </div>
+                    </div>
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={styles.postMetaLabel}>Brand Voice</div>
+                      <textarea style={{ ...styles.textArea, marginTop: 6 }} value={clientEdits.brand_voice} onChange={e => setClientEdits({ ...clientEdits, brand_voice: e.target.value })} placeholder="Describe the client's tone, style, and any specific keywords or phrases to use..." />
+                    </div>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                        <div style={styles.postMetaLabel}>Competitors</div>
+                        <button style={{ ...styles.connectBtn, fontSize: 10 }} onClick={findCompetitors} disabled={findingCompetitors}>
+                          {findingCompetitors ? "Searching..." : "⟳ Auto-Find"}
+                        </button>
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        {competitors.map((comp, i) => (
+                          <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 6, padding: "4px 10px" }}>
+                            <span style={{ fontSize: 12, color: "#ccc" }}>{comp}</span>
+                            <button style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 14, padding: 0, lineHeight: 1 }} onClick={() => { const u=[...competitors]; u.splice(i,1); setCompetitors(u); saveCompetitors(selectedClient.id, u); }}>×</button>
+                          </div>
+                        ))}
+                        {competitors.length < 5 && (
+                          <button style={{ ...styles.connectBtn, fontSize: 11 }} onClick={() => {
+                            const domain = prompt("Enter competitor domain (e.g. competitor.com):");
+                            if (domain && competitors.length < 5) { const updated = [...competitors, domain.trim().replace(/^https?:\/\//,"")]; setCompetitors(updated); saveCompetitors(selectedClient.id, updated); }
+                          }}>+ Add</button>
+                        )}
+                      </div>
+                      {competitors.length > 0 && <div style={{ fontSize: 11, color: "#444", marginTop: 6 }}>{competitors.length}/5 competitors tracked</div>}
+                    </div>
+                  </div>
+                ) : null}
                     </div>
                   )}
                 </div>
 
-                                {/* ── CONNECTED APPS DROPDOWN ── */}
+                {/* ── CONNECTED APPS DROPDOWN ── */}
                 <div style={{ marginBottom: 20 }}>
                     <button
                       onClick={() => setProfileExpanded(v => !v)}
-                      style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: "0 0 12px 0" }}
+                      style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: "0 0 12px 0" }}
                     >
                       <div style={styles.sectionTitle}>Connected Apps</div>
                       <span style={{ fontSize: 18, color: "#fff", transition: "transform 0.2s", display: "inline-block", transform: profileExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
@@ -2110,7 +2127,7 @@ function App() {
                 <div style={{ marginBottom: 20 }}>
                   <button
                     onClick={() => setGbpExpanded(v => !v)}
-                    style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: gbpExpanded ? 16 : 0 }}
+                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: gbpExpanded ? 16 : 0 }}
                   >
                     <div>
                       <div style={styles.sectionTitle}>Google Business Profile</div>
@@ -2219,7 +2236,7 @@ function App() {
                   )}
                 </div>
 
-                    {/* ── KEYWORD QUEUE SECTION ── */}
+                {/* ── KEYWORD QUEUE SECTION ── */}
                 <div style={{ marginBottom: 20 }}>
                   <button
                     onClick={() => setScheduledQueueExpanded(v => !v)}
@@ -2230,7 +2247,7 @@ function App() {
                   </button>
                   {scheduledQueueExpanded && (
                     <div>
-                      {/* Scheduled Posts (pending/processing) */}
+                      {/* Scheduled Posts pending/processing */}
                       {scheduleJobs.filter(j => j.status !== "published").length > 0 && (
                         <div style={{ marginBottom: 16 }}>
                           <div style={{ fontSize: 10, color: "#555", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>
@@ -2265,10 +2282,13 @@ function App() {
                           </div>
                         ))}
                       </div>
+                    )}
+
+                  </div>
+                )}
                         </div>
                       )}
-
-                      {/* Tab Bar + Tab Content */}
+                      {/* Keyword Tabs */}
                   {/* Tab Bar */}
                   <div style={{ display: "flex", gap: 2, marginBottom: 20, borderBottom: "1px solid #222", paddingBottom: 0 }}>
                     {[
@@ -2283,11 +2303,11 @@ function App() {
                   {/* ── MONTHLY QUEUE TAB ── */}
                   {clientTab === "monthly" && (
                     <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
-                        <button style={{ ...styles.addBtn, fontSize: 11, padding: "6px 14px" }} onClick={refreshMonthlyQueue} disabled={refreshingQueue}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+                        <button style={{ ...styles.addBtn, fontSize: 11, padding: "6px 16px" }} onClick={refreshMonthlyQueue} disabled={refreshingQueue}>
                           {refreshingQueue ? "Regenerating..." : "⟳ Regenerate Queue"}
                         </button>
-                        <button style={{ ...styles.addBtn, background: "transparent", border: "1px solid #d60000", color: "#d60000", fontSize: 11, padding: "6px 14px" }} onClick={() => { setShowManualKeywordInput(v => !v); setManualKeywordText(""); }}>
+                        <button style={{ ...styles.addBtn, background: "transparent", border: "1px solid #d60000", color: "#d60000", fontSize: 11, padding: "6px 16px" }} onClick={() => { setShowManualKeywordInput(v => !v); setManualKeywordText(""); }}>
                           {showManualKeywordInput ? "✕ Cancel" : "+ Add Keyword"}
                         </button>
                       </div>
@@ -2459,6 +2479,7 @@ function App() {
                         </div>
                       )}
                       </>
+                      )}
                     </div>
                   )}
 
@@ -2568,11 +2589,7 @@ function App() {
                       )}
                     </div>
                   )}
-
-                    </div>
-                  )}
                 </div>
-
                 {/* ARCHIVED POSTS — standalone section */}
                 {scheduleJobs.filter(j => j.status === "published").length > 0 && (
                   <div style={{ marginBottom: 20 }}>
@@ -2580,7 +2597,6 @@ function App() {
                       onClick={() => {
                         const opening = !archivedPostsExpanded;
                         setArchivedPostsExpanded(v => !v);
-                        // Auto-check all posts when opening
                         if (opening) {
                           scheduleJobs.filter(j => j.status === "published" && j.wp_post_id).forEach(job => {
                             if (!yoastStatuses[job.wp_post_id]) {
@@ -2614,26 +2630,23 @@ function App() {
                               });
                               const d = await r.json();
                               if (d.success) {
-                                // Re-check after fix
                                 const check = await authFetch(`${API}/api/yoast-check/${selectedClient.id}/${job.wp_post_id}`);
                                 const cd = await check.json();
                                 setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: cd.green ? "green" : "failed" }));
                               } else {
                                 setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: "failed" }));
                               }
-                            } catch {
+                            } catch(err) {
                               setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: "failed" }));
                             }
                           };
                           return (
                             <div key={job.id} style={{ background: "#0a0a0a", border: "1px solid #141414", borderRadius: 6, padding: "10px 14px" }}>
-                              {/* Row 1: keyword + date */}
                               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                                 <span style={{ fontSize: 11, color: "#22c55e", flexShrink: 0 }}>✓</span>
                                 <span style={{ flex: 1, fontSize: 12, color: "#fff", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.04em", fontWeight: 600 }}>{job.keyword}</span>
                                 <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", flexShrink: 0 }}>{new Date(job.scheduled_time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
                               </div>
-                              {/* Row 2: URL + Yoast button */}
                               <div style={{ display: "flex", alignItems: "center", gap: 10, paddingLeft: 20 }}>
                                 {job.published_url ? (
                                   <a href={job.published_url} target="_blank" rel="noopener noreferrer"
