@@ -228,6 +228,8 @@ function App() {
   const [libSortField, setLibSortField] = useState("volume");
   const [libSortDir, setLibSortDir] = useState("desc");
   const [selectedKwIds, setSelectedKwIds] = useState(new Set());
+  const [kwSelectMode, setKwSelectMode] = useState(false);
+  const [editingKwId, setEditingKwId] = useState(null);
   const [dragOverIndustry, setDragOverIndustry] = useState(null);
   const [usedKeywords, setUsedKeywords] = useState([]);
   const [newUsedKw, setNewUsedKw] = useState("");
@@ -2868,7 +2870,7 @@ function App() {
                               transition: "all 0.15s",
                             };
                           })()}
-                          onClick={() => { setActiveIndustry(ind); setSelectedKwIds(new Set()); }}
+                          onClick={() => { setActiveIndustry(ind); setSelectedKwIds(new Set()); setKwSelectMode(false); setEditingKwId(null); }}
                           onDoubleClick={() => { setEditingIndustryTab(ind); setEditingIndustryVal(ind); }}
                           onDragOver={e => { e.preventDefault(); if (ind !== activeIndustry) setDragOverIndustry(ind); }}
                           onDragLeave={() => setDragOverIndustry(null)}
@@ -2890,21 +2892,28 @@ function App() {
                     )}
                   </div>
 
-                  {selectedKwIds.size > 0 && (
-                    <div style={{ background: "rgba(214,0,0,0.08)", border: "1px solid rgba(214,0,0,0.2)", borderRadius: 4, padding: "10px 16px", marginBottom: 16, fontSize: 12, color: "#d60000", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                      <span style={{ fontWeight: 700 }}>{selectedKwIds.size} selected</span>
-                      <span style={{ color: "#555" }}>Drag rows to an industry tab to move them:</span>
-                      <button style={{ ...styles.addKeywordBtn, color: "#ef4444", borderColor: "rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.1)" }} onClick={async () => {
-                        if (!window.confirm(`Delete ${selectedKwIds.size} keyword(s)??`)) return;
-                        const ids = [...selectedKwIds];
-                        await Promise.all(ids.map(id => authFetch(`${API}/api/keywords/library/${id}`, { method: 'DELETE' })));
-                        setLibrary(prev => ({ ...prev, [activeIndustry]: (prev[activeIndustry] || []).filter(k => !ids.includes(k.id)) }));
-                        setSelectedKwIds(new Set());
-                      }}>🗑 Delete Selected</button>
-                      <button style={{ ...styles.addKeywordBtn, color: "#3b82f6", borderColor: "rgba(59,130,246,0.3)", background: "rgba(59,130,246,0.1)" }} onClick={() => { setAddToClientTargets(new Set()); setAddToClientDest('queue'); setAddToClientResult(null); setShowAddToClientModal(true); }}>➕ Add to Client →</button>
-                      <button style={{ ...styles.addKeywordBtn, color: "#d60000", borderColor: "rgba(214,0,0,0.3)", background: "rgba(214,0,0,0.1)" }} onClick={() => setSelectedKwIds(new Set())}>✕ Clear</button>
-                    </div>
-                  )}
+                  {/* Select Mode Toolbar */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: kwSelectMode || selectedKwIds.size > 0 ? 10 : 16 }}>
+                    <button
+                      style={{ fontSize: 11, padding: "6px 14px", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600, cursor: "pointer", border: kwSelectMode ? "1px solid #d60000" : "1px solid #333", background: kwSelectMode ? "rgba(214,0,0,0.12)" : "transparent", color: kwSelectMode ? "#d60000" : "#555", borderRadius: 2, transition: "all 0.15s" }}
+                      onClick={() => { setKwSelectMode(m => { if (m) { setSelectedKwIds(new Set()); } return !m; }); setEditingKwId(null); }}
+                    >{kwSelectMode ? "✕ Cancel Selection" : "☐ Select Multiple"}</button>
+                    {kwSelectMode && selectedKwIds.size > 0 && (
+                      <>
+                        <button style={{ fontSize: 11, padding: "6px 14px", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600, cursor: "pointer", border: "1px solid rgba(239,68,68,0.4)", background: "rgba(239,68,68,0.1)", color: "#ef4444", borderRadius: 2 }}
+                          onClick={async () => {
+                            if (!window.confirm(`Delete ${selectedKwIds.size} keyword(s)?`)) return;
+                            const ids = [...selectedKwIds];
+                            await Promise.all(ids.map(id => authFetch(`${API}/api/keywords/library/${id}`, { method: "DELETE" })));
+                            setLibrary(prev => ({ ...prev, [activeIndustry]: (prev[activeIndustry] || []).filter(k => !ids.includes(k.id)) }));
+                            setSelectedKwIds(new Set());
+                          }}>🗑 Delete {selectedKwIds.size}</button>
+                        <button style={{ fontSize: 11, padding: "6px 14px", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600, cursor: "pointer", border: "1px solid rgba(59,130,246,0.4)", background: "rgba(59,130,246,0.1)", color: "#3b82f6", borderRadius: 2 }}
+                          onClick={() => { setAddToClientTargets(new Set()); setAddToClientDest("queue"); setAddToClientResult(null); setShowAddToClientModal(true); }}>➕ Add to Client</button>
+                        <span style={{ fontSize: 11, color: "#555", fontFamily: "'Barlow Condensed', sans-serif" }}>{selectedKwIds.size} selected — drag to move industry</span>
+                      </>
+                    )}
+                  </div>
 
                   {/* Add Keyword Row */}
                   <div style={styles.addKeywordRow}>
@@ -2935,16 +2944,20 @@ function App() {
                   <div style={styles.table}>
                     <div style={styles.tableHeader}>
                       <div style={{ flex: "0 0 36px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <input
-                          type="checkbox"
-                          style={{ cursor: "pointer", accentColor: "#d60000" }}
-                          checked={selectedKwIds.size > 0 && (library[activeIndustry] || []).every(r => selectedKwIds.has(r.id))}
-                          onChange={e => {
-                            const allIds = (library[activeIndustry] || []).map(r => r.id);
-                            setSelectedKwIds(e.target.checked ? new Set(allIds) : new Set());
-                          }}
-                          title="Select all"
-                        />
+                        {kwSelectMode ? (
+                          <input
+                            type="checkbox"
+                            style={{ cursor: "pointer", accentColor: "#d60000" }}
+                            checked={selectedKwIds.size > 0 && (library[activeIndustry] || []).every(r => selectedKwIds.has(r.id))}
+                            onChange={e => {
+                              const allIds = (library[activeIndustry] || []).map(r => r.id);
+                              setSelectedKwIds(e.target.checked ? new Set(allIds) : new Set());
+                            }}
+                            title="Select all"
+                          />
+                        ) : (
+                          <span style={{ color: "#333", fontSize: 14, userSelect: "none" }}>⠿</span>
+                        )}
                       </div>
                       <div style={{ flex: 3, cursor: "pointer", color: libSortField === "keyword" ? "#dc2626" : "#444" }} onClick={() => handleLibSort("keyword")}>Keyword {libSortField === "keyword" ? (libSortDir === "asc" ? "↑" : "↓") : "↕"}</div>
                       <div style={{ flex: 1, textAlign: "center", cursor: "pointer", color: libSortField === "volume" ? "#dc2626" : "#444" }} onClick={() => handleLibSort("volume")}>Volume {libSortField === "volume" ? (libSortDir === "asc" ? "↑" : "↓") : "↕"}</div>
@@ -2953,112 +2966,151 @@ function App() {
                       <div style={{ flex: "0 0 130px", textAlign: "center" }}>Industry</div>
                       <div style={{ flex: "0 0 32px" }}></div>
                     </div>
-                    {getSortedLibrary(library[activeIndustry] || []).map((row) => (
-                      <div
-                        key={row.id}
-                        draggable={true}
-                        onDragStart={e => { e.dataTransfer.setData("kwId", row.id); }}
-                        style={{ ...styles.tableRow, cursor: "grab", background: selectedKwIds.has(row.id) ? "rgba(214,0,0,0.06)" : "transparent", alignItems: "center" }}
-                        onMouseEnter={e => { if (!selectedKwIds.has(row.id)) e.currentTarget.style.background = "#111"; }}
-                        onMouseLeave={e => { if (!selectedKwIds.has(row.id)) e.currentTarget.style.background = "transparent"; }}
-                      >
-                        <div style={{ flex: "0 0 36px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {getSortedLibrary(library[activeIndustry] || []).map((row) => {
+                      const isEditing = editingKwId === row.id;
+                      const isSelected = selectedKwIds.has(row.id);
+                      const ic = getIndustryColor(activeIndustry);
+                      return (
+                        <div
+                          key={row.id}
+                          draggable={!isEditing}
+                          onDragStart={e => { e.dataTransfer.setData("kwId", row.id); }}
+                          style={{ ...styles.tableRow, cursor: isEditing ? "default" : "grab", background: isEditing ? (ic ? "rgba(" + parseInt(ic.slice(1,3),16) + "," + parseInt(ic.slice(3,5),16) + "," + parseInt(ic.slice(5,7),16) + ",0.07)" : "rgba(214,0,0,0.07)") : isSelected ? "rgba(214,0,0,0.06)" : "transparent", alignItems: "center", outline: isEditing ? ("1px solid " + (ic || "#d60000")) : "none", outlineOffset: -1, transition: "background 0.12s" }}
+                          onMouseEnter={e => { if (!isSelected && !isEditing) e.currentTarget.style.background = "#111"; }}
+                          onMouseLeave={e => { if (!isSelected && !isEditing) e.currentTarget.style.background = "transparent"; }}
+                          onDoubleClick={e => { if (!kwSelectMode) { e.stopPropagation(); setEditingKwId(isEditing ? null : row.id); } }}
+                        >
+                          {/* Drag handle / checkbox */}
+                          <div style={{ flex: "0 0 36px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            {kwSelectMode ? (
+                              <input
+                                type="checkbox"
+                                style={{ cursor: "pointer", accentColor: "#d60000" }}
+                                checked={isSelected}
+                                onChange={e => {
+                                  setSelectedKwIds(prev => {
+                                    const next = new Set(prev);
+                                    e.target.checked ? next.add(row.id) : next.delete(row.id);
+                                    return next;
+                                  });
+                                }}
+                              />
+                            ) : (
+                              <span style={{ color: "#444", fontSize: 16, cursor: "grab", userSelect: "none", lineHeight: 1 }} title="Drag to move industry">⠿</span>
+                            )}
+                          </div>
+
+                          {/* Keyword — always editable on click */}
                           <input
-                            type="checkbox"
-                            style={{ cursor: "pointer", accentColor: "#d60000" }}
-                            checked={selectedKwIds.has(row.id)}
-                            onChange={e => {
-                              setSelectedKwIds(prev => {
-                                const next = new Set(prev);
-                                e.target.checked ? next.add(row.id) : next.delete(row.id);
-                                return next;
-                              });
-                            }}
-                          />
-                        </div>
-                        <input
-                          style={{ flex: 3, background: "transparent", border: "none", borderBottom: "1px solid transparent", color: "#fff", fontWeight: 500, fontSize: 13, fontFamily: "inherit", padding: "2px 4px", outline: "none", minWidth: 100, cursor: "text" }}
-                          defaultValue={row.keyword}
-                          onFocus={e => e.currentTarget.style.borderBottomColor = "#d60000"}
-                          onBlur={e => {
-                            e.currentTarget.style.borderBottomColor = "transparent";
-                            const val = e.currentTarget.value.trim();
-                            if (val && val !== row.keyword) updateKeyword(row.id, { keyword: val });
-                          }}
-                          onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") { e.currentTarget.value = row.keyword; e.currentTarget.blur(); } }}
-                          onClick={e => e.stopPropagation()}
-                        />
-                        <input
-                          type="number"
-                          style={{ flex: 1, maxWidth: 90, background: "transparent", border: "none", borderBottom: "1px solid transparent", color: "#aaa", fontSize: 13, fontFamily: "inherit", padding: "2px 4px", outline: "none", textAlign: "center", cursor: "text" }}
-                          defaultValue={row.volume || 0}
-                          onFocus={e => e.currentTarget.style.borderBottomColor = "#d60000"}
-                          onBlur={e => {
-                            e.currentTarget.style.borderBottomColor = "transparent";
-                            const val = parseInt(e.currentTarget.value) || 0;
-                            if (val !== (row.volume || 0)) updateKeyword(row.id, { volume: val });
-                          }}
-                          onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }}
-                          onClick={e => e.stopPropagation()}
-                        />
-                        <div style={{ flex: "0 0 70px", textAlign: "center" }}>
-                          <input
-                            type="number"
-                            min="0" max="100"
-                            style={{ width: 48, background: "transparent", border: "none", borderBottom: "1px solid transparent", color: row.kd <= 30 ? "#22c55e" : row.kd <= 60 ? "#eab308" : "#ef4444", fontSize: 12, fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", padding: "2px 4px", outline: "none", textAlign: "center", cursor: "text" }}
-                            defaultValue={row.kd || ""}
-                            placeholder="—"
+                            style={{ flex: 3, background: "transparent", border: "none", borderBottom: "1px solid transparent", color: "#fff", fontWeight: 500, fontSize: 13, fontFamily: "inherit", padding: "2px 4px", outline: "none", minWidth: 100, cursor: "text" }}
+                            defaultValue={row.keyword}
                             onFocus={e => e.currentTarget.style.borderBottomColor = "#d60000"}
                             onBlur={e => {
                               e.currentTarget.style.borderBottomColor = "transparent";
-                              const val = parseInt(e.currentTarget.value) || 0;
-                              if (val !== (row.kd || 0)) updateKeyword(row.id, { kd: val });
+                              const val = e.currentTarget.value.trim();
+                              if (val && val !== row.keyword) updateKeyword(row.id, { keyword: val });
                             }}
-                            onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                            onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") { e.currentTarget.value = row.keyword; e.currentTarget.blur(); } }}
                             onClick={e => e.stopPropagation()}
                           />
+
+                          {/* Volume — locked unless editing */}
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              style={{ flex: 1, maxWidth: 90, background: "transparent", border: "none", borderBottom: "1px solid #555", color: "#aaa", fontSize: 13, fontFamily: "inherit", padding: "2px 4px", outline: "none", textAlign: "center", cursor: "text" }}
+                              defaultValue={row.volume || 0}
+                              onFocus={e => e.currentTarget.style.borderBottomColor = "#d60000"}
+                              onBlur={e => {
+                                e.currentTarget.style.borderBottomColor = "#555";
+                                const val = parseInt(e.currentTarget.value) || 0;
+                                if (val !== (row.volume || 0)) updateKeyword(row.id, { volume: val });
+                              }}
+                              onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                              onClick={e => e.stopPropagation()}
+                            />
+                          ) : (
+                            <div style={{ flex: 1, maxWidth: 90, color: "#aaa", fontSize: 13, textAlign: "center", userSelect: "none" }}>{(row.volume || 0).toLocaleString()}</div>
+                          )}
+
+                          {/* KD — locked unless editing */}
+                          <div style={{ flex: "0 0 70px", textAlign: "center" }}>
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                min="0" max="100"
+                                style={{ width: 48, background: "transparent", border: "none", borderBottom: "1px solid #555", color: (row.kd || 0) <= 30 ? "#22c55e" : (row.kd || 0) <= 60 ? "#eab308" : "#ef4444", fontSize: 12, fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", padding: "2px 4px", outline: "none", textAlign: "center", cursor: "text" }}
+                                defaultValue={row.kd || ""}
+                                placeholder="--"
+                                onFocus={e => e.currentTarget.style.borderBottomColor = "#d60000"}
+                                onBlur={e => {
+                                  e.currentTarget.style.borderBottomColor = "#555";
+                                  const val = parseInt(e.currentTarget.value) || 0;
+                                  if (val !== (row.kd || 0)) updateKeyword(row.id, { kd: val });
+                                }}
+                                onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                                onClick={e => e.stopPropagation()}
+                              />
+                            ) : (
+                              <span style={{ color: (row.kd || 0) <= 30 ? "#22c55e" : (row.kd || 0) <= 60 ? "#eab308" : "#ef4444", fontSize: 12, fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif" }}>{row.kd || "--"}</span>
+                            )}
+                          </div>
+
+                          {/* Intent — locked unless editing */}
+                          <div style={{ flex: 1, textAlign: "center" }}>
+                            {isEditing ? (
+                              <select
+                                style={{ background: "#111", border: "1px solid #333", color: getIntentColor(row.intent), fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", padding: "2px 6px", outline: "none", cursor: "pointer", letterSpacing: "0.05em", borderRadius: 2 }}
+                                defaultValue={row.intent || "Informational"}
+                                onChange={e => {
+                                  const val = e.currentTarget.value;
+                                  if (val !== row.intent) updateKeyword(row.id, { intent: val });
+                                }}
+                                onClick={e => e.stopPropagation()}
+                              >
+                                {INTENTS.map(i => <option key={i} value={i} style={{ background: "#111", color: "#fff" }}>{i}</option>)}
+                              </select>
+                            ) : (
+                              <span style={{ color: getIntentColor(row.intent), fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.05em", textTransform: "uppercase" }}>{row.intent || "—"}</span>
+                            )}
+                          </div>
+
+                          {/* Industry — locked unless editing */}
+                          <div style={{ flex: "0 0 130px", textAlign: "center" }}>
+                            {isEditing ? (
+                              <select
+                                style={{ background: "#111", border: "1px solid #333", color: "#aaa", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", padding: "2px 6px", outline: "none", cursor: "pointer", maxWidth: 125, borderRadius: 2 }}
+                                value={row.industry || activeIndustry}
+                                onChange={e => {
+                                  const val = e.currentTarget.value;
+                                  if (val !== (row.industry || activeIndustry)) updateKeyword(row.id, { industry: val });
+                                }}
+                                onClick={e => e.stopPropagation()}
+                              >
+                                {industries.map(i => <option key={i} value={i} style={{ background: "#111", color: "#fff" }}>{i}</option>)}
+                              </select>
+                            ) : (
+                              <span style={{ color: "#555", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif" }}>{row.industry || activeIndustry}</span>
+                            )}
+                          </div>
+
+                          {/* Delete — only visible in edit mode */}
+                          <div style={{ flex: "0 0 32px", textAlign: "center" }}>
+                            {isEditing ? (
+                              <button
+                                style={{ background: "none", border: "none", color: "#444", cursor: "pointer", fontSize: 14, padding: "0 4px", lineHeight: 1 }}
+                                onMouseEnter={e => e.currentTarget.style.color = "#ef4444"}
+                                onMouseLeave={e => e.currentTarget.style.color = "#444"}
+                                onClick={e => { e.stopPropagation(); removeKeyword(row.id); setEditingKwId(null); }}
+                                title="Delete"
+                              >✕</button>
+                            ) : (
+                              <span style={{ color: "#222", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", userSelect: "none" }} title="Double-click row to edit">✎</span>
+                            )}
+                          </div>
                         </div>
-                        <div style={{ flex: 1, textAlign: "center" }}>
-                          <select
-                            style={{ background: "transparent", border: "none", borderBottom: "1px solid transparent", color: getIntentColor(row.intent), fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", padding: "2px 4px", outline: "none", cursor: "pointer", letterSpacing: "0.05em" }}
-                            defaultValue={row.intent || "Informational"}
-                            onFocus={e => e.currentTarget.style.borderBottomColor = "#d60000"}
-                            onBlur={e => e.currentTarget.style.borderBottomColor = "transparent"}
-                            onChange={e => {
-                              const val = e.currentTarget.value;
-                              if (val !== row.intent) updateKeyword(row.id, { intent: val });
-                            }}
-                            onClick={e => e.stopPropagation()}
-                          >
-                            {INTENTS.map(i => <option key={i} value={i} style={{ background: "#111", color: "#fff" }}>{i}</option>)}
-                          </select>
-                        </div>
-                        <div style={{ flex: "0 0 130px", textAlign: "center" }}>
-                          <select
-                            style={{ background: "transparent", border: "none", borderBottom: "1px solid transparent", color: "#aaa", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", padding: "2px 4px", outline: "none", cursor: "pointer", maxWidth: 125 }}
-                            value={row.industry || activeIndustry}
-                            onFocus={e => e.currentTarget.style.borderBottomColor = "#d60000"}
-                            onBlur={e => e.currentTarget.style.borderBottomColor = "transparent"}
-                            onChange={e => {
-                              const val = e.currentTarget.value;
-                              if (val !== (row.industry || activeIndustry)) updateKeyword(row.id, { industry: val });
-                            }}
-                            onClick={e => e.stopPropagation()}
-                          >
-                            {industries.map(i => <option key={i} value={i} style={{ background: "#111", color: "#fff" }}>{i}</option>)}
-                          </select>
-                        </div>
-                        <div style={{ flex: "0 0 32px", textAlign: "center" }}>
-                          <button
-                            style={{ background: "none", border: "none", color: "#333", cursor: "pointer", fontSize: 14, padding: "0 4px", lineHeight: 1 }}
-                            onMouseEnter={e => e.currentTarget.style.color = "#ef4444"}
-                            onMouseLeave={e => e.currentTarget.style.color = "#333"}
-                            onClick={e => { e.stopPropagation(); removeKeyword(row.id); }}
-                            title="Delete"
-                          >✕</button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>
