@@ -293,7 +293,6 @@ function App() {
   const [gbpExpanded, setGbpExpanded] = useState(false);
   const [scheduledPostsExpanded, setScheduledPostsExpanded] = useState(false);
   const [archivedPostsExpanded, setArchivedPostsExpanded] = useState(false);
-  const [yoastStatuses, setYoastStatuses] = useState({});
   const [scheduledQueueExpanded, setScheduledQueueExpanded] = useState(false);
   const [imageGalleryExpanded, setImageGalleryExpanded] = useState(false);
 
@@ -1420,16 +1419,7 @@ function App() {
         // Reload schedule jobs so published post moves to Archived Posts
         if (activeClient?.id) loadScheduleJobs(activeClient.id);
         if (selectedClient?.id) loadScheduleJobs(selectedClient.id);
-        // Auto-check Yoast score for the newly published post
-        if (data.wpPostId) {
-          setYoastStatuses(prev => ({ ...prev, [data.wpPostId]: "checking" }));
-          setTimeout(() => {
-            authFetch(`${API}/api/yoast-check/${activeClient.id}/${data.wpPostId}`)
-              .then(r => r.json())
-              .then(d => setYoastStatuses(prev => ({ ...prev, [data.wpPostId]: d.green ? "green" : "fix" })))
-              .catch(() => {});
-          }, 3000);
-        }
+
 
       } else {
         setPublishResult({ success: false, error: data.detail || data.error });
@@ -1699,8 +1689,7 @@ function App() {
                       setScheduledPostsExpanded(false);
                       setArchivedPostsExpanded(false);
                       setScheduledQueueExpanded(false);
-                      setYoastStatuses({});
-                      setImageGalleryExpanded(false);
+                                            setImageGalleryExpanded(false);
                       setScheduleSettings({
                         schedule_frequency: client.schedule_frequency || "daily",
                         schedule_days: client.schedule_days || ["Mon","Tue","Wed","Thu","Fri"],
@@ -1756,8 +1745,7 @@ function App() {
                       setScheduledPostsExpanded(false);
                       setArchivedPostsExpanded(false);
                       setScheduledQueueExpanded(false);
-                      setYoastStatuses({});
-                      setImageGalleryExpanded(false);
+                                            setImageGalleryExpanded(false);
                       setScheduleSettings({
                         schedule_frequency: client.schedule_frequency || "daily",
                         schedule_days: client.schedule_days || ["Mon","Tue","Wed","Thu","Fri"],
@@ -2638,21 +2626,7 @@ function App() {
                 {/* ARCHIVED POSTS — standalone section */}
                 <div style={{ marginBottom: 20 }}>
                     <button
-                      onClick={() => {
-                        const opening = !archivedPostsExpanded;
-                        setArchivedPostsExpanded(v => !v);
-                        if (opening) {
-                          scheduleJobs.filter(j => j.status === "published" && j.wp_post_id).forEach(job => {
-                            if (!yoastStatuses[job.wp_post_id]) {
-                              setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: "checking" }));
-                              authFetch(`${API}/api/yoast-check/${selectedClient.id}/${job.wp_post_id}`)
-                                .then(r => r.json())
-                                .then(d => setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: d.green ? "green" : "fix" })))
-                                .catch(() => setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: "fix" })));
-                            }
-                          });
-                        }
-                      }}
+                      onClick={() => setArchivedPostsExpanded(v => !v)}
                       style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: "0 0 12px 0" }}
                     >
                       <div style={styles.sectionTitle}>
@@ -2666,19 +2640,6 @@ function App() {
                           <div style={{ fontSize: 12, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.05em", padding: "10px 0" }}>No published posts yet.</div>
                         )}
                         {scheduleJobs.filter(j => j.status === "published").map(job => {
-                          const ys = job.wp_post_id ? (yoastStatuses[job.wp_post_id] || null) : null;
-                          const handleYoastFix = async () => {
-                            setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: "fixing" }));
-                            try {
-                              // Direct check - backend already writes focuskw/title/metadesc correctly
-                              // Posts are green after publish; this just re-reads and updates the dot
-                              const check = await authFetch(`${API}/api/yoast-check/${selectedClient.id}/${job.wp_post_id}`);
-                              const cd = await check.json();
-                              setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: cd.green ? "green" : "failed" }));
-                            } catch(err) {
-                              setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: "failed" }));
-                            }
-                          };
                           const handleDelete = async (trashWp) => {
                             if (!window.confirm(trashWp ? "Remove from dashboard AND trash the WordPress post?" : "Remove this entry from the dashboard? (WordPress post will NOT be deleted)")) return;
                             try {
@@ -2727,19 +2688,7 @@ function App() {
                                 ) : (
                                   <span style={{ flex: 1, fontSize: 11, color: "#333" }}>No URL recorded</span>
                                 )}
-                                {job.wp_post_id && (
-                                  ys === "checking" ? (
-                                    <span style={{ fontSize: 9, color: "#555", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", flexShrink: 0 }}>Checking...</span>
-                                  ) : ys === "green" ? (
-                                    <span style={{ fontSize: 9, padding: "3px 10px", borderRadius: 4, border: "1px solid #22c55e", color: "#22c55e", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", flexShrink: 0 }}>&#x25cf; Yoast Good</span>
-                                  ) : ys === "fixing" ? (
-                                    <span style={{ fontSize: 9, color: "#f59e0b", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", flexShrink: 0 }}>Fixing...</span>
-                                  ) : ys === "failed" ? (
-                                    <button onClick={handleYoastFix} style={{ ...styles.connectBtn, fontSize: 9, padding: "3px 10px", borderColor: "#555", color: "#555", flexShrink: 0 }}>Fix Failed - Retry</button>
-                                  ) : (
-                                    <button onClick={handleYoastFix} style={{ ...styles.connectBtn, fontSize: 9, padding: "3px 10px", borderColor: "#d60000", color: "#d60000", flexShrink: 0 }}>Fix Yoast</button>
-                                  )
-                                )}
+
                               </div>
                             </div>
                           );
