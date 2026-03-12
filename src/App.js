@@ -239,6 +239,8 @@ function App() {
   const [generatingPost, setGeneratingPost] = useState(null);
   const [generatedPost, setGeneratedPost] = useState(null);
   const [wpCategories, setWpCategories] = useState([]);
+  const [editingImageId, setEditingImageId] = useState(null);
+  const [editingImageDesc, setEditingImageDesc] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [generatedSchemaHtml, setGeneratedSchemaHtml] = useState(null);
   const [isEditingPost, setIsEditingPost] = useState(false);
@@ -3203,6 +3205,39 @@ function App() {
                       <div style={styles.imageInfo}>
                         <div style={styles.imageName}>{img.category}</div>
                         <div style={styles.imageFilename}>{img.filename}</div>
+                        {editingImageId === img.id ? (
+                          <div style={{ marginTop: 6 }}>
+                            <textarea
+                              value={editingImageDesc}
+                              onChange={e => setEditingImageDesc(e.target.value)}
+                              placeholder="Describe what is in this photo (e.g. technician installing water heater, burst pipe repair, AC unit on roof)..."
+                              style={{ width: "100%", background: "#1a1a1a", border: "1px solid #d60000", color: "#fff", borderRadius: 4, padding: "4px 6px", fontSize: 11, fontFamily: "Barlow, sans-serif", resize: "vertical", minHeight: 52, boxSizing: "border-box" }}
+                              autoFocus
+                            />
+                            <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                              <button
+                                style={{ flex: 1, background: "#d60000", color: "#fff", border: "none", borderRadius: 4, padding: "3px 0", fontSize: 11, cursor: "pointer", fontFamily: "Barlow, sans-serif" }}
+                                onClick={async () => {
+                                  await authFetch(`${API}/api/images/${img.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ description: editingImageDesc }) });
+                                  setImages(prev => prev.map(i => i.id === img.id ? { ...i, description: editingImageDesc } : i));
+                                  setEditingImageId(null);
+                                }}
+                              >Save</button>
+                              <button
+                                style={{ flex: 1, background: "#222", color: "#aaa", border: "1px solid #333", borderRadius: 4, padding: "3px 0", fontSize: 11, cursor: "pointer", fontFamily: "Barlow, sans-serif" }}
+                                onClick={() => setEditingImageId(null)}
+                              >Cancel</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div
+                            onClick={() => { setEditingImageId(img.id); setEditingImageDesc(img.description || ""); }}
+                            style={{ marginTop: 5, fontSize: 11, color: img.description ? "#aaa" : "#555", cursor: "pointer", fontStyle: img.description ? "normal" : "italic", lineHeight: 1.4, borderTop: "1px solid #1e1e1e", paddingTop: 4 }}
+                            title="Click to edit description"
+                          >
+                            {img.description || "Add description..."}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
