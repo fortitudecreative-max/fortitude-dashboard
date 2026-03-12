@@ -400,12 +400,10 @@ function App() {
       const data = await res.json();
       if (data.industries && data.industries.length > 0) {
         // Merge DB industries with DEFAULT_INDUSTRIES, deduplicate, keep all
-        setIndustries(prev => {
-          const merged = [...new Set([...data.industries, ...prev])];
-          return merged;
-        });
-        // Load keywords for first industry
-        loadKeywords(data.industries[0]);
+        const merged = [...new Set([...data.industries, ...DEFAULT_INDUSTRIES])];
+        setIndustries(merged);
+        // Load ALL industries in parallel so tab counts are accurate immediately
+        await Promise.all(merged.map(ind => loadKeywords(ind)));
       }
     } catch (e) { console.error("Failed to load industries:", e); }
   };
