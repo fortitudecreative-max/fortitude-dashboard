@@ -797,7 +797,7 @@ function App() {
       const res = await authFetch(`${API}/api/competitors/find`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientName: selectedClient.name, industry: selectedClient.industry, domain: selectedClient.domain, serviceArea: selectedClient.service_area }),
+        body: JSON.stringify({ clientName: selectedClient.name, industry: (selectedClient.industry_tags && selectedClient.industry_tags.length > 0 ? selectedClient.industry_tags[0] : selectedClient.industry), domain: selectedClient.domain, serviceArea: selectedClient.service_area }),
       });
       const data = await res.json();
       if (data.competitors) {
