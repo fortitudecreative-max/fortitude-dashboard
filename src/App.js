@@ -791,12 +791,17 @@ function App() {
   const findCompetitors = async () => {
     if (!selectedClient) return;
     setFindingCompetitors(true);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 45000);
     try {
+      const industry = (selectedClient.industry_tags && selectedClient.industry_tags.length > 0 ? selectedClient.industry_tags[0] : selectedClient.industry);
       const res = await authFetch(`${API}/api/competitors/find`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientName: selectedClient.name, industry: (selectedClient.industry_tags && selectedClient.industry_tags.length > 0 ? selectedClient.industry_tags[0] : selectedClient.industry), domain: selectedClient.domain, serviceArea: selectedClient.service_area }),
+        body: JSON.stringify({ clientName: selectedClient.name, industry, domain: selectedClient.domain, serviceArea: selectedClient.service_area }),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
       const data = await res.json();
       if (data.competitors) {
         setCompetitors(data.competitors);
@@ -804,7 +809,14 @@ function App() {
       } else {
         alert("Auto-find failed: " + (data.error || "Unknown error") + (data.detail ? "\n\n" + data.detail : ""));
       }
-    } catch (e) { alert("Auto-find failed: " + e.message); }
+    } catch (e) {
+      clearTimeout(timeout);
+      if (e.name === "AbortError") {
+        alert("Auto-find timed out. The search is taking longer than usual — try again.");
+      } else {
+        alert("Auto-find failed: " + e.message);
+      }
+    }
     setFindingCompetitors(false);
   };
 
