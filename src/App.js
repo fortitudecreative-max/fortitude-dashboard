@@ -2325,9 +2325,8 @@ function App() {
                       {[
                         { key: "monthly", label: `Scheduled Queue${monthlyQueue.length ? ` (${monthlyQueue.length})` : ""}` },
                         { key: "clientkeywords", label: `Client Keywords${clientKeywordsTotal ? ` (${clientKeywordsTotal})` : ""}` },
-                        { key: "used", label: `Used Keywords${clientUsedTotal ? ` (${clientUsedTotal})` : ""}` },
-                      ].map(t => (
-                        <button key={t.key} onClick={() => { setClientTab(t.key); if (t.key === "used") loadClientUsedKeywords(selectedClient.id, 1); if (t.key === "clientkeywords") loadClientKeywords(selectedClient.id, 1); }} style={{ ...styles.industryTab, ...(clientTab === t.key ? styles.industryTabActive : {}), marginBottom: -1, borderBottom: clientTab === t.key ? "2px solid #d60000" : "1px solid transparent" }}>{t.label}</button>
+                                      ].map(t => (
+                        <button key={t.key} onClick={() => { setClientTab(t.key); if (t.key === "clientkeywords") loadClientKeywords(selectedClient.id, 1); }} style={{ ...styles.industryTab, ...(clientTab === t.key ? styles.industryTabActive : {}), marginBottom: -1, borderBottom: clientTab === t.key ? "2px solid #d60000" : "1px solid transparent" }}>{t.label}</button>
                       ))}
                     </div>
 
@@ -2580,45 +2579,6 @@ function App() {
                     )}
 
                     {/* ── USED KEYWORDS TAB ── */}
-                    {clientTab === "used" && (
-                      <div>
-                        <div style={{ ...styles.sectionTitle, marginBottom: 8 }}>Used Keywords</div>
-                        <div style={{ fontSize: 11, color: "#555", marginBottom: 16 }}>Keywords published for this client. Added automatically after a post is published.</div>
-                        {clientUsedKeywords.length === 0 ? (
-                          <div style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 10, padding: 24, textAlign: "center" }}>
-                            <div style={{ color: "#444", fontSize: 13 }}>No used keywords yet — they'll appear here automatically after publishing.</div>
-                          </div>
-                        ) : (
-                          <div>
-                            <div style={styles.table}>
-                              <div style={styles.tableHeader}>
-                                <div style={{ flex: 3 }}>Keyword</div>
-                                <div style={{ flex: 1, textAlign: "center" }}>Date Used</div>
-                                <div style={{ flex: "0 0 80px", textAlign: "center" }}>Remove</div>
-                              </div>
-                              {clientUsedKeywords.map(kw => (
-                                <div key={kw.id} style={styles.tableRow} onMouseEnter={e => e.currentTarget.style.background = "#111"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                                  <div style={{ flex: 3, color: "#fff", fontWeight: 500 }}>{kw.keyword}</div>
-                                  <div style={{ flex: 1, textAlign: "center", color: "#555", fontSize: 11 }}>{kw.added_at ? new Date(kw.added_at).toLocaleDateString() : "—"}</div>
-                                  <div style={{ flex: "0 0 80px", textAlign: "center" }}>
-                                    <button style={{ ...styles.addKeywordBtn, color: "#ef4444", borderColor: "rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.08)" }} onClick={() => removeClientUsedKeyword(kw.id)}>✕</button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                            {clientUsedTotal > 20 && (
-                              <div style={{ display: "flex", gap: 6, justifyContent: "center", alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
-                                <button style={{ ...styles.addKeywordBtn, opacity: clientUsedPage === 1 ? 0.3 : 1 }} disabled={clientUsedPage === 1} onClick={() => loadClientUsedKeywords(selectedClient.id, clientUsedPage - 1)}>← Prev</button>
-                                {Array.from({ length: Math.ceil(clientUsedTotal / 20) }, (_, i) => i + 1).map(p => (
-                                  <button key={p} style={{ ...styles.addKeywordBtn, ...(p === clientUsedPage ? { color: "#d60000", borderColor: "#d60000", background: "rgba(214,0,0,0.08)" } : {}) }} onClick={() => loadClientUsedKeywords(selectedClient.id, p)}>{p}</button>
-                                ))}
-                                <button style={{ ...styles.addKeywordBtn, opacity: clientUsedPage >= Math.ceil(clientUsedTotal / 20) ? 0.3 : 1 }} disabled={clientUsedPage >= Math.ceil(clientUsedTotal / 20)} onClick={() => loadClientUsedKeywords(selectedClient.id, clientUsedPage + 1)}>Next →</button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                    </div>
-                  )}
                     </div>
                   )}
                 </div>
@@ -2823,7 +2783,7 @@ function App() {
                   {selectedKwIds.size > 0 && (
                     <div style={{ background: "rgba(214,0,0,0.08)", border: "1px solid rgba(214,0,0,0.2)", borderRadius: 4, padding: "10px 16px", marginBottom: 16, fontSize: 12, color: "#d60000", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                       <span style={{ fontWeight: 700 }}>{selectedKwIds.size} selected</span>
-                      <span style={{ color: "#555" }}>Drag rows to an industry tab to move, or drag to Used Keywords tab:</span>
+                      <span style={{ color: "#555" }}>Drag rows to an industry tab to move them:</span>
                       <button style={{ ...styles.addKeywordBtn, color: "#ef4444", borderColor: "rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.1)" }} onClick={async () => {
                         if (!window.confirm(`Delete ${selectedKwIds.size} keyword(s)??`)) return;
                         const ids = [...selectedKwIds];
