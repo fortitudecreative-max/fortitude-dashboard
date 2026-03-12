@@ -1334,10 +1334,11 @@ function App() {
         body: JSON.stringify({ imageIds: Array.from(ilSelected), clientIds: Array.from(ilAssignClients) }),
       });
       const data = await res.json();
+      const clientCount = ilAssignClients.size;
       setIlAssigning(false);
       setIlSelected(new Set());
       setIlAssignClients(new Set());
-      alert(`Assigned ${data.assigned} image${data.assigned !== 1 ? "s" : ""} to ${ilAssignClients.size} client${ilAssignClients.size !== 1 ? "s" : ""}.`);
+      alert(`Assigned ${data.assigned} image${data.assigned !== 1 ? "s" : ""} to ${clientCount} client${clientCount !== 1 ? "s" : ""}.`);
     } catch (e3) { console.error("assign error", e3); }
     finally { setIlAssignLoading(false); }
   };
