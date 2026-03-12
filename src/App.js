@@ -1872,6 +1872,12 @@ function App() {
                       <div style={styles.clientDetailName}>{selectedClient.name}</div>
                       <div style={styles.clientDetailIndustry}>{selectedClient.industry} · {selectedClient.domain || "No domain set"}</div>
                     </div>
+                    {clientProfileExpanded && !editingClient && (
+                      <button
+                        style={{ fontSize: 11, padding: "4px 12px", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 600, cursor: "pointer", border: "1px solid #333", background: "transparent", color: "#888", borderRadius: 2, flexShrink: 0 }}
+                        onClick={e => { e.stopPropagation(); startEditClient(); }}
+                      >✎ Edit</button>
+                    )}
                     <span style={{ fontSize: 18, color: "#fff", transition: "transform 0.2s", display: "inline-block", transform: clientProfileExpanded ? "rotate(180deg)" : "rotate(0deg)", flexShrink: 0 }}>▾</span>
                   </button>
 
@@ -1927,7 +1933,7 @@ function App() {
                             {competitors.length > 0 && <div style={{ fontSize: 11, color: "#444", marginTop: 6 }}>{competitors.length}/5 competitors tracked</div>}
                             {competitors.length === 0 && <div style={{ fontSize: 11, color: "#333", marginTop: 4, fontFamily: "'Barlow Condensed', sans-serif" }}>No competitors set</div>}
                           </div>
-                          <button style={{ ...styles.connectBtn, fontSize: 11, padding: "6px 14px" }} onClick={startEditClient}>✎ Edit Client</button>
+
                         </div>
                       )}
 
