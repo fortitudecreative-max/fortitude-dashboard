@@ -239,8 +239,7 @@ function App() {
   const [generatingPost, setGeneratingPost] = useState(null);
   const [generatedPost, setGeneratedPost] = useState(null);
   const [wpCategories, setWpCategories] = useState([]);
-  const [editingImageId, setEditingImageId] = useState(null);
-  const [editingImageDesc, setEditingImageDesc] = useState("");
+  const [editingImage, setEditingImage] = useState(null); // { id, category, description } — modal open when set
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [generatedSchemaHtml, setGeneratedSchemaHtml] = useState(null);
   const [isEditingPost, setIsEditingPost] = useState(false);
@@ -2842,12 +2841,14 @@ function App() {
                   ) : (
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>
                       {clientImages.map(img => (
-                        <div key={img.id} style={{ position: "relative", background: "#0d0d0d", border: "1px solid #1a1a1a", overflow: "hidden" }}
+                        <div key={img.id} style={{ position: "relative", background: "#0d0d0d", border: "1px solid #1a1a1a", overflow: "hidden", cursor: "pointer" }}
+                          onClick={() => setEditingImage({ id: img.id, category: img.category || "", description: img.description || "", storage_path: img.storage_path, filename: img.filename, isClientImage: true })}
                           onMouseEnter={e => e.currentTarget.querySelector(".del-btn").style.opacity = "1"}
                           onMouseLeave={e => e.currentTarget.querySelector(".del-btn").style.opacity = "0"}>
                           <img src={img.storage_path} alt={img.category} style={{ width: "100%", height: 90, objectFit: "cover", display: "block" }} />
                           <div style={{ padding: "4px 6px", fontSize: 10, color: "#555", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{img.category || "general"}</div>
-                          <button className="del-btn" onClick={() => deleteClientImage(img.id)}
+                          {img.description && <div style={{ padding: "0 6px 4px", fontSize: 9, color: "#444", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{img.description}</div>}
+                          <button className="del-btn" onClick={e => { e.stopPropagation(); deleteClientImage(img.id); }}
                             style={{ position: "absolute", top: 4, right: 4, background: "rgba(0,0,0,0.7)", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 13, width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0, transition: "opacity 0.15s", borderRadius: 2 }}>×</button>
                         </div>
                       ))}
@@ -3200,44 +3201,13 @@ function App() {
               ) : (
                 <div style={styles.imageGrid}>
                   {images.map((img) => (
-                    <div key={img.id} style={styles.imageCard}>
+                    <div key={img.id} style={{ ...styles.imageCard, cursor: "pointer", position: "relative" }} onClick={() => setEditingImage({ id: img.id, category: img.category || "", description: img.description || "", storage_path: img.storage_path, filename: img.filename })}>
                       <img src={img.storage_path} alt={img.category} style={styles.imageThumb} />
                       <div style={styles.imageInfo}>
-                        <div style={styles.imageName}>{img.category}</div>
+                        <div style={styles.imageName}>{img.category || "general"}</div>
                         <div style={styles.imageFilename}>{img.filename}</div>
-                        {editingImageId === img.id ? (
-                          <div style={{ marginTop: 6 }}>
-                            <textarea
-                              value={editingImageDesc}
-                              onChange={e => setEditingImageDesc(e.target.value)}
-                              placeholder="Describe what is in this photo (e.g. technician installing water heater, burst pipe repair, AC unit on roof)..."
-                              style={{ width: "100%", background: "#1a1a1a", border: "1px solid #d60000", color: "#fff", borderRadius: 4, padding: "4px 6px", fontSize: 11, fontFamily: "Barlow, sans-serif", resize: "vertical", minHeight: 52, boxSizing: "border-box" }}
-                              autoFocus
-                            />
-                            <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
-                              <button
-                                style={{ flex: 1, background: "#d60000", color: "#fff", border: "none", borderRadius: 4, padding: "3px 0", fontSize: 11, cursor: "pointer", fontFamily: "Barlow, sans-serif" }}
-                                onClick={async () => {
-                                  await authFetch(`${API}/api/images/${img.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ description: editingImageDesc }) });
-                                  setImages(prev => prev.map(i => i.id === img.id ? { ...i, description: editingImageDesc } : i));
-                                  setEditingImageId(null);
-                                }}
-                              >Save</button>
-                              <button
-                                style={{ flex: 1, background: "#222", color: "#aaa", border: "1px solid #333", borderRadius: 4, padding: "3px 0", fontSize: 11, cursor: "pointer", fontFamily: "Barlow, sans-serif" }}
-                                onClick={() => setEditingImageId(null)}
-                              >Cancel</button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div
-                            onClick={() => { setEditingImageId(img.id); setEditingImageDesc(img.description || ""); }}
-                            style={{ marginTop: 5, fontSize: 11, color: img.description ? "#aaa" : "#555", cursor: "pointer", fontStyle: img.description ? "normal" : "italic", lineHeight: 1.4, borderTop: "1px solid #1e1e1e", paddingTop: 4 }}
-                            title="Click to edit description"
-                          >
-                            {img.description || "Add description..."}
-                          </div>
-                        )}
+                        {img.description && <div style={{ fontSize: 10, color: "#555", marginTop: 3, lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{img.description}</div>}
+                        {!img.description && <div style={{ fontSize: 10, color: "#333", marginTop: 3, fontStyle: "italic" }}>Click to add description</div>}
                       </div>
                     </div>
                   ))}
@@ -4451,6 +4421,60 @@ function App() {
             </div>
           )}
         </div>
+
+            {/* IMAGE EDIT MODAL */}
+      {editingImage && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+          onClick={e => { if (e.target === e.currentTarget) setEditingImage(null); }}>
+          <div style={{ background: "#0d0d0d", border: "1px solid #222", width: "100%", maxWidth: 480, borderTop: "3px solid #d60000" }}>
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid #1a1a1a", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#fff" }}>Edit Image</div>
+              <button onClick={() => setEditingImage(null)} style={{ background: "none", border: "none", color: "#555", fontSize: 20, cursor: "pointer", lineHeight: 1 }}>×</button>
+            </div>
+            <div style={{ padding: 20 }}>
+              <img src={editingImage.storage_path} alt={editingImage.category} style={{ width: "100%", height: 200, objectFit: "cover", borderRadius: 4, marginBottom: 16, display: "block" }} />
+              <div style={{ fontSize: 10, color: "#444", marginBottom: 4, letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif" }}>{editingImage.filename}</div>
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 11, color: "#888", marginBottom: 6, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>Category</div>
+                <input
+                  value={editingImage.category}
+                  onChange={e => setEditingImage(prev => ({ ...prev, category: e.target.value }))}
+                  placeholder="e.g. Water Heaters, Drain Cleaning, AC Repair..."
+                  style={{ width: "100%", background: "#141414", border: "1px solid #333", color: "#fff", borderRadius: 4, padding: "8px 10px", fontSize: 13, fontFamily: "'Barlow', sans-serif", boxSizing: "border-box" }}
+                />
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, color: "#888", marginBottom: 6, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>Description <span style={{ color: "#555", textTransform: "none", letterSpacing: 0 }}>(helps match this image to the right blog posts)</span></div>
+                <textarea
+                  value={editingImage.description}
+                  onChange={e => setEditingImage(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Describe what is in this photo — e.g. plumber installing water heater in basement, burst pipe repair under sink, technician on roof with AC unit..."
+                  style={{ width: "100%", background: "#141414", border: "1px solid #333", color: "#fff", borderRadius: 4, padding: "8px 10px", fontSize: 13, fontFamily: "'Barlow', sans-serif", resize: "vertical", minHeight: 80, boxSizing: "border-box" }}
+                />
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button
+                  style={{ flex: 1, background: "#d60000", color: "#fff", border: "none", borderRadius: 4, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}
+                  onClick={async () => {
+                    await authFetch(`${API}/api/images/${editingImage.id}`, {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ category: editingImage.category, description: editingImage.description }),
+                    });
+                    setImages(prev => prev.map(i => i.id === editingImage.id ? { ...i, category: editingImage.category, description: editingImage.description } : i));
+                    setClientImages(prev => prev.map(i => i.id === editingImage.id ? { ...i, category: editingImage.category, description: editingImage.description } : i));
+                    setEditingImage(null);
+                  }}
+                >Save Changes</button>
+                <button
+                  onClick={() => setEditingImage(null)}
+                  style={{ flex: 1, background: "none", border: "1px solid #333", color: "#aaa", borderRadius: 4, padding: "10px 0", fontSize: 13, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}
+                >Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
             {/* ADD TO CLIENT MODAL */}
       {showAddToClientModal && (
