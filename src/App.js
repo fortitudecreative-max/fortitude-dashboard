@@ -1365,6 +1365,7 @@ function App() {
       brand_voice: selectedClient.brand_voice || "",
       domain: selectedClient.domain || "",
       service_area: selectedClient.service_area || "",
+      industry: selectedClient.industry || "",
       industry_tags: Array.isArray(selectedClient.industry_tags) ? selectedClient.industry_tags.join(", ") : (selectedClient.industry_tags || ""),
     });
     setEditingClient(true);
@@ -1974,6 +1975,15 @@ function App() {
                       <div>
                         <div style={styles.postMetaLabel}>Service Area</div>
                         <input style={{ ...styles.searchInput, marginTop: 6 }} value={clientEdits.service_area} onChange={e => setClientEdits({ ...clientEdits, service_area: e.target.value })} placeholder="City and state (e.g. Charlotte, NC)" />
+                      </div>
+                      <div>
+                        <div style={styles.postMetaLabel}>Industry</div>
+                        <select style={{ ...styles.selectInput, marginTop: 6, width: "100%" }} value={clientEdits.industry || ""} onChange={e => setClientEdits({ ...clientEdits, industry: e.target.value })}>
+                          <option value="">-- Select Industry --</option>
+                          {["HVAC", "Plumbing", "Electrical", "Roofing", "Landscaping", "Painting", "Flooring", "Concrete", "Cleaning", "Pest Control", "General Contracting"].map(i => (
+                            <option key={i} value={i}>{i}</option>
+                          ))}
+                        </select>
                       </div>
                       <div>
                         <div style={styles.postMetaLabel}>Industry Tags</div>
