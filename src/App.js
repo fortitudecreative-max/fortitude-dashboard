@@ -237,7 +237,7 @@ function IlImageCard({ img, selected, view, onToggleSelect, onSave, onDelete, in
         <img src={img.storage_path} alt={img.filename} style={{ width: 64, height: 48, objectFit: "cover", borderRadius: 3, flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           {editing ? <EditFields /> : (
-            <div onClick={() => setEditing(true)} style={{ cursor: "pointer" }}>
+            <div onDoubleClick={() => setEditing(true)} style={{ cursor: "pointer" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
                 <div style={{ fontSize: 12, color: cat ? "#ddd" : "#444", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", fontStyle: cat ? "normal" : "italic" }}>{cat || "No category"}</div>
                 {ind && <div style={{ fontSize: 9, color: "#d60000", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", border: "1px solid rgba(214,0,0,0.3)", padding: "1px 5px", borderRadius: 2 }}>{ind}</div>}
@@ -267,17 +267,17 @@ function IlImageCard({ img, selected, view, onToggleSelect, onSave, onDelete, in
       <button onClick={() => onDelete(img.id)}
         style={{ position: "absolute", top: 6, right: 6, zIndex: 2, background: "rgba(0,0,0,0.7)", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 14, width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 3, opacity: hovered ? 1 : 0, transition: "opacity 0.15s" }}>×</button>
       {/* Thumbnail */}
-      <div style={{ position: "relative" }} onClick={() => { if (!editing) setEditing(true); }}>
+      <div style={{ position: "relative" }} onDoubleClick={() => { if (!editing) setEditing(true); }}>
         <img src={img.storage_path} alt={img.filename} style={{ width: "100%", height: 140, objectFit: "cover", display: "block", cursor: "pointer" }} />
         {!editing && hovered && (
-          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "4px 8px", background: "rgba(0,0,0,0.6)", fontSize: 9, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", color: "#aaa", textAlign: "center" }}>Click to edit</div>
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "4px 8px", background: "rgba(0,0,0,0.6)", fontSize: 9, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", color: "#aaa", textAlign: "center" }}>Double-click to edit</div>
         )}
       </div>
       {/* Info */}
       <div style={{ padding: "8px 10px 10px" }}>
         <div style={{ fontSize: 9, color: "#2a2a2a", marginBottom: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "'Barlow Condensed', sans-serif" }}>{img.filename}</div>
         {editing ? <EditFields /> : (
-          <div onClick={() => setEditing(true)} style={{ cursor: "pointer" }}>
+          <div onDoubleClick={() => setEditing(true)} style={{ cursor: "pointer" }}>
             {ind && <div style={{ fontSize: 9, color: "#d60000", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 3 }}>{ind}</div>}
             <div style={{ fontSize: 11, color: cat ? "#ccc" : "#333", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", fontStyle: cat ? "normal" : "italic", marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cat || "No category"}</div>
             <div style={{ fontSize: 10, color: desc ? "#555" : "#2a2a2a", lineHeight: 1.35, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", fontStyle: desc ? "normal" : "italic" }}>{desc || "No description"}</div>
