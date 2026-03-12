@@ -1304,11 +1304,12 @@ function App() {
         body: JSON.stringify(clientEdits),
       });
       const data = await res.json();
+      if (data.error) { alert("Save failed: " + data.error); return; }
       setSelectedClient({ ...selectedClient, ...data.client });
       setClients(prev => prev.map(c => c.id === selectedClient.id ? { ...c, ...data.client } : c));
       setEditingClient(false);
     } catch (e) {
-      console.error("Failed to save client:", e);
+      alert("Save failed: " + e.message);
     } finally {
       setSavingClient(false);
     }
