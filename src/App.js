@@ -174,6 +174,8 @@ function App() {
   const [newIndustryName, setNewIndustryName] = useState("");
   const [editingRow, setEditingRow] = useState(null); // { id, keyword, volume, kd, intent }
   const [savingEdit, setSavingEdit] = useState(false);
+  const [editingIndustryTab, setEditingIndustryTab] = useState(null); // industry name being renamed
+  const [editingIndustryVal, setEditingIndustryVal] = useState("");
   const [newKeyword, setNewKeyword] = useState("");
   const [newVolume, setNewVolume] = useState("");
   const [newKd, setNewKd] = useState("");
@@ -470,7 +472,18 @@ function App() {
         body: JSON.stringify(updates),
       });
       const data = await res.json();
-      setLibrary(prev => ({ ...prev, [activeIndustry]: prev[activeIndustry].map(k => k.id === id ? { ...k, ...data.keyword } : k) }));
+      // If industry changed, move row to new industry list
+      if (updates.industry && updates.industry !== activeIndustry) {
+        setLibrary(prev => ({
+          ...prev,
+          [activeIndustry]: (prev[activeIndustry] || []).filter(k => k.id !== id),
+          [updates.industry]: [...(prev[updates.industry] || []), { ...data.keyword }],
+        }));
+        // Ensure new industry exists in tab list
+        setIndustries(prev => prev.includes(updates.industry) ? prev : [...prev, updates.industry]);
+      } else {
+        setLibrary(prev => ({ ...prev, [activeIndustry]: (prev[activeIndustry] || []).map(k => k.id === id ? { ...k, ...data.keyword } : k) }));
+      }
       setEditingRow(null);
     } catch (e) { console.error("Failed to update keyword:", e); }
     setSavingEdit(false);
@@ -485,6 +498,32 @@ function App() {
     setActiveIndustry(name);
     setNewIndustryName("");
     setShowAddIndustry(false);
+  };
+
+  const renameIndustry = async (oldName, newName) => {
+    newName = newName.trim().toUpperCase();
+    if (!newName || newName === oldName || industries.includes(newName)) {
+      setEditingIndustryTab(null);
+      return;
+    }
+    // Update all keywords in this industry in DB
+    const ids = (library[oldName] || []).map(k => k.id);
+    if (ids.length > 0) {
+      await Promise.all(ids.map(id => authFetch(`${API}/api/keywords/library/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ industry: newName }),
+      })));
+    }
+    setIndustries(prev => prev.map(i => i === oldName ? newName : i));
+    setLibrary(prev => {
+      const updated = { ...prev };
+      updated[newName] = (updated[oldName] || []).map(k => ({ ...k, industry: newName }));
+      delete updated[oldName];
+      return updated;
+    });
+    if (activeIndustry === oldName) setActiveIndustry(newName);
+    setEditingIndustryTab(null);
   };
 
   const removeKeyword = async (id) => {
@@ -2753,21 +2792,38 @@ function App() {
                   {/* Industry Tabs — drop targets for drag-to-move */}
                   <div style={{ display: "flex", alignItems: "center", gap: 2, marginBottom: 24, flexWrap: "wrap" }}>
                     {industries.map((ind) => (
-                      <button
-                        key={ind}
-                        style={{
-                          ...styles.industryTab,
-                          ...(activeIndustry === ind ? styles.industryTabActive : {}),
-                          ...(dragOverIndustry === ind && ind !== activeIndustry ? { background: "rgba(214,0,0,0.25)", borderColor: "#d60000", color: "#fff" } : {}),
-                          transition: "all 0.15s",
-                        }}
-                        onClick={() => { setActiveIndustry(ind); setSelectedKwIds(new Set()); }}
-                        onDragOver={e => { e.preventDefault(); if (ind !== activeIndustry) setDragOverIndustry(ind); }}
-                        onDragLeave={() => setDragOverIndustry(null)}
-                        onDrop={e => { e.preventDefault(); setDragOverIndustry(null); const draggedId = e.dataTransfer.getData("kwId"); moveKeywordsToIndustry(ind, draggedId); }}
-                      >
-                        {ind}<span style={styles.industryCount}>{library[ind]?.length || 0}</span>
-                      </button>
+                      editingIndustryTab === ind ? (
+                        <input
+                          key={ind}
+                          autoFocus
+                          style={{ ...styles.searchInput, width: 120, flex: "none", fontSize: 12, padding: "6px 10px" }}
+                          value={editingIndustryVal}
+                          onChange={e => setEditingIndustryVal(e.target.value)}
+                          onBlur={() => renameIndustry(ind, editingIndustryVal)}
+                          onKeyDown={e => {
+                            if (e.key === "Enter") renameIndustry(ind, editingIndustryVal);
+                            if (e.key === "Escape") setEditingIndustryTab(null);
+                          }}
+                        />
+                      ) : (
+                        <button
+                          key={ind}
+                          style={{
+                            ...styles.industryTab,
+                            ...(activeIndustry === ind ? styles.industryTabActive : {}),
+                            ...(dragOverIndustry === ind && ind !== activeIndustry ? { background: "rgba(214,0,0,0.25)", borderColor: "#d60000", color: "#fff" } : {}),
+                            transition: "all 0.15s",
+                          }}
+                          onClick={() => { setActiveIndustry(ind); setSelectedKwIds(new Set()); }}
+                          onDoubleClick={() => { setEditingIndustryTab(ind); setEditingIndustryVal(ind); }}
+                          onDragOver={e => { e.preventDefault(); if (ind !== activeIndustry) setDragOverIndustry(ind); }}
+                          onDragLeave={() => setDragOverIndustry(null)}
+                          onDrop={e => { e.preventDefault(); setDragOverIndustry(null); const draggedId = e.dataTransfer.getData("kwId"); moveKeywordsToIndustry(ind, draggedId); }}
+                          title="Double-click to rename"
+                        >
+                          {ind}<span style={styles.industryCount}>{library[ind]?.length || 0}</span>
+                        </button>
+                      )
                     ))}
                     {showAddIndustry ? (
                       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -2840,63 +2896,114 @@ function App() {
                       <div style={{ flex: 1, textAlign: "center", cursor: "pointer", color: libSortField === "volume" ? "#dc2626" : "#444" }} onClick={() => handleLibSort("volume")}>Volume {libSortField === "volume" ? (libSortDir === "asc" ? "↑" : "↓") : "↕"}</div>
                       <div style={{ flex: "0 0 70px", textAlign: "center", cursor: "pointer", color: libSortField === "kd" ? "#dc2626" : "#444" }} onClick={() => handleLibSort("kd")}>KD {libSortField === "kd" ? (libSortDir === "asc" ? "↑" : "↓") : "↕"}</div>
                       <div style={{ flex: 1, textAlign: "center" }}>Intent</div>
-                      <div style={{ flex: "0 0 160px", textAlign: "center" }}>Actions</div>
+                      <div style={{ flex: "0 0 130px", textAlign: "center" }}>Industry</div>
+                      <div style={{ flex: "0 0 32px" }}></div>
                     </div>
                     {getSortedLibrary(library[activeIndustry] || []).map((row) => (
-                      editingRow?.id === row.id ? (
-                        <div key={row.id} style={{ ...styles.tableRow, background: "#111", flexWrap: "wrap", gap: 8, minWidth: 500 }}>
-                          <div style={{ flex: "0 0 36px" }} />
-                          <input style={{ ...styles.searchInput, flex: 3, minWidth: 160, fontSize: 12, padding: "6px 10px" }} value={editingRow.keyword} onChange={e => setEditingRow(r => ({ ...r, keyword: e.target.value }))} onKeyDown={e => e.key === "Enter" && updateKeyword(row.id, editingRow)} />
-                          <input style={{ ...styles.searchInput, flex: 1, maxWidth: 90, fontSize: 12, padding: "6px 10px" }} type="number" placeholder="Volume" value={editingRow.volume} onChange={e => setEditingRow(r => ({ ...r, volume: e.target.value }))} />
-                          <input style={{ ...styles.searchInput, flex: "0 0 60px", fontSize: 12, padding: "6px 10px" }} type="number" placeholder="KD" min="0" max="100" value={editingRow.kd} onChange={e => setEditingRow(r => ({ ...r, kd: e.target.value }))} />
-                          <select style={{ ...styles.selectInput, fontSize: 11, padding: "6px 10px" }} value={editingRow.intent} onChange={e => setEditingRow(r => ({ ...r, intent: e.target.value }))}>
-                            {INTENTS.map(i => <option key={i} value={i}>{i}</option>)}
+                      <div
+                        key={row.id}
+                        draggable={true}
+                        onDragStart={e => { e.dataTransfer.setData("kwId", row.id); }}
+                        style={{ ...styles.tableRow, cursor: "grab", background: selectedKwIds.has(row.id) ? "rgba(214,0,0,0.06)" : "transparent", alignItems: "center" }}
+                        onMouseEnter={e => { if (!selectedKwIds.has(row.id)) e.currentTarget.style.background = "#111"; }}
+                        onMouseLeave={e => { if (!selectedKwIds.has(row.id)) e.currentTarget.style.background = "transparent"; }}
+                      >
+                        <div style={{ flex: "0 0 36px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <input
+                            type="checkbox"
+                            style={{ cursor: "pointer", accentColor: "#d60000" }}
+                            checked={selectedKwIds.has(row.id)}
+                            onChange={e => {
+                              setSelectedKwIds(prev => {
+                                const next = new Set(prev);
+                                e.target.checked ? next.add(row.id) : next.delete(row.id);
+                                return next;
+                              });
+                            }}
+                          />
+                        </div>
+                        <input
+                          style={{ flex: 3, background: "transparent", border: "none", borderBottom: "1px solid transparent", color: "#fff", fontWeight: 500, fontSize: 13, fontFamily: "inherit", padding: "2px 4px", outline: "none", minWidth: 100, cursor: "text" }}
+                          defaultValue={row.keyword}
+                          onFocus={e => e.currentTarget.style.borderBottomColor = "#d60000"}
+                          onBlur={e => {
+                            e.currentTarget.style.borderBottomColor = "transparent";
+                            const val = e.currentTarget.value.trim();
+                            if (val && val !== row.keyword) updateKeyword(row.id, { keyword: val });
+                          }}
+                          onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") { e.currentTarget.value = row.keyword; e.currentTarget.blur(); } }}
+                          onClick={e => e.stopPropagation()}
+                        />
+                        <input
+                          type="number"
+                          style={{ flex: 1, maxWidth: 90, background: "transparent", border: "none", borderBottom: "1px solid transparent", color: "#aaa", fontSize: 13, fontFamily: "inherit", padding: "2px 4px", outline: "none", textAlign: "center", cursor: "text" }}
+                          defaultValue={row.volume || 0}
+                          onFocus={e => e.currentTarget.style.borderBottomColor = "#d60000"}
+                          onBlur={e => {
+                            e.currentTarget.style.borderBottomColor = "transparent";
+                            const val = parseInt(e.currentTarget.value) || 0;
+                            if (val !== (row.volume || 0)) updateKeyword(row.id, { volume: val });
+                          }}
+                          onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                          onClick={e => e.stopPropagation()}
+                        />
+                        <div style={{ flex: "0 0 70px", textAlign: "center" }}>
+                          <input
+                            type="number"
+                            min="0" max="100"
+                            style={{ width: 48, background: "transparent", border: "none", borderBottom: "1px solid transparent", color: row.kd <= 30 ? "#22c55e" : row.kd <= 60 ? "#eab308" : "#ef4444", fontSize: 12, fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", padding: "2px 4px", outline: "none", textAlign: "center", cursor: "text" }}
+                            defaultValue={row.kd || ""}
+                            placeholder="—"
+                            onFocus={e => e.currentTarget.style.borderBottomColor = "#d60000"}
+                            onBlur={e => {
+                              e.currentTarget.style.borderBottomColor = "transparent";
+                              const val = parseInt(e.currentTarget.value) || 0;
+                              if (val !== (row.kd || 0)) updateKeyword(row.id, { kd: val });
+                            }}
+                            onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                            onClick={e => e.stopPropagation()}
+                          />
+                        </div>
+                        <div style={{ flex: 1, textAlign: "center" }}>
+                          <select
+                            style={{ background: "transparent", border: "none", borderBottom: "1px solid transparent", color: getIntentColor(row.intent), fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", padding: "2px 4px", outline: "none", cursor: "pointer", letterSpacing: "0.05em" }}
+                            defaultValue={row.intent || "Informational"}
+                            onFocus={e => e.currentTarget.style.borderBottomColor = "#d60000"}
+                            onBlur={e => e.currentTarget.style.borderBottomColor = "transparent"}
+                            onChange={e => {
+                              const val = e.currentTarget.value;
+                              if (val !== row.intent) updateKeyword(row.id, { intent: val });
+                            }}
+                            onClick={e => e.stopPropagation()}
+                          >
+                            {INTENTS.map(i => <option key={i} value={i} style={{ background: "#111", color: "#fff" }}>{i}</option>)}
                           </select>
-                          <div style={{ display: "flex", gap: 6 }}>
-                            <button style={{ ...styles.addBtn, padding: "6px 14px", fontSize: 10, opacity: savingEdit ? 0.5 : 1 }} onClick={() => updateKeyword(row.id, editingRow)} disabled={savingEdit}>{savingEdit ? "..." : "✓ Save"}</button>
-                            <button style={{ ...styles.backBtn, marginBottom: 0, padding: "6px 12px", fontSize: 10 }} onClick={() => setEditingRow(null)}>Cancel</button>
-                          </div>
                         </div>
-                      ) : (
-                        <div
-                          key={row.id}
-                          draggable={true}
-                          onDragStart={e => { e.dataTransfer.setData("kwId", row.id); }}
-                          style={{ ...styles.tableRow, cursor: "grab", background: selectedKwIds.has(row.id) ? "rgba(214,0,0,0.06)" : "transparent" }}
-                          onMouseEnter={e => { if (!selectedKwIds.has(row.id)) e.currentTarget.style.background = "#111"; }}
-                          onMouseLeave={e => { if (!selectedKwIds.has(row.id)) e.currentTarget.style.background = "transparent"; }}
-                        >
-                          <div style={{ flex: "0 0 36px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <input
-                              type="checkbox"
-                              style={{ cursor: "pointer", accentColor: "#d60000" }}
-                              checked={selectedKwIds.has(row.id)}
-                              onChange={e => {
-                                setSelectedKwIds(prev => {
-                                  const next = new Set(prev);
-                                  e.target.checked ? next.add(row.id) : next.delete(row.id);
-                                  return next;
-                                });
-                              }}
-                            />
-                          </div>
-                          <div style={{ flex: 3, color: "#fff", fontWeight: 500 }}>{row.keyword}</div>
-                          <div style={{ flex: 1, textAlign: "center", color: "#aaa" }}>{(row.volume || 0).toLocaleString()}</div>
-                          <div style={{ flex: "0 0 70px", textAlign: "center" }}>
-                            {row.kd > 0 ? (
-                              <span style={{ display: "inline-block", padding: "2px 8px", fontSize: 11, fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", borderRadius: 2, background: row.kd <= 30 ? "rgba(34,197,94,0.15)" : row.kd <= 60 ? "rgba(234,179,8,0.15)" : "rgba(239,68,68,0.15)", color: row.kd <= 30 ? "#22c55e" : row.kd <= 60 ? "#eab308" : "#ef4444" }}>{row.kd}</span>
-                            ) : <span style={{ color: "#333" }}>—</span>}
-                          </div>
-                          <div style={{ flex: 1, textAlign: "center" }}>
-                            <span style={{ ...styles.intentBadge, color: getIntentColor(row.intent), background: getIntentColor(row.intent) + "22", borderColor: getIntentColor(row.intent) + "44" }}>{row.intent}</span>
-                          </div>
-                          <div style={{ flex: "0 0 160px", textAlign: "center", display: "flex", gap: 4, justifyContent: "center" }}>
-                            <button style={styles.addKeywordBtn} onClick={() => setEditingRow({ id: row.id, keyword: row.keyword, volume: row.volume || 0, kd: row.kd || 0, intent: row.intent || "Transactional" })}>Edit</button>
-                            <button style={{ ...styles.addKeywordBtn, color: "#22c55e", borderColor: "rgba(34,197,94,0.2)", background: "rgba(34,197,94,0.08)" }} onClick={() => addUsedKeyword(row.keyword)} title="Mark as used">✓ Used</button>
-                            <button style={{ ...styles.addKeywordBtn, color: "#ef4444", borderColor: "rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.1)" }} onClick={() => removeKeyword(row.id)}>✕</button>
-                          </div>
+                        <div style={{ flex: "0 0 130px", textAlign: "center" }}>
+                          <select
+                            style={{ background: "transparent", border: "none", borderBottom: "1px solid transparent", color: "#aaa", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", padding: "2px 4px", outline: "none", cursor: "pointer", maxWidth: 125 }}
+                            value={row.industry || activeIndustry}
+                            onFocus={e => e.currentTarget.style.borderBottomColor = "#d60000"}
+                            onBlur={e => e.currentTarget.style.borderBottomColor = "transparent"}
+                            onChange={e => {
+                              const val = e.currentTarget.value;
+                              if (val !== (row.industry || activeIndustry)) updateKeyword(row.id, { industry: val });
+                            }}
+                            onClick={e => e.stopPropagation()}
+                          >
+                            {industries.map(i => <option key={i} value={i} style={{ background: "#111", color: "#fff" }}>{i}</option>)}
+                          </select>
                         </div>
-                      )
+                        <div style={{ flex: "0 0 32px", textAlign: "center" }}>
+                          <button
+                            style={{ background: "none", border: "none", color: "#333", cursor: "pointer", fontSize: 14, padding: "0 4px", lineHeight: 1 }}
+                            onMouseEnter={e => e.currentTarget.style.color = "#ef4444"}
+                            onMouseLeave={e => e.currentTarget.style.color = "#333"}
+                            onClick={e => { e.stopPropagation(); removeKeyword(row.id); }}
+                            title="Delete"
+                          >✕</button>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
