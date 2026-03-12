@@ -169,9 +169,7 @@ function App() {
   // Keyword Library
   const [library, setLibrary] = useState({});
   const [activeIndustry, setActiveIndustry] = useState("HVAC");
-  const [industries, setIndustries] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("fortitude_industries") || "null") || DEFAULT_INDUSTRIES; } catch { return DEFAULT_INDUSTRIES; }
-  });
+  const [industries, setIndustries] = useState(DEFAULT_INDUSTRIES);
   const [showAddIndustry, setShowAddIndustry] = useState(false);
   const [newIndustryName, setNewIndustryName] = useState("");
   const [editingRow, setEditingRow] = useState(null); // { id, keyword, volume, kd, intent }
@@ -336,7 +334,7 @@ function App() {
   useEffect(() => {
     if (!session) return; // don't load until authenticated
     loadClients();
-    loadKeywords("HVAC");
+    loadIndustries();
     loadImages();
     loadUsedKeywords();
   }, [session]);
@@ -369,6 +367,22 @@ function App() {
     } finally {
       setClientsLoading(false);
     }
+  };
+
+  const loadIndustries = async () => {
+    try {
+      const res = await authFetch(`${API}/api/keywords/industries`);
+      const data = await res.json();
+      if (data.industries && data.industries.length > 0) {
+        // Merge DB industries with DEFAULT_INDUSTRIES, deduplicate, keep all
+        setIndustries(prev => {
+          const merged = [...new Set([...data.industries, ...prev])];
+          return merged;
+        });
+        // Load keywords for first industry
+        loadKeywords(data.industries[0]);
+      }
+    } catch (e) { console.error("Failed to load industries:", e); }
   };
 
   const loadKeywords = async (industry) => {
@@ -496,15 +510,14 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ industry: targetIndustry }),
       })));
-      setLibrary(prev => {
-        const moved = (prev[activeIndustry] || []).filter(k => ids.includes(k.id)).map(k => ({ ...k, industry: targetIndustry }));
-        return {
-          ...prev,
-          [activeIndustry]: (prev[activeIndustry] || []).filter(k => !ids.includes(k.id)),
-          [targetIndustry]: [...(prev[targetIndustry] || []), ...moved],
-        };
-      });
+      // Update source industry optimistically, then reload target from DB to confirm save
+      setLibrary(prev => ({
+        ...prev,
+        [activeIndustry]: (prev[activeIndustry] || []).filter(k => !ids.includes(k.id)),
+      }));
       setSelectedKwIds(new Set());
+      // Reload target industry from DB now that PUTs are complete
+      await loadKeywords(targetIndustry);
     } catch(e) { console.error('Move failed:', e); }
   };
 
@@ -1308,6 +1321,17 @@ function App() {
       setSelectedClient({ ...selectedClient, ...data.client });
       setClients(prev => prev.map(c => c.id === selectedClient.id ? { ...c, ...data.client } : c));
       setEditingClient(false);
+      // Auto-add any new industry tags as library industry tabs
+      const savedTags = data.client.industry_tags;
+      if (Array.isArray(savedTags) && savedTags.length > 0) {
+        setIndustries(prev => {
+          const newInds = savedTags
+            .map(t => t.trim())
+            .filter(t => t && !prev.some(p => p.toLowerCase() === t.toLowerCase()))
+            .map(t => t.charAt(0).toUpperCase() + t.slice(1));
+          return newInds.length > 0 ? [...prev, ...newInds] : prev;
+        });
+      }
     } catch (e) {
       alert("Save failed: " + e.message);
     } finally {
