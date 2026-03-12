@@ -1258,7 +1258,7 @@ function App() {
         imgs = d.images || [];
       }
       if (imgs.length === 0) {
-        const r = await authFetch(`${API}/api/images`);
+        const r = await authFetch(`${API}/api/images?all=true`);
         const d = await r.json();
         imgs = d.images || [];
       }
