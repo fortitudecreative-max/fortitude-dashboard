@@ -3069,7 +3069,13 @@ function App() {
                                 {industries.map(i => <option key={i} value={i} style={{ background: "#111", color: "#fff" }}>{i}</option>)}
                               </select>
                             ) : (
-                              <span style={{ color: "#555", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif" }}>{row.industry || activeIndustry}</span>
+                              (() => {
+                                const ind = row.industry || activeIndustry;
+                                const col = getIndustryColor(ind);
+                                return (
+                                  <span style={{ display: "inline-block", fontSize: 10, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 700, padding: "2px 8px", borderRadius: 2, border: "1px solid " + (col ? col.border : "#333"), color: col ? col.color : "#555", background: col ? col.bg : "transparent" }}>{ind}</span>
+                                );
+                              })()
                             )}
                           </div>
 
