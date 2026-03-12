@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import React from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const fontLink = document.createElement("link");
@@ -175,6 +176,87 @@ function LoginScreen({ onLogin }) {
   );
 }
 
+function IlImageCard({ img, selected, onToggleSelect, onSave }) {
+  const [editing, setEditing] = React.useState(false);
+  const [cat, setCat] = React.useState(img.category || "");
+  const [desc, setDesc] = React.useState(img.description || "");
+  const [saving, setSaving] = React.useState(false);
+
+  React.useEffect(() => {
+    setCat(img.category || "");
+    setDesc(img.description || "");
+  }, [img.category, img.description]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSave(img.id, cat, desc);
+    setSaving(false);
+    setEditing(false);
+  };
+
+  return (
+    <div style={{ background: "#0d0d0d", border: `1px solid ${selected ? "#d60000" : editing ? "#333" : "#1a1a1a"}`, borderRadius: 4, overflow: "hidden", position: "relative", transition: "border-color 0.1s" }}>
+      {/* Checkbox */}
+      <div
+        onClick={() => onToggleSelect(img.id)}
+        style={{ position: "absolute", top: 8, left: 8, width: 20, height: 20, borderRadius: 3, border: `2px solid ${selected ? "#d60000" : "rgba(255,255,255,0.3)"}`, background: selected ? "#d60000" : "rgba(0,0,0,0.6)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2, transition: "all 0.1s" }}
+      >
+        {selected && <span style={{ color: "#fff", fontSize: 11, lineHeight: 1, fontWeight: 700 }}>✓</span>}
+      </div>
+
+      {/* Image */}
+      <div style={{ position: "relative" }} onClick={() => { if (!editing) setEditing(true); }}>
+        <img src={img.storage_path} alt={img.filename} style={{ width: "100%", height: 150, objectFit: "cover", display: "block", cursor: "pointer" }} />
+        {!editing && (
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0)", display: "flex", alignItems: "flex-end", justifyContent: "center", opacity: 0, transition: "opacity 0.15s" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(0,0,0,0.45)"; e.currentTarget.style.opacity = "1"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(0,0,0,0)"; e.currentTarget.style.opacity = "0"; }}>
+            <div style={{ padding: "6px 10px", fontSize: 10, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", color: "#fff" }}>Click to edit</div>
+          </div>
+        )}
+      </div>
+
+      {/* Info / edit area */}
+      <div style={{ padding: "10px 10px 10px" }}>
+        <div style={{ fontSize: 10, color: "#333", marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "'Barlow Condensed', sans-serif" }}>{img.filename}</div>
+
+        {editing ? (
+          <div>
+            <input
+              value={cat}
+              onChange={e => setCat(e.target.value)}
+              placeholder="Category (e.g. Water Heaters)"
+              style={{ width: "100%", background: "#141414", border: "1px solid #333", color: "#fff", borderRadius: 3, padding: "6px 8px", fontSize: 11, fontFamily: "'Barlow', sans-serif", boxSizing: "border-box", marginBottom: 6 }}
+              autoFocus
+            />
+            <textarea
+              value={desc}
+              onChange={e => setDesc(e.target.value)}
+              placeholder="Describe what is in the photo..."
+              style={{ width: "100%", background: "#141414", border: "1px solid #333", color: "#fff", borderRadius: 3, padding: "6px 8px", fontSize: 11, fontFamily: "'Barlow', sans-serif", boxSizing: "border-box", resize: "none", height: 64, marginBottom: 8 }}
+            />
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={handleSave} disabled={saving}
+                style={{ flex: 1, background: "#d60000", color: "#fff", border: "none", borderRadius: 3, padding: "5px 0", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer" }}>
+                {saving ? "Saving..." : "Save"}
+              </button>
+              <button onClick={() => { setEditing(false); setCat(img.category || ""); setDesc(img.description || ""); }}
+                style={{ flex: 1, background: "transparent", color: "#555", border: "1px solid #2a2a2a", borderRadius: 3, padding: "5px 0", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer" }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div onClick={() => setEditing(true)} style={{ cursor: "pointer" }}>
+            <div style={{ fontSize: 12, color: cat ? "#ccc" : "#333", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", fontStyle: cat ? "normal" : "italic", marginBottom: 3 }}>{cat || "No category"}</div>
+            <div style={{ fontSize: 10, color: desc ? "#555" : "#2a2a2a", lineHeight: 1.35, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", fontStyle: desc ? "normal" : "italic" }}>{desc || "No description — click to add"}</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [session, setSession] = useState(undefined); // undefined = loading, null = logged out
   const [activeTab, setActiveTab] = useState("clients");
@@ -222,6 +304,15 @@ function App() {
   // Image Library
   const [images, setImages] = useState([]);
   const [imageMode, setImageMode] = useState("industry");
+  const [ilImages, setIlImages] = useState([]); // image library tab: staged + saved images
+  const [ilDragging, setIlDragging] = useState(false);
+  const [ilUploading, setIlUploading] = useState(false);
+  const [ilUploadProgress, setIlUploadProgress] = useState({ done: 0, total: 0 });
+  const [ilSelected, setIlSelected] = useState(new Set()); // selected image ids
+  const [ilAssigning, setIlAssigning] = useState(false); // assign panel open
+  const [ilAssignClients, setIlAssignClients] = useState(new Set()); // client ids to assign to
+  const [ilAssignLoading, setIlAssignLoading] = useState(false);
+  const [ilFilter, setIlFilter] = useState("all"); // all | untagged | tagged
   const [imageIndustry, setImageIndustry] = useState("HVAC");
   const [imageClientId, setImageClientId] = useState("");
   const [imageCategory, setImageCategory] = useState("");
@@ -1105,6 +1196,81 @@ function App() {
     } catch (e) { console.error("Failed to load client images:", e); }
   };
 
+  const loadIlImages = async () => {
+    try {
+      const res = await authFetch(`${API}/api/images?limit=500`);
+      const data = await res.json();
+      setIlImages(data.images || data || []);
+    } catch (e) { console.error("loadIlImages:", e); }
+  };
+
+  const ilHandleDrop = async (e) => {
+    e.preventDefault();
+    setIlDragging(false);
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/"));
+    if (!files.length) return;
+    setIlUploading(true);
+    setIlUploadProgress({ done: 0, total: files.length });
+    const batchSize = 5;
+    const allUploaded = [];
+    for (let i = 0; i < files.length; i += batchSize) {
+      const batch = files.slice(i, i + batchSize);
+      const formData = new FormData();
+      batch.forEach(f => formData.append("images", f));
+      try {
+        const res = await authFetch(`${API}/api/images/upload-bulk`, { method: "POST", body: formData });
+        const data = await res.json();
+        if (data.uploaded) allUploaded.push(...data.uploaded);
+        setIlUploadProgress(prev => ({ ...prev, done: prev.done + batch.length }));
+      } catch (e2) { console.error("batch upload error", e2); }
+    }
+    setIlImages(prev => [...allUploaded, ...prev]);
+    setIlUploading(false);
+    setIlUploadProgress({ done: 0, total: 0 });
+  };
+
+  const ilSaveImage = async (id, category, description) => {
+    await authFetch(`${API}/api/images/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category, description }),
+    });
+    setIlImages(prev => prev.map(img => img.id === id ? { ...img, category, description } : img));
+  };
+
+  const ilToggleSelect = (id) => {
+    setIlSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const ilSelectAll = () => {
+    const filtered = ilImages.filter(img => ilFilter === "all" || (ilFilter === "untagged" ? !img.category : !!img.category));
+    setIlSelected(new Set(filtered.map(img => img.id)));
+  };
+
+  const ilClearSelect = () => setIlSelected(new Set());
+
+  const ilDoAssign = async () => {
+    if (!ilSelected.size || !ilAssignClients.size) return;
+    setIlAssignLoading(true);
+    try {
+      const res = await authFetch(`${API}/api/images/assign-clients`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageIds: Array.from(ilSelected), clientIds: Array.from(ilAssignClients) }),
+      });
+      const data = await res.json();
+      setIlAssigning(false);
+      setIlSelected(new Set());
+      setIlAssignClients(new Set());
+      alert(`Assigned ${data.assigned} image${data.assigned !== 1 ? "s" : ""} to ${ilAssignClients.size} client${ilAssignClients.size !== 1 ? "s" : ""}.`);
+    } catch (e3) { console.error("assign error", e3); }
+    finally { setIlAssignLoading(false); }
+  };
+
   const uploadClientImage = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -1658,13 +1824,14 @@ function App() {
           {[
             { id: "clients", icon: "◈", label: "Clients" },
             { id: "library", icon: "⌕", label: "Keyword Library" },
+            { id: "imagelib", icon: "▣", label: "Image Library" },
 
             { id: "content", icon: "✦", label: "Content" },
             { id: "seo", icon: "◎", label: "SEO Audit" },
             { id: "publishing", icon: "⟳", label: "Publishing" },
             { id: "settings", icon: "⚙", label: "Settings" },
           ].map((item) => (
-            <button key={item.id} style={{ ...styles.navItem, ...(activeTab === item.id ? styles.navItemActive : {}) }} onClick={() => { setActiveTab(item.id); setSelectedClient(null); setMobileMenuOpen(false); }}>
+            <button key={item.id} style={{ ...styles.navItem, ...(activeTab === item.id ? styles.navItemActive : {}) }} onClick={() => { setActiveTab(item.id); setSelectedClient(null); setMobileMenuOpen(false); if (item.id === "imagelib") { loadIlImages(); } }}>
               <span style={styles.navIcon}>{item.icon}</span>
               {sidebarOpen && <span style={styles.navLabel}>{item.label}</span>}
             </button>
@@ -1697,6 +1864,7 @@ function App() {
               {activeTab === "clients" && selectedClient && selectedClient.name}
               {activeTab === "library" && "Keyword Library"}
               {activeTab === "images" && "Image Library"}
+              {activeTab === "imagelib" && "Image Library"}
               {activeTab === "gap" && "Competitor Gap Analysis"}
               {activeTab === "content" && "Content Pipeline"}
               {activeTab === "publishing" && "Auto Publishing"}
@@ -3215,6 +3383,125 @@ function App() {
               )}
             </div>
           )}
+
+          {/* IMAGE LIBRARY (top-level nav) */}
+          {activeTab === "imagelib" && (() => {
+            const ilFiltered = ilImages.filter(img =>
+              ilFilter === "all" ? true : ilFilter === "untagged" ? !img.category : !!img.category
+            );
+            const allFilteredSelected = ilFiltered.length > 0 && ilFiltered.every(img => ilSelected.has(img.id));
+            return (
+              <div style={{ paddingBottom: 40 }}>
+
+                {/* DRAG DROP ZONE */}
+                <div
+                  onDragOver={e => { e.preventDefault(); setIlDragging(true); }}
+                  onDragLeave={() => setIlDragging(false)}
+                  onDrop={ilHandleDrop}
+                  style={{ border: `2px dashed ${ilDragging ? "#d60000" : "#2a2a2a"}`, borderRadius: 6, padding: "40px 20px", textAlign: "center", marginBottom: 28, background: ilDragging ? "rgba(214,0,0,0.05)" : "#0a0a0a", transition: "all 0.15s", cursor: "default" }}
+                >
+                  {ilUploading ? (
+                    <div>
+                      <div style={{ fontSize: 28, marginBottom: 10 }}>⟳</div>
+                      <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 14, color: "#fff", letterSpacing: "0.1em", textTransform: "uppercase" }}>Uploading {ilUploadProgress.done} / {ilUploadProgress.total}</div>
+                      <div style={{ width: "100%", maxWidth: 240, margin: "12px auto 0", height: 3, background: "#1a1a1a", borderRadius: 2 }}>
+                        <div style={{ height: "100%", background: "#d60000", width: `${ilUploadProgress.total ? (ilUploadProgress.done / ilUploadProgress.total) * 100 : 0}%`, borderRadius: 2, transition: "width 0.3s" }} />
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ fontSize: 36, marginBottom: 10, color: ilDragging ? "#d60000" : "#333" }}>▣</div>
+                      <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 15, color: ilDragging ? "#fff" : "#555", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
+                        {ilDragging ? "Drop to upload" : "Drag & drop images here"}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#333" }}>JPG, PNG, WebP, GIF — up to 50 at once</div>
+                      <label style={{ display: "inline-block", marginTop: 16, padding: "7px 18px", background: "#1a1a1a", border: "1px solid #333", color: "#777", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", borderRadius: 3 }}>
+                        Or browse files
+                        <input type="file" accept="image/*" multiple style={{ display: "none" }} onChange={async e => {
+                          const fakeDropEvent = { preventDefault: () => {}, dataTransfer: { files: e.target.files } };
+                          await ilHandleDrop(fakeDropEvent);
+                          e.target.value = "";
+                        }} />
+                      </label>
+                    </div>
+                  )}
+                </div>
+
+                {/* TOOLBAR */}
+                {ilImages.length > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+                    {/* Filter tabs */}
+                    <div style={{ display: "flex", gap: 4 }}>
+                      {["all","untagged","tagged"].map(f => (
+                        <button key={f} onClick={() => setIlFilter(f)} style={{ padding: "5px 12px", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", border: "1px solid", borderColor: ilFilter === f ? "#d60000" : "#2a2a2a", background: ilFilter === f ? "rgba(214,0,0,0.12)" : "transparent", color: ilFilter === f ? "#fff" : "#555", cursor: "pointer", borderRadius: 3 }}>
+                          {f} {f === "all" ? `(${ilImages.length})` : f === "untagged" ? `(${ilImages.filter(i => !i.category).length})` : `(${ilImages.filter(i => !!i.category).length})`}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Select all / clear */}
+                    <div style={{ display: "flex", gap: 4, marginLeft: "auto" }}>
+                      {ilSelected.size > 0 && (
+                        <button onClick={() => { setIlAssigning(true); setIlAssignClients(new Set()); }} style={{ padding: "5px 14px", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", border: "1px solid #d60000", background: "#d60000", color: "#fff", cursor: "pointer", borderRadius: 3 }}>
+                          Assign {ilSelected.size} to Clients
+                        </button>
+                      )}
+                      <button onClick={allFilteredSelected ? ilClearSelect : ilSelectAll} style={{ padding: "5px 12px", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", border: "1px solid #2a2a2a", background: "transparent", color: "#555", cursor: "pointer", borderRadius: 3 }}>
+                        {allFilteredSelected ? "Deselect All" : "Select All"}
+                      </button>
+                      {ilSelected.size > 0 && (
+                        <button onClick={ilClearSelect} style={{ padding: "5px 12px", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", border: "1px solid #2a2a2a", background: "transparent", color: "#555", cursor: "pointer", borderRadius: 3 }}>Clear</button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* ASSIGN PANEL */}
+                {ilAssigning && (
+                  <div style={{ background: "#0d0d0d", border: "1px solid #d60000", borderRadius: 4, padding: 20, marginBottom: 24 }}>
+                    <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#fff", marginBottom: 12 }}>Assign {ilSelected.size} Image{ilSelected.size !== 1 ? "s" : ""} to Clients</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+                      {clients.map(c => {
+                        const on = ilAssignClients.has(c.id);
+                        return (
+                          <button key={c.id} onClick={() => setIlAssignClients(prev => { const n = new Set(prev); if (n.has(c.id)) n.delete(c.id); else n.add(c.id); return n; })}
+                            style={{ padding: "6px 14px", fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", border: "1px solid", borderColor: on ? "#d60000" : "#2a2a2a", background: on ? "rgba(214,0,0,0.15)" : "transparent", color: on ? "#fff" : "#555", cursor: "pointer", borderRadius: 3, transition: "all 0.1s" }}>
+                            {on ? "✓ " : ""}{c.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={ilDoAssign} disabled={!ilAssignClients.size || ilAssignLoading}
+                        style={{ padding: "8px 20px", fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", background: ilAssignClients.size ? "#d60000" : "#1a1a1a", color: ilAssignClients.size ? "#fff" : "#333", border: "none", cursor: ilAssignClients.size ? "pointer" : "default", borderRadius: 3 }}>
+                        {ilAssignLoading ? "Assigning..." : `Assign to ${ilAssignClients.size} Client${ilAssignClients.size !== 1 ? "s" : ""}`}
+                      </button>
+                      <button onClick={() => { setIlAssigning(false); setIlAssignClients(new Set()); }}
+                        style={{ padding: "8px 16px", fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", background: "transparent", color: "#555", border: "1px solid #2a2a2a", cursor: "pointer", borderRadius: 3 }}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* IMAGE GRID */}
+                {ilFiltered.length === 0 && !ilUploading ? (
+                  <div style={{ textAlign: "center", padding: "60px 20px" }}>
+                    <div style={{ fontSize: 32, marginBottom: 12, color: "#2a2a2a" }}>▣</div>
+                    <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 14, color: "#333", letterSpacing: "0.1em", textTransform: "uppercase" }}>{ilImages.length === 0 ? "No images yet" : "No images match this filter"}</div>
+                  </div>
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
+                    {ilFiltered.map(img => {
+                      const sel = ilSelected.has(img.id);
+                      return (
+                        <IlImageCard key={img.id} img={img} selected={sel} onToggleSelect={ilToggleSelect} onSave={ilSaveImage} />
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* COMPETITOR GAP */}
           {activeTab === "gap" && (
