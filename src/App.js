@@ -176,21 +176,23 @@ function LoginScreen({ onLogin }) {
   );
 }
 
-function IlImageCard({ img, selected, view, onToggleSelect, onSave, onDelete }) {
+function IlImageCard({ img, selected, view, onToggleSelect, onSave, onDelete, industries }) {
   const [editing, setEditing] = React.useState(false);
   const [cat, setCat] = React.useState(img.category || "");
   const [desc, setDesc] = React.useState(img.description || "");
+  const [ind, setInd] = React.useState(img.industry || "");
   const [saving, setSaving] = React.useState(false);
   const [hovered, setHovered] = React.useState(false);
 
   React.useEffect(() => {
     setCat(img.category || "");
     setDesc(img.description || "");
-  }, [img.category, img.description]);
+    setInd(img.industry || "");
+  }, [img.category, img.description, img.industry]);
 
   const handleSave = async () => {
     setSaving(true);
-    await onSave(img.id, cat, desc);
+    await onSave(img.id, cat, desc, ind);
     setSaving(false);
     setEditing(false);
   };
@@ -204,6 +206,11 @@ function IlImageCard({ img, selected, view, onToggleSelect, onSave, onDelete }) 
 
   const EditFields = () => (
     <div>
+      <select value={ind} onChange={e => setInd(e.target.value)}
+        style={{ width: "100%", background: "#141414", border: "1px solid #333", color: ind ? "#fff" : "#555", borderRadius: 3, padding: "6px 8px", fontSize: 11, fontFamily: "'Barlow', sans-serif", boxSizing: "border-box", marginBottom: 6, cursor: "pointer" }}>
+        <option value="">-- Industry --</option>
+        {(industries || []).map(i => <option key={i} value={i}>{i}</option>)}
+      </select>
       <input value={cat} onChange={e => setCat(e.target.value)} placeholder="Category (e.g. Water Heaters)"
         style={{ width: "100%", background: "#141414", border: "1px solid #333", color: "#fff", borderRadius: 3, padding: "6px 8px", fontSize: 11, fontFamily: "'Barlow', sans-serif", boxSizing: "border-box", marginBottom: 6 }} autoFocus />
       <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Describe what is in the photo..."
@@ -231,7 +238,10 @@ function IlImageCard({ img, selected, view, onToggleSelect, onSave, onDelete }) 
         <div style={{ flex: 1, minWidth: 0 }}>
           {editing ? <EditFields /> : (
             <div onClick={() => setEditing(true)} style={{ cursor: "pointer" }}>
-              <div style={{ fontSize: 12, color: cat ? "#ddd" : "#444", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", fontStyle: cat ? "normal" : "italic", marginBottom: 2 }}>{cat || "No category"}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                <div style={{ fontSize: 12, color: cat ? "#ddd" : "#444", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", fontStyle: cat ? "normal" : "italic" }}>{cat || "No category"}</div>
+                {ind && <div style={{ fontSize: 9, color: "#d60000", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", border: "1px solid rgba(214,0,0,0.3)", padding: "1px 5px", borderRadius: 2 }}>{ind}</div>}
+              </div>
               <div style={{ fontSize: 10, color: desc ? "#666" : "#333", lineHeight: 1.4, fontStyle: desc ? "normal" : "italic", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{desc || "No description — click to add"}</div>
               <div style={{ fontSize: 9, color: "#2a2a2a", marginTop: 2, fontFamily: "'Barlow Condensed', sans-serif" }}>{img.filename}</div>
             </div>
@@ -268,6 +278,7 @@ function IlImageCard({ img, selected, view, onToggleSelect, onSave, onDelete }) 
         <div style={{ fontSize: 9, color: "#2a2a2a", marginBottom: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "'Barlow Condensed', sans-serif" }}>{img.filename}</div>
         {editing ? <EditFields /> : (
           <div onClick={() => setEditing(true)} style={{ cursor: "pointer" }}>
+            {ind && <div style={{ fontSize: 9, color: "#d60000", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 3 }}>{ind}</div>}
             <div style={{ fontSize: 11, color: cat ? "#ccc" : "#333", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", fontStyle: cat ? "normal" : "italic", marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cat || "No category"}</div>
             <div style={{ fontSize: 10, color: desc ? "#555" : "#2a2a2a", lineHeight: 1.35, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", fontStyle: desc ? "normal" : "italic" }}>{desc || "No description"}</div>
           </div>
@@ -335,6 +346,7 @@ function App() {
   const [ilFilter, setIlFilter] = useState("all"); // all | untagged | tagged
   const [ilIndustry, setIlIndustry] = useState("all"); // "all" or a specific industry name
   const [ilView, setIlView] = useState("grid"); // grid | list
+  const [ilUploadIndustry, setIlUploadIndustry] = useState(""); // industry for new uploads
   const [imageIndustry, setImageIndustry] = useState("HVAC");
   const [imageClientId, setImageClientId] = useState("");
   const [imageCategory, setImageCategory] = useState("");
@@ -1248,6 +1260,7 @@ function App() {
       const batch = files.slice(i, i + batchSize);
       const formData = new FormData();
       batch.forEach(f => formData.append("images", f));
+      if (ilUploadIndustry) formData.append("industry", ilUploadIndustry);
       try {
         const res = await authFetch(`${API}/api/images/upload-bulk`, { method: "POST", body: formData });
         const data = await res.json();
@@ -1260,13 +1273,13 @@ function App() {
     setIlUploadProgress({ done: 0, total: 0 });
   };
 
-  const ilSaveImage = async (id, category, description) => {
+  const ilSaveImage = async (id, category, description, industry) => {
     await authFetch(`${API}/api/images/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ category, description }),
+      body: JSON.stringify({ category, description, industry }),
     });
-    setIlImages(prev => prev.map(img => img.id === id ? { ...img, category, description } : img));
+    setIlImages(prev => prev.map(img => img.id === id ? { ...img, category, description, industry } : img));
   };
 
   const ilToggleSelect = (id) => {
@@ -3445,14 +3458,25 @@ function App() {
                         {ilDragging ? "Drop to upload" : "Drag & drop images here"}
                       </div>
                       <div style={{ fontSize: 11, color: "#2a2a2a", marginBottom: 12 }}>JPG, PNG, WebP — up to 50 at once</div>
-                      <label style={{ display: "inline-block", padding: "6px 16px", background: "#141414", border: "1px solid #2a2a2a", color: "#666", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", borderRadius: 3 }}>
-                        Browse Files
-                        <input type="file" accept="image/*" multiple style={{ display: "none" }} onChange={async e => {
-                          const fakeDropEvent = { preventDefault: () => {}, dataTransfer: { files: e.target.files } };
-                          await ilHandleDrop(fakeDropEvent);
-                          e.target.value = "";
-                        }} />
-                      </label>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+                        <select
+                          value={ilUploadIndustry}
+                          onChange={e => setIlUploadIndustry(e.target.value)}
+                          onClick={e => e.stopPropagation()}
+                          style={{ padding: "6px 10px", background: "#141414", border: "1px solid #2a2a2a", color: ilUploadIndustry ? "#fff" : "#555", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", borderRadius: 3, cursor: "pointer", minWidth: 160 }}
+                        >
+                          <option value="">-- Select Industry --</option>
+                          {industries.map(ind => <option key={ind} value={ind}>{ind}</option>)}
+                        </select>
+                        <label style={{ display: "inline-block", padding: "6px 16px", background: "#141414", border: "1px solid #2a2a2a", color: "#666", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", borderRadius: 3 }}>
+                          Browse Files
+                          <input type="file" accept="image/*" multiple style={{ display: "none" }} onChange={async e => {
+                            const fakeDropEvent = { preventDefault: () => {}, dataTransfer: { files: e.target.files } };
+                            await ilHandleDrop(fakeDropEvent);
+                            e.target.value = "";
+                          }} />
+                        </label>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -3548,7 +3572,7 @@ function App() {
                 ) : ilView === "grid" ? (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 10 }}>
                     {ilFiltered.map(img => (
-                      <IlImageCard key={img.id} img={img} view="grid" selected={ilSelected.has(img.id)} onToggleSelect={ilToggleSelect} onSave={ilSaveImage} onDelete={ilDeleteImage} />
+                      <IlImageCard key={img.id} img={img} view="grid" selected={ilSelected.has(img.id)} onToggleSelect={ilToggleSelect} onSave={ilSaveImage} onDelete={ilDeleteImage} industries={industries} />
                     ))}
                   </div>
                 ) : (
@@ -3562,7 +3586,7 @@ function App() {
                       <div />
                     </div>
                     {ilFiltered.map(img => (
-                      <IlImageCard key={img.id} img={img} view="list" selected={ilSelected.has(img.id)} onToggleSelect={ilToggleSelect} onSave={ilSaveImage} onDelete={ilDeleteImage} />
+                      <IlImageCard key={img.id} img={img} view="list" selected={ilSelected.has(img.id)} onToggleSelect={ilToggleSelect} onSave={ilSaveImage} onDelete={ilDeleteImage} industries={industries} />
                     ))}
                   </div>
                 )}
