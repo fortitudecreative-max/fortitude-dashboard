@@ -1290,7 +1290,7 @@ function App() {
       brand_voice: selectedClient.brand_voice || "",
       domain: selectedClient.domain || "",
       service_area: selectedClient.service_area || "",
-      industry_tags: selectedClient.industry_tags || "",
+      industry_tags: Array.isArray(selectedClient.industry_tags) ? selectedClient.industry_tags.join(", ") : (selectedClient.industry_tags || ""),
     });
     setEditingClient(true);
   };
