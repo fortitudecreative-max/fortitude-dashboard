@@ -238,6 +238,8 @@ function App() {
   // Content
   const [generatingPost, setGeneratingPost] = useState(null);
   const [generatedPost, setGeneratedPost] = useState(null);
+  const [wpCategories, setWpCategories] = useState([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [generatedSchemaHtml, setGeneratedSchemaHtml] = useState(null);
   const [isEditingPost, setIsEditingPost] = useState(false);
   const [editLinkUrl, setEditLinkUrl] = useState("");
@@ -1484,6 +1486,7 @@ function App() {
           featuredImageId: featuredImage?.id || null,
           industry: activeClient?.industry || "",
           schemaHtml: generatedSchemaHtml || null,
+          selectedCategoryId: selectedCategoryId || null,
         }),
       });
       const data = await res.json();
@@ -1533,6 +1536,29 @@ function App() {
         setGeneratedPost(data.post);
         setFeaturedImage(data.featuredImage);
         setGeneratedSchemaHtml(data.schemaHtml || null);
+        setSelectedCategoryId(null);
+        // Fetch WP categories and auto-select best match via backend
+        if (client.wordpress_url && client.wordpress_username) {
+          try {
+            const catRes = await authFetch(`${API}/api/wordpress/categories`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                wordpressUrl: client.wordpress_url,
+                wpUsername: client.wordpress_username || client.wp_username,
+                wpPassword: client.wordpress_password || client.wp_password,
+                keyword,
+                title: data.post.title,
+                industry: client.industry,
+              }),
+            });
+            const catData = await catRes.json();
+            if (catData.categories) {
+              setWpCategories(catData.categories);
+              setSelectedCategoryId(catData.bestMatchId || null);
+            }
+          } catch(e) { /* non-fatal */ }
+        }
         loadClients();
       } else {
         setContentError(data.error || "Failed to generate post.");
@@ -3268,7 +3294,7 @@ function App() {
                         <button style={{ ...styles.addKeywordBtn, fontSize: 12, padding: "6px 14px", color: "#f59e0b", borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.07)" }}
                           onClick={() => setIsEditingPost(true)}>✎ Edit</button>
                       )}
-                      <button style={{ ...styles.addBtn, background: "none", border: "1px solid #dc2626", color: "#dc2626" }} onClick={() => { setGeneratedPost(null); setGeneratingPost(null); setGeneratedSchemaHtml(null); setIsEditingPost(false); }}>Clear</button>
+                      <button style={{ ...styles.addBtn, background: "none", border: "1px solid #dc2626", color: "#dc2626" }} onClick={() => { setGeneratedPost(null); setGeneratingPost(null); setGeneratedSchemaHtml(null); setIsEditingPost(false); setWpCategories([]); setSelectedCategoryId(null); }}>Clear</button>
                       <button style={{ ...styles.addBtn, opacity: publishLoading ? 0.6 : 1 }} onClick={publishToWordPress} disabled={publishLoading}>
                         {publishLoading ? "Publishing..." : "Publish to WordPress"}
                       </button>
@@ -3335,6 +3361,21 @@ function App() {
                       </div>
                       <div style={styles.postMetaItem}><div style={styles.postMetaLabel}>Slug</div><div style={styles.postMetaValue}>/{generatedPost.slug}</div></div>
                       <div style={styles.postMetaItem}><div style={styles.postMetaLabel}>Word Count</div><div style={styles.postMetaValue}>{generatedPost.wordCount} words</div></div>
+                      {wpCategories.length > 0 && (
+                        <div style={styles.postMetaItem}>
+                          <div style={styles.postMetaLabel}>Category</div>
+                          <select
+                            value={selectedCategoryId || ""}
+                            onChange={e => setSelectedCategoryId(e.target.value ? parseInt(e.target.value) : null)}
+                            style={{ ...styles.searchInput, marginTop: 4, fontSize: 12, color: "#fff", background: "#1a1a1a", cursor: "pointer" }}
+                          >
+                            <option value="">-- No category --</option>
+                            {wpCategories.map(cat => (
+                              <option key={cat.id} value={cat.id}>{cat.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                     </div>
                     {featuredImage && (
                       <div style={{ padding: "16px 20px", borderBottom: "1px solid #1a1a1a", display: "flex", alignItems: "center", gap: 12 }}>
