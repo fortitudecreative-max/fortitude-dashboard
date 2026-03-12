@@ -58,6 +58,49 @@ mobileCSS.textContent = `
 document.head.appendChild(mobileCSS);
 
 const DEFAULT_INDUSTRIES = ["HVAC", "Plumbing", "Electrical", "Roofing"];
+
+// Color palette for industry tabs — keyed by lowercase industry name
+const INDUSTRY_COLORS = {
+  hvac:        { color: "#f97316", border: "#f97316", bg: "rgba(249,115,22,0.12)" },   // orange
+  plumbing:    { color: "#3b82f6", border: "#3b82f6", bg: "rgba(59,130,246,0.12)" },   // blue
+  electrical:  { color: "#a855f7", border: "#a855f7", bg: "rgba(168,85,247,0.12)" },   // purple
+  roofing:     { color: "#22c55e", border: "#22c55e", bg: "rgba(34,197,94,0.12)" },    // green
+  landscaping: { color: "#84cc16", border: "#84cc16", bg: "rgba(132,204,22,0.12)" },   // lime
+  painting:    { color: "#ec4899", border: "#ec4899", bg: "rgba(236,72,153,0.12)" },   // pink
+  flooring:    { color: "#eab308", border: "#eab308", bg: "rgba(234,179,8,0.12)" },    // yellow
+  cleaning:    { color: "#06b6d4", border: "#06b6d4", bg: "rgba(6,182,212,0.12)" },    // cyan
+  pest:        { color: "#f43f5e", border: "#f43f5e", bg: "rgba(244,63,94,0.12)" },    // rose
+  concrete:    { color: "#94a3b8", border: "#94a3b8", bg: "rgba(148,163,184,0.12)" },  // slate
+  default:     { color: "#d60000", border: "#d60000", bg: "rgba(214,0,0,0.12)" },      // red fallback
+};
+
+const getIndustryColor = (ind) => {
+  if (!ind) return INDUSTRY_COLORS.default;
+  const key = ind.toLowerCase().split(" ")[0]; // match on first word
+  return INDUSTRY_COLORS[key] || INDUSTRY_COLORS.default;
+};
+
+// Color palette for industry tabs — maps industry name (lowercase) to a color
+const INDUSTRY_COLORS = {
+  hvac:        "#f97316", // orange
+  plumbing:    "#3b82f6", // blue
+  electrical:  "#a855f7", // purple
+  roofing:     "#10b981", // emerald
+  landscaping: "#84cc16", // lime
+  painting:    "#ec4899", // pink
+  flooring:    "#f59e0b", // amber
+  concrete:    "#6b7280", // gray
+  fencing:     "#14b8a6", // teal
+  cleaning:    "#06b6d4", // cyan
+  pest:        "#ef4444", // red
+  general:     "#8b5cf6", // violet
+};
+
+const getIndustryColor = (name) => {
+  if (!name) return null;
+  const key = name.toLowerCase().split(" ")[0]; // use first word for matching
+  return INDUSTRY_COLORS[key] || null;
+};
 const INTENTS = ["Transactional", "Commercial", "Informational"];
 const API = process.env.REACT_APP_API_URL || "http://localhost:3001";
 
@@ -2808,12 +2851,23 @@ function App() {
                       ) : (
                         <button
                           key={ind}
-                          style={{
-                            ...styles.industryTab,
-                            ...(activeIndustry === ind ? styles.industryTabActive : {}),
-                            ...(dragOverIndustry === ind && ind !== activeIndustry ? { background: "rgba(214,0,0,0.25)", borderColor: "#d60000", color: "#fff" } : {}),
-                            transition: "all 0.15s",
-                          }}
+                          style={(() => {
+                            const c = getIndustryColor(ind);
+                            const isActive = activeIndustry === ind;
+                            const isDragOver = dragOverIndustry === ind && ind !== activeIndustry;
+                            return {
+                              ...styles.industryTab,
+                              ...(c ? {
+                                borderColor: isActive ? c : "rgba(" + parseInt(c.slice(1,3),16) + "," + parseInt(c.slice(3,5),16) + "," + parseInt(c.slice(5,7),16) + ",0.35)",
+                                color: isActive ? "#fff" : c,
+                                background: isActive ? c : "rgba(" + parseInt(c.slice(1,3),16) + "," + parseInt(c.slice(3,5),16) + "," + parseInt(c.slice(5,7),16) + ",0.08)",
+                              } : {
+                                ...(isActive ? styles.industryTabActive : {}),
+                              }),
+                              ...(isDragOver ? { background: "rgba(214,0,0,0.25)", borderColor: "#d60000", color: "#fff" } : {}),
+                              transition: "all 0.15s",
+                            };
+                          })()}
                           onClick={() => { setActiveIndustry(ind); setSelectedKwIds(new Set()); }}
                           onDoubleClick={() => { setEditingIndustryTab(ind); setEditingIndustryVal(ind); }}
                           onDragOver={e => { e.preventDefault(); if (ind !== activeIndustry) setDragOverIndustry(ind); }}
@@ -3022,7 +3076,7 @@ function App() {
               {imageMode === "industry" && (
                 <div style={styles.industryTabs}>
                   {industries.map((ind) => (
-                    <button key={ind} style={{ ...styles.industryTab, ...(imageIndustry === ind ? styles.industryTabActive : {}) }} onClick={() => { setImageIndustry(ind); loadImages(ind); }}>
+                    <button key={ind} style={{ ...styles.industryTab, color: imageIndustry === ind ? "#fff" : getIndustryColor(ind).color, borderColor: getIndustryColor(ind).border, background: imageIndustry === ind ? getIndustryColor(ind).border : "transparent" }} onClick={() => { setImageIndustry(ind); loadImages(ind); }}>
                       {ind}
                     </button>
                   ))}
