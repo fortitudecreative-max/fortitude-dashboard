@@ -80,27 +80,6 @@ const getIndustryColor = (ind) => {
   return INDUSTRY_COLORS[key] || INDUSTRY_COLORS.default;
 };
 
-// Color palette for industry tabs — maps industry name (lowercase) to a color
-const INDUSTRY_COLORS = {
-  hvac:        "#f97316", // orange
-  plumbing:    "#3b82f6", // blue
-  electrical:  "#a855f7", // purple
-  roofing:     "#10b981", // emerald
-  landscaping: "#84cc16", // lime
-  painting:    "#ec4899", // pink
-  flooring:    "#f59e0b", // amber
-  concrete:    "#6b7280", // gray
-  fencing:     "#14b8a6", // teal
-  cleaning:    "#06b6d4", // cyan
-  pest:        "#ef4444", // red
-  general:     "#8b5cf6", // violet
-};
-
-const getIndustryColor = (name) => {
-  if (!name) return null;
-  const key = name.toLowerCase().split(" ")[0]; // use first word for matching
-  return INDUSTRY_COLORS[key] || null;
-};
 const INTENTS = ["Transactional", "Commercial", "Informational"];
 const API = process.env.REACT_APP_API_URL || "http://localhost:3001";
 
@@ -2854,15 +2833,15 @@ function App() {
                         <button
                           key={ind}
                           style={(() => {
-                            const c = getIndustryColor(ind);
+                            const col = getIndustryColor(ind);
                             const isActive = activeIndustry === ind;
                             const isDragOver = dragOverIndustry === ind && ind !== activeIndustry;
                             return {
                               ...styles.industryTab,
-                              ...(c ? {
-                                borderColor: isActive ? c : "rgba(" + parseInt(c.slice(1,3),16) + "," + parseInt(c.slice(3,5),16) + "," + parseInt(c.slice(5,7),16) + ",0.35)",
-                                color: isActive ? "#fff" : c,
-                                background: isActive ? c : "rgba(" + parseInt(c.slice(1,3),16) + "," + parseInt(c.slice(3,5),16) + "," + parseInt(c.slice(5,7),16) + ",0.08)",
+                              ...(col ? {
+                                borderColor: col.border,
+                                color: isActive ? "#fff" : col.color,
+                                background: isActive ? col.color : col.bg,
                               } : {
                                 ...(isActive ? styles.industryTabActive : {}),
                               }),
@@ -2975,7 +2954,7 @@ function App() {
                           key={row.id}
                           draggable={!isEditing}
                           onDragStart={e => { e.dataTransfer.setData("kwId", row.id); }}
-                          style={{ ...styles.tableRow, cursor: isEditing ? "default" : "grab", background: isEditing ? (ic ? "rgba(" + parseInt(ic.slice(1,3),16) + "," + parseInt(ic.slice(3,5),16) + "," + parseInt(ic.slice(5,7),16) + ",0.07)" : "rgba(214,0,0,0.07)") : isSelected ? "rgba(214,0,0,0.06)" : "transparent", alignItems: "center", outline: isEditing ? ("1px solid " + (ic || "#d60000")) : "none", outlineOffset: -1, transition: "background 0.12s" }}
+                          style={{ ...styles.tableRow, cursor: isEditing ? "default" : "grab", background: isEditing ? (ic ? ic.bg : "rgba(214,0,0,0.07)") : isSelected ? "rgba(214,0,0,0.06)" : "transparent", alignItems: "center", outline: isEditing ? ("1px solid " + (ic ? ic.border : "#d60000")) : "none", outlineOffset: -1, transition: "background 0.12s" }}
                           onMouseEnter={e => { if (!isSelected && !isEditing) e.currentTarget.style.background = "#111"; }}
                           onMouseLeave={e => { if (!isSelected && !isEditing) e.currentTarget.style.background = "transparent"; }}
                           onDoubleClick={e => { if (!kwSelectMode) { e.stopPropagation(); setEditingKwId(isEditing ? null : row.id); } }}
