@@ -376,6 +376,10 @@ function App() {
   const [selectedQueueRowId, setSelectedQueueRowId] = useState(null);
   const [queueRowPosts, setQueueRowPosts] = useState({}); // { [rowId]: { post, featuredImage, loading, error } }
   const [featuredImage, setFeaturedImage] = useState(null);
+  const [showImagePicker, setShowImagePicker] = useState(false);
+  const [imagePickerImages, setImagePickerImages] = useState([]);
+  const [imagePickerLoading, setImagePickerLoading] = useState(false);
+  const [imagePickerSearch, setImagePickerSearch] = useState("");
   const [contentLoading, setContentLoading] = useState(false);
   const [contentError, setContentError] = useState(null);
   const [publishLoading, setPublishLoading] = useState(false);
@@ -1238,6 +1242,29 @@ function App() {
       const data = await res.json();
       setIlImages(data.images || data || []);
     } catch (e) { console.error("loadIlImages:", e); }
+  };
+
+  const openImagePicker = async () => {
+    setShowImagePicker(true);
+    setImagePickerSearch("");
+    setImagePickerLoading(true);
+    try {
+      // Load client images first, fall back to all images
+      const clientId = activeClient?.id || selectedClient?.id;
+      let imgs = [];
+      if (clientId) {
+        const r = await authFetch(`${API}/api/images/client/${clientId}`);
+        const d = await r.json();
+        imgs = d.images || [];
+      }
+      if (imgs.length === 0) {
+        const r = await authFetch(`${API}/api/images`);
+        const d = await r.json();
+        imgs = d.images || [];
+      }
+      setImagePickerImages(imgs);
+    } catch (e) { console.error("openImagePicker:", e); }
+    finally { setImagePickerLoading(false); }
   };
 
   const ilDeleteImage = async (id) => {
@@ -3760,15 +3787,33 @@ function App() {
                         </div>
                       )}
                     </div>
-                    {featuredImage && (
-                      <div style={{ padding: "16px 20px", borderBottom: "1px solid #1a1a1a", display: "flex", alignItems: "center", gap: 12 }}>
-                        <img src={featuredImage.storage_path} alt={featuredImage.category} style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 6 }} />
-                        <div>
-                          <div style={styles.postMetaLabel}>Featured Image</div>
-                          <div style={{ fontSize: 12, color: "#aaa", marginTop: 4 }}>{featuredImage.category} — will be renamed to {generatedPost.slug}.jpg</div>
-                        </div>
+                    <div style={{ padding: "12px 20px", borderBottom: "1px solid #1a1a1a" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: featuredImage ? 10 : 0 }}>
+                        <div style={styles.postMetaLabel}>Featured Image</div>
+                        <button onClick={openImagePicker}
+                          style={{ fontSize: 10, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", background: "none", border: "1px solid #333", color: "#888", cursor: "pointer", padding: "3px 10px", borderRadius: 3 }}>
+                          {featuredImage ? "Change" : "Pick Image"}
+                        </button>
                       </div>
-                    )}
+                      {featuredImage ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <div style={{ position: "relative", flexShrink: 0 }}>
+                            <img src={featuredImage.storage_path} alt={featuredImage.category} style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 4, display: "block" }} />
+                            <button onClick={() => setFeaturedImage(null)}
+                              style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: "50%", background: "#1a1a1a", border: "1px solid #333", color: "#ef4444", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>×</button>
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: 12, color: "#ccc", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{featuredImage.category || "No category"}</div>
+                            <div style={{ fontSize: 10, color: "#555", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{featuredImage.filename}</div>
+                            {generatedPost?.slug && <div style={{ fontSize: 10, color: "#333", marginTop: 2 }}>Renames to {generatedPost.slug}.jpg</div>}
+                          </div>
+                        </div>
+                      ) : (
+                        <div onClick={openImagePicker} style={{ border: "1px dashed #222", borderRadius: 4, padding: "14px", textAlign: "center", cursor: "pointer", color: "#333", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                          No image selected — click to pick
+                        </div>
+                      )}
+                    </div>
                     {isEditingPost ? (
                       <div
                         id="post-editor-body"
@@ -4799,6 +4844,73 @@ function App() {
             </div>
           )}
         </div>
+
+            {/* FEATURED IMAGE PICKER MODAL */}
+      {showImagePicker && (() => {
+        const q = imagePickerSearch.toLowerCase();
+        const filtered = imagePickerImages.filter(img =>
+          !q || (img.category || "").toLowerCase().includes(q) || (img.description || "").toLowerCase().includes(q) || (img.filename || "").toLowerCase().includes(q)
+        );
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+            onClick={e => { if (e.target === e.currentTarget) setShowImagePicker(false); }}>
+            <div style={{ background: "#0d0d0d", border: "1px solid #222", borderTop: "3px solid #d60000", width: "100%", maxWidth: 780, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
+              {/* Header */}
+              <div style={{ padding: "14px 20px", borderBottom: "1px solid #1a1a1a", display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#fff" }}>Select Featured Image</div>
+                <input
+                  value={imagePickerSearch}
+                  onChange={e => setImagePickerSearch(e.target.value)}
+                  placeholder="Search by category, description, filename..."
+                  autoFocus
+                  style={{ flex: 1, background: "#141414", border: "1px solid #2a2a2a", color: "#fff", borderRadius: 3, padding: "6px 10px", fontSize: 12, fontFamily: "'Barlow', sans-serif" }}
+                />
+                <button onClick={() => setShowImagePicker(false)}
+                  style={{ background: "none", border: "none", color: "#444", fontSize: 20, cursor: "pointer", lineHeight: 1, flexShrink: 0 }}>×</button>
+              </div>
+              {/* Count */}
+              <div style={{ padding: "6px 20px", borderBottom: "1px solid #111", fontSize: 10, color: "#333", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                {imagePickerLoading ? "Loading..." : `${filtered.length} image${filtered.length !== 1 ? "s" : ""}${q ? " matching" : ""}`}
+              </div>
+              {/* Grid */}
+              <div style={{ overflowY: "auto", padding: 16, flex: 1 }}>
+                {imagePickerLoading ? (
+                  <div style={{ textAlign: "center", padding: 40, color: "#333", fontSize: 12 }}>Loading images...</div>
+                ) : filtered.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: 40, color: "#333", fontSize: 12 }}>No images found</div>
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 8 }}>
+                    {filtered.map(img => {
+                      const isSelected = featuredImage?.id === img.id;
+                      return (
+                        <div key={img.id}
+                          onClick={() => { setFeaturedImage(img); setShowImagePicker(false); setImagePickerSearch(""); }}
+                          style={{ cursor: "pointer", border: `2px solid ${isSelected ? "#d60000" : "#1a1a1a"}`, borderRadius: 4, overflow: "hidden", background: "#111", transition: "border-color 0.1s" }}
+                          onMouseEnter={e => { if (!isSelected) e.currentTarget.style.borderColor = "#333"; }}
+                          onMouseLeave={e => { if (!isSelected) e.currentTarget.style.borderColor = "#1a1a1a"; }}>
+                          <img src={img.storage_path} alt={img.category || img.filename} style={{ width: "100%", height: 100, objectFit: "cover", display: "block" }} />
+                          <div style={{ padding: "6px 8px" }}>
+                            <div style={{ fontSize: 10, color: img.category ? "#bbb" : "#444", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.05em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontStyle: img.category ? "normal" : "italic" }}>{img.category || "No category"}</div>
+                            {img.description && <div style={{ fontSize: 9, color: "#444", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{img.description}</div>}
+                          </div>
+                          {isSelected && <div style={{ padding: "3px 8px", background: "#d60000", fontSize: 9, color: "#fff", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", textAlign: "center" }}>Selected</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              {/* Footer */}
+              <div style={{ padding: "10px 20px", borderTop: "1px solid #1a1a1a", display: "flex", justifyContent: "flex-end" }}>
+                <button onClick={() => { setShowImagePicker(false); setImagePickerSearch(""); }}
+                  style={{ padding: "7px 20px", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", background: "transparent", border: "1px solid #2a2a2a", color: "#555", cursor: "pointer", borderRadius: 3 }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
             {/* IMAGE EDIT MODAL */}
       {editingImage && (
