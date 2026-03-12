@@ -1379,6 +1379,49 @@ function App() {
     setYoastRetrying(false);
   };
 
+  // Yoast Browser Update — runs after publish in the user's browser.
+  // Opens the WP post edit page in a hidden iframe, waits 10s for Yoast JS
+  // to calculate scores, then submits the Update form.
+  // This is the only reliable way to get Yoast Premium green lights.
+  const yoastBrowserUpdate = (wpBase, wpPostId) => {
+    if (!wpBase || !wpPostId) return;
+    wpBase = wpBase.replace(/\/$/, "");
+    const editUrl = `${wpBase}/wp-admin/post.php?post=${wpPostId}&action=edit`;
+
+    // Create hidden iframe pointed at the edit page
+    const iframe = document.createElement("iframe");
+    iframe.src = editUrl;
+    iframe.style.cssText = "position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;border:none;top:-9999px;left:-9999px;";
+    document.body.appendChild(iframe);
+
+    iframe.onload = () => {
+      // Wait 10 seconds for Yoast JS to fully initialize and score the content
+      setTimeout(() => {
+        try {
+          const doc = iframe.contentDocument || iframe.contentWindow?.document;
+          if (!doc) { document.body.removeChild(iframe); return; }
+
+          // Find and click the Update button
+          const updateBtn = doc.getElementById("publish") || doc.querySelector("input[name=save][value=Update], input[name=publish]");
+          if (updateBtn) {
+            updateBtn.click();
+            console.log("[YoastUpdate] Clicked Update for post", wpPostId);
+          } else {
+            // Fallback: submit the post form directly
+            const form = doc.getElementById("post") || doc.querySelector("form[name=post]");
+            if (form) form.submit();
+          }
+        } catch(e) {
+          console.log("[YoastUpdate] iframe access error (cross-origin?):", e.message);
+        }
+        // Remove iframe after a short delay
+        setTimeout(() => {
+          try { document.body.removeChild(iframe); } catch(e) {}
+        }, 5000);
+      }, 10000);
+    };
+  };
+
   const publishToWordPress = async () => {
     console.log("Publish clicked", { generatedPost: !!generatedPost, activeClient });
     if (!generatedPost || !activeClient) {
@@ -1420,6 +1463,11 @@ function App() {
         // Reload schedule jobs so published post moves to Archived Posts
         if (activeClient?.id) loadScheduleJobs(activeClient.id);
         if (selectedClient?.id) loadScheduleJobs(selectedClient.id);
+        // Trigger Yoast browser update — opens edit page in hidden iframe,
+        // waits 10s for Yoast JS to score content, then clicks Update
+        if (data.wpPostId && activeClient?.wordpress_url) {
+          yoastBrowserUpdate(activeClient.wordpress_url, data.wpPostId);
+        }
       } else {
         setPublishResult({ success: false, error: data.detail || data.error });
       }
@@ -2667,22 +2715,15 @@ function App() {
                           const handleYoastFix = async () => {
                             setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: "fixing" }));
                             try {
-                              // Step 1: trigger no-op PUT to force Yoast to recalculate all scores
-                              const r = await authFetch(`${API}/api/yoast-recalc`, {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ clientId: selectedClient.id, wpPostId: job.wp_post_id }),
-                              });
-                              const d = await r.json();
-                              if (d.success) {
-                                // Wait 2s for WP to finish recalculating before checking
-                                await new Promise(res => setTimeout(res, 2000));
-                                const check = await authFetch(`${API}/api/yoast-check/${selectedClient.id}/${job.wp_post_id}`);
-                                const cd = await check.json();
-                                setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: cd.green ? "green" : "failed" }));
-                              } else {
-                                setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: "failed" }));
+                              // Open edit page in hidden iframe, wait 10s for Yoast JS, click Update
+                              if (selectedClient?.wordpress_url && job.wp_post_id) {
+                                yoastBrowserUpdate(selectedClient.wordpress_url, job.wp_post_id);
                               }
+                              // Wait 15s for browser update to complete, then check score
+                              await new Promise(res => setTimeout(res, 15000));
+                              const check = await authFetch(`${API}/api/yoast-check/${selectedClient.id}/${job.wp_post_id}`);
+                              const cd = await check.json();
+                              setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: cd.green ? "green" : "failed" }));
                             } catch(err) {
                               setYoastStatuses(prev => ({ ...prev, [job.wp_post_id]: "failed" }));
                             }
