@@ -176,11 +176,12 @@ function LoginScreen({ onLogin }) {
   );
 }
 
-function IlImageCard({ img, selected, onToggleSelect, onSave }) {
+function IlImageCard({ img, selected, view, onToggleSelect, onSave, onDelete }) {
   const [editing, setEditing] = React.useState(false);
   const [cat, setCat] = React.useState(img.category || "");
   const [desc, setDesc] = React.useState(img.description || "");
   const [saving, setSaving] = React.useState(false);
+  const [hovered, setHovered] = React.useState(false);
 
   React.useEffect(() => {
     setCat(img.category || "");
@@ -194,62 +195,81 @@ function IlImageCard({ img, selected, onToggleSelect, onSave }) {
     setEditing(false);
   };
 
-  return (
-    <div style={{ background: "#0d0d0d", border: `1px solid ${selected ? "#d60000" : editing ? "#333" : "#1a1a1a"}`, borderRadius: 4, overflow: "hidden", position: "relative", transition: "border-color 0.1s" }}>
-      {/* Checkbox */}
-      <div
-        onClick={() => onToggleSelect(img.id)}
-        style={{ position: "absolute", top: 8, left: 8, width: 20, height: 20, borderRadius: 3, border: `2px solid ${selected ? "#d60000" : "rgba(255,255,255,0.3)"}`, background: selected ? "#d60000" : "rgba(0,0,0,0.6)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2, transition: "all 0.1s" }}
-      >
-        {selected && <span style={{ color: "#fff", fontSize: 11, lineHeight: 1, fontWeight: 700 }}>✓</span>}
-      </div>
+  const Checkbox = ({ style }) => (
+    <div onClick={e => { e.stopPropagation(); onToggleSelect(img.id); }}
+      style={{ width: 18, height: 18, borderRadius: 3, border: `2px solid ${selected ? "#d60000" : "rgba(255,255,255,0.25)"}`, background: selected ? "#d60000" : "rgba(0,0,0,0.6)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.1s", ...style }}>
+      {selected && <span style={{ color: "#fff", fontSize: 10, lineHeight: 1, fontWeight: 700 }}>✓</span>}
+    </div>
+  );
 
-      {/* Image */}
-      <div style={{ position: "relative" }} onClick={() => { if (!editing) setEditing(true); }}>
-        <img src={img.storage_path} alt={img.filename} style={{ width: "100%", height: 150, objectFit: "cover", display: "block", cursor: "pointer" }} />
+  const EditFields = () => (
+    <div>
+      <input value={cat} onChange={e => setCat(e.target.value)} placeholder="Category (e.g. Water Heaters)"
+        style={{ width: "100%", background: "#141414", border: "1px solid #333", color: "#fff", borderRadius: 3, padding: "6px 8px", fontSize: 11, fontFamily: "'Barlow', sans-serif", boxSizing: "border-box", marginBottom: 6 }} autoFocus />
+      <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Describe what is in the photo..."
+        style={{ width: "100%", background: "#141414", border: "1px solid #333", color: "#fff", borderRadius: 3, padding: "6px 8px", fontSize: 11, fontFamily: "'Barlow', sans-serif", boxSizing: "border-box", resize: "none", height: 60, marginBottom: 8 }} />
+      <div style={{ display: "flex", gap: 6 }}>
+        <button onClick={handleSave} disabled={saving}
+          style={{ flex: 1, background: "#d60000", color: "#fff", border: "none", borderRadius: 3, padding: "5px 0", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer" }}>
+          {saving ? "Saving..." : "Save"}
+        </button>
+        <button onClick={() => { setEditing(false); setCat(img.category || ""); setDesc(img.description || ""); }}
+          style={{ flex: 1, background: "transparent", color: "#555", border: "1px solid #2a2a2a", borderRadius: 3, padding: "5px 0", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer" }}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+
+  // ── LIST ROW ──────────────────────────────────────────────────────────────
+  if (view === "list") {
+    return (
+      <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+        style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 12px", background: selected ? "rgba(214,0,0,0.04)" : hovered ? "#111" : "transparent", borderBottom: "1px solid #1a1a1a", transition: "background 0.1s" }}>
+        <Checkbox style={{ marginTop: 2 }} />
+        <img src={img.storage_path} alt={img.filename} style={{ width: 64, height: 48, objectFit: "cover", borderRadius: 3, flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {editing ? <EditFields /> : (
+            <div onClick={() => setEditing(true)} style={{ cursor: "pointer" }}>
+              <div style={{ fontSize: 12, color: cat ? "#ddd" : "#444", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", fontStyle: cat ? "normal" : "italic", marginBottom: 2 }}>{cat || "No category"}</div>
+              <div style={{ fontSize: 10, color: desc ? "#666" : "#333", lineHeight: 1.4, fontStyle: desc ? "normal" : "italic", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{desc || "No description — click to add"}</div>
+              <div style={{ fontSize: 9, color: "#2a2a2a", marginTop: 2, fontFamily: "'Barlow Condensed', sans-serif" }}>{img.filename}</div>
+            </div>
+          )}
+        </div>
         {!editing && (
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0)", display: "flex", alignItems: "flex-end", justifyContent: "center", opacity: 0, transition: "opacity 0.15s" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(0,0,0,0.45)"; e.currentTarget.style.opacity = "1"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "rgba(0,0,0,0)"; e.currentTarget.style.opacity = "0"; }}>
-            <div style={{ padding: "6px 10px", fontSize: 10, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", color: "#fff" }}>Click to edit</div>
-          </div>
+          <button onClick={() => onDelete(img.id)}
+            style={{ flexShrink: 0, background: "none", border: "none", color: hovered ? "#ef4444" : "#2a2a2a", cursor: "pointer", fontSize: 16, padding: "0 4px", lineHeight: 1, transition: "color 0.15s" }}>×</button>
         )}
       </div>
+    );
+  }
 
-      {/* Info / edit area */}
-      <div style={{ padding: "10px 10px 10px" }}>
-        <div style={{ fontSize: 10, color: "#333", marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "'Barlow Condensed', sans-serif" }}>{img.filename}</div>
-
-        {editing ? (
-          <div>
-            <input
-              value={cat}
-              onChange={e => setCat(e.target.value)}
-              placeholder="Category (e.g. Water Heaters)"
-              style={{ width: "100%", background: "#141414", border: "1px solid #333", color: "#fff", borderRadius: 3, padding: "6px 8px", fontSize: 11, fontFamily: "'Barlow', sans-serif", boxSizing: "border-box", marginBottom: 6 }}
-              autoFocus
-            />
-            <textarea
-              value={desc}
-              onChange={e => setDesc(e.target.value)}
-              placeholder="Describe what is in the photo..."
-              style={{ width: "100%", background: "#141414", border: "1px solid #333", color: "#fff", borderRadius: 3, padding: "6px 8px", fontSize: 11, fontFamily: "'Barlow', sans-serif", boxSizing: "border-box", resize: "none", height: 64, marginBottom: 8 }}
-            />
-            <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={handleSave} disabled={saving}
-                style={{ flex: 1, background: "#d60000", color: "#fff", border: "none", borderRadius: 3, padding: "5px 0", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer" }}>
-                {saving ? "Saving..." : "Save"}
-              </button>
-              <button onClick={() => { setEditing(false); setCat(img.category || ""); setDesc(img.description || ""); }}
-                style={{ flex: 1, background: "transparent", color: "#555", border: "1px solid #2a2a2a", borderRadius: 3, padding: "5px 0", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer" }}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        ) : (
+  // ── GRID CARD ─────────────────────────────────────────────────────────────
+  return (
+    <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+      style={{ background: "#0d0d0d", border: `1px solid ${selected ? "#d60000" : editing ? "#333" : "#1a1a1a"}`, borderRadius: 4, overflow: "hidden", position: "relative", transition: "border-color 0.1s" }}>
+      {/* Checkbox — top left */}
+      <div style={{ position: "absolute", top: 8, left: 8, zIndex: 2 }}>
+        <Checkbox />
+      </div>
+      {/* Delete — top right, visible on hover */}
+      <button onClick={() => onDelete(img.id)}
+        style={{ position: "absolute", top: 6, right: 6, zIndex: 2, background: "rgba(0,0,0,0.7)", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 14, width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 3, opacity: hovered ? 1 : 0, transition: "opacity 0.15s" }}>×</button>
+      {/* Thumbnail */}
+      <div style={{ position: "relative" }} onClick={() => { if (!editing) setEditing(true); }}>
+        <img src={img.storage_path} alt={img.filename} style={{ width: "100%", height: 140, objectFit: "cover", display: "block", cursor: "pointer" }} />
+        {!editing && hovered && (
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "4px 8px", background: "rgba(0,0,0,0.6)", fontSize: 9, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", color: "#aaa", textAlign: "center" }}>Click to edit</div>
+        )}
+      </div>
+      {/* Info */}
+      <div style={{ padding: "8px 10px 10px" }}>
+        <div style={{ fontSize: 9, color: "#2a2a2a", marginBottom: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "'Barlow Condensed', sans-serif" }}>{img.filename}</div>
+        {editing ? <EditFields /> : (
           <div onClick={() => setEditing(true)} style={{ cursor: "pointer" }}>
-            <div style={{ fontSize: 12, color: cat ? "#ccc" : "#333", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", fontStyle: cat ? "normal" : "italic", marginBottom: 3 }}>{cat || "No category"}</div>
-            <div style={{ fontSize: 10, color: desc ? "#555" : "#2a2a2a", lineHeight: 1.35, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", fontStyle: desc ? "normal" : "italic" }}>{desc || "No description — click to add"}</div>
+            <div style={{ fontSize: 11, color: cat ? "#ccc" : "#333", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", fontStyle: cat ? "normal" : "italic", marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cat || "No category"}</div>
+            <div style={{ fontSize: 10, color: desc ? "#555" : "#2a2a2a", lineHeight: 1.35, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", fontStyle: desc ? "normal" : "italic" }}>{desc || "No description"}</div>
           </div>
         )}
       </div>
@@ -313,6 +333,8 @@ function App() {
   const [ilAssignClients, setIlAssignClients] = useState(new Set()); // client ids to assign to
   const [ilAssignLoading, setIlAssignLoading] = useState(false);
   const [ilFilter, setIlFilter] = useState("all"); // all | untagged | tagged
+  const [ilIndustry, setIlIndustry] = useState("all"); // "all" or a specific industry name
+  const [ilView, setIlView] = useState("grid"); // grid | list
   const [imageIndustry, setImageIndustry] = useState("HVAC");
   const [imageClientId, setImageClientId] = useState("");
   const [imageCategory, setImageCategory] = useState("");
@@ -1196,12 +1218,21 @@ function App() {
     } catch (e) { console.error("Failed to load client images:", e); }
   };
 
-  const loadIlImages = async () => {
+  const loadIlImages = async (industry) => {
     try {
-      const res = await authFetch(`${API}/api/images?limit=500`);
+      const ind = industry !== undefined ? industry : ilIndustry;
+      const qs = ind && ind !== "all" ? `?industry=${encodeURIComponent(ind)}` : "";
+      const res = await authFetch(`${API}/api/images${qs}`);
       const data = await res.json();
       setIlImages(data.images || data || []);
     } catch (e) { console.error("loadIlImages:", e); }
+  };
+
+  const ilDeleteImage = async (id) => {
+    if (!window.confirm("Delete this image? This cannot be undone.")) return;
+    await authFetch(`${API}/api/images/${id}`, { method: "DELETE" });
+    setIlImages(prev => prev.filter(img => img.id !== id));
+    setIlSelected(prev => { const n = new Set(prev); n.delete(id); return n; });
   };
 
   const ilHandleDrop = async (e) => {
@@ -3398,25 +3429,24 @@ function App() {
                   onDragOver={e => { e.preventDefault(); setIlDragging(true); }}
                   onDragLeave={() => setIlDragging(false)}
                   onDrop={ilHandleDrop}
-                  style={{ border: `2px dashed ${ilDragging ? "#d60000" : "#2a2a2a"}`, borderRadius: 6, padding: "40px 20px", textAlign: "center", marginBottom: 28, background: ilDragging ? "rgba(214,0,0,0.05)" : "#0a0a0a", transition: "all 0.15s", cursor: "default" }}
+                  style={{ border: `2px dashed ${ilDragging ? "#d60000" : "#222"}`, borderRadius: 6, padding: "32px 20px", textAlign: "center", marginBottom: 24, background: ilDragging ? "rgba(214,0,0,0.05)" : "#090909", transition: "all 0.15s" }}
                 >
                   {ilUploading ? (
                     <div>
-                      <div style={{ fontSize: 28, marginBottom: 10 }}>⟳</div>
-                      <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 14, color: "#fff", letterSpacing: "0.1em", textTransform: "uppercase" }}>Uploading {ilUploadProgress.done} / {ilUploadProgress.total}</div>
-                      <div style={{ width: "100%", maxWidth: 240, margin: "12px auto 0", height: 3, background: "#1a1a1a", borderRadius: 2 }}>
+                      <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 14, color: "#fff", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>Uploading {ilUploadProgress.done} / {ilUploadProgress.total}</div>
+                      <div style={{ width: "100%", maxWidth: 240, margin: "0 auto", height: 3, background: "#1a1a1a", borderRadius: 2 }}>
                         <div style={{ height: "100%", background: "#d60000", width: `${ilUploadProgress.total ? (ilUploadProgress.done / ilUploadProgress.total) * 100 : 0}%`, borderRadius: 2, transition: "width 0.3s" }} />
                       </div>
                     </div>
                   ) : (
                     <div>
-                      <div style={{ fontSize: 36, marginBottom: 10, color: ilDragging ? "#d60000" : "#333" }}>▣</div>
-                      <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 15, color: ilDragging ? "#fff" : "#555", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
+                      <div style={{ fontSize: 28, marginBottom: 8, color: ilDragging ? "#d60000" : "#2a2a2a" }}>▣</div>
+                      <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 14, color: ilDragging ? "#fff" : "#444", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>
                         {ilDragging ? "Drop to upload" : "Drag & drop images here"}
                       </div>
-                      <div style={{ fontSize: 11, color: "#333" }}>JPG, PNG, WebP, GIF — up to 50 at once</div>
-                      <label style={{ display: "inline-block", marginTop: 16, padding: "7px 18px", background: "#1a1a1a", border: "1px solid #333", color: "#777", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", borderRadius: 3 }}>
-                        Or browse files
+                      <div style={{ fontSize: 11, color: "#2a2a2a", marginBottom: 12 }}>JPG, PNG, WebP — up to 50 at once</div>
+                      <label style={{ display: "inline-block", padding: "6px 16px", background: "#141414", border: "1px solid #2a2a2a", color: "#666", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", borderRadius: 3 }}>
+                        Browse Files
                         <input type="file" accept="image/*" multiple style={{ display: "none" }} onChange={async e => {
                           const fakeDropEvent = { preventDefault: () => {}, dataTransfer: { files: e.target.files } };
                           await ilHandleDrop(fakeDropEvent);
@@ -3427,37 +3457,63 @@ function App() {
                   )}
                 </div>
 
+                {/* INDUSTRY TABS */}
+                <div style={{ display: "flex", alignItems: "center", gap: 2, marginBottom: 16, flexWrap: "wrap" }}>
+                  {["all", ...industries].map(ind => {
+                    const isAll = ind === "all";
+                    const active = ilIndustry === ind;
+                    const col = isAll ? { color: "#d60000", border: "#d60000", bg: "rgba(214,0,0,0.12)" } : getIndustryColor(ind);
+                    return (
+                      <button key={ind} onClick={() => { setIlIndustry(ind); setIlSelected(new Set()); loadIlImages(isAll ? "all" : ind); }}
+                        style={{ padding: "8px 16px", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600, border: "1px solid", borderColor: active ? col.border : "#1e1e1e", background: active ? col.bg : "transparent", color: active ? col.color : "#444", cursor: "pointer", transition: "all 0.1s" }}>
+                        {isAll ? "All Industries" : ind}
+                      </button>
+                    );
+                  })}
+                </div>
+
                 {/* TOOLBAR */}
-                {ilImages.length > 0 && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
-                    {/* Filter tabs */}
-                    <div style={{ display: "flex", gap: 4 }}>
-                      {["all","untagged","tagged"].map(f => (
-                        <button key={f} onClick={() => setIlFilter(f)} style={{ padding: "5px 12px", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", border: "1px solid", borderColor: ilFilter === f ? "#d60000" : "#2a2a2a", background: ilFilter === f ? "rgba(214,0,0,0.12)" : "transparent", color: ilFilter === f ? "#fff" : "#555", cursor: "pointer", borderRadius: 3 }}>
-                          {f} {f === "all" ? `(${ilImages.length})` : f === "untagged" ? `(${ilImages.filter(i => !i.category).length})` : `(${ilImages.filter(i => !!i.category).length})`}
-                        </button>
-                      ))}
-                    </div>
-                    {/* Select all / clear */}
-                    <div style={{ display: "flex", gap: 4, marginLeft: "auto" }}>
-                      {ilSelected.size > 0 && (
-                        <button onClick={() => { setIlAssigning(true); setIlAssignClients(new Set()); }} style={{ padding: "5px 14px", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", border: "1px solid #d60000", background: "#d60000", color: "#fff", cursor: "pointer", borderRadius: 3 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+                  {/* Tagged filter */}
+                  <div style={{ display: "flex", gap: 3, background: "#0d0d0d", border: "1px solid #1e1e1e", borderRadius: 4, padding: 3 }}>
+                    {["all","untagged","tagged"].map(f => (
+                      <button key={f} onClick={() => setIlFilter(f)}
+                        style={{ padding: "4px 10px", fontSize: 10, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", border: "none", borderRadius: 3, background: ilFilter === f ? "#1e1e1e" : "transparent", color: ilFilter === f ? "#fff" : "#444", cursor: "pointer" }}>
+                        {f} ({f === "all" ? ilImages.length : f === "untagged" ? ilImages.filter(i => !i.category).length : ilImages.filter(i => !!i.category).length})
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* View toggle */}
+                  <div style={{ display: "flex", gap: 3, background: "#0d0d0d", border: "1px solid #1e1e1e", borderRadius: 4, padding: 3, marginLeft: 4 }}>
+                    <button onClick={() => setIlView("grid")}
+                      style={{ padding: "4px 10px", fontSize: 12, border: "none", borderRadius: 3, background: ilView === "grid" ? "#1e1e1e" : "transparent", color: ilView === "grid" ? "#fff" : "#444", cursor: "pointer" }} title="Grid view">⊞</button>
+                    <button onClick={() => setIlView("list")}
+                      style={{ padding: "4px 10px", fontSize: 12, border: "none", borderRadius: 3, background: ilView === "list" ? "#1e1e1e" : "transparent", color: ilView === "list" ? "#fff" : "#444", cursor: "pointer" }} title="List view">☰</button>
+                  </div>
+
+                  {/* Right-side actions */}
+                  <div style={{ display: "flex", gap: 6, marginLeft: "auto", alignItems: "center" }}>
+                    {ilSelected.size > 0 && (
+                      <>
+                        <button onClick={() => { setIlAssigning(true); setIlAssignClients(new Set()); }}
+                          style={{ padding: "5px 14px", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", border: "1px solid #d60000", background: "#d60000", color: "#fff", cursor: "pointer", borderRadius: 3 }}>
                           Assign {ilSelected.size} to Clients
                         </button>
-                      )}
-                      <button onClick={allFilteredSelected ? ilClearSelect : ilSelectAll} style={{ padding: "5px 12px", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", border: "1px solid #2a2a2a", background: "transparent", color: "#555", cursor: "pointer", borderRadius: 3 }}>
-                        {allFilteredSelected ? "Deselect All" : "Select All"}
-                      </button>
-                      {ilSelected.size > 0 && (
-                        <button onClick={ilClearSelect} style={{ padding: "5px 12px", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", border: "1px solid #2a2a2a", background: "transparent", color: "#555", cursor: "pointer", borderRadius: 3 }}>Clear</button>
-                      )}
-                    </div>
+                        <button onClick={ilClearSelect}
+                          style={{ padding: "5px 10px", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", border: "1px solid #222", background: "transparent", color: "#555", cursor: "pointer", borderRadius: 3 }}>Clear</button>
+                      </>
+                    )}
+                    <button onClick={allFilteredSelected ? ilClearSelect : ilSelectAll}
+                      style={{ padding: "5px 12px", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", border: "1px solid #222", background: "transparent", color: "#555", cursor: "pointer", borderRadius: 3 }}>
+                      {allFilteredSelected ? "Deselect All" : "Select All"}
+                    </button>
                   </div>
-                )}
+                </div>
 
                 {/* ASSIGN PANEL */}
                 {ilAssigning && (
-                  <div style={{ background: "#0d0d0d", border: "1px solid #d60000", borderRadius: 4, padding: 20, marginBottom: 24 }}>
+                  <div style={{ background: "#0d0d0d", border: "1px solid #d60000", borderRadius: 4, padding: 20, marginBottom: 20 }}>
                     <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#fff", marginBottom: 12 }}>Assign {ilSelected.size} Image{ilSelected.size !== 1 ? "s" : ""} to Clients</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
                       {clients.map(c => {
@@ -3483,20 +3539,31 @@ function App() {
                   </div>
                 )}
 
-                {/* IMAGE GRID */}
+                {/* IMAGE GRID / LIST */}
                 {ilFiltered.length === 0 && !ilUploading ? (
                   <div style={{ textAlign: "center", padding: "60px 20px" }}>
-                    <div style={{ fontSize: 32, marginBottom: 12, color: "#2a2a2a" }}>▣</div>
-                    <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 14, color: "#333", letterSpacing: "0.1em", textTransform: "uppercase" }}>{ilImages.length === 0 ? "No images yet" : "No images match this filter"}</div>
+                    <div style={{ fontSize: 28, marginBottom: 10, color: "#1e1e1e" }}>▣</div>
+                    <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 13, color: "#333", letterSpacing: "0.1em", textTransform: "uppercase" }}>{ilImages.length === 0 ? "No images yet — drop some above" : "No images match this filter"}</div>
+                  </div>
+                ) : ilView === "grid" ? (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 10 }}>
+                    {ilFiltered.map(img => (
+                      <IlImageCard key={img.id} img={img} view="grid" selected={ilSelected.has(img.id)} onToggleSelect={ilToggleSelect} onSave={ilSaveImage} onDelete={ilDeleteImage} />
+                    ))}
                   </div>
                 ) : (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
-                    {ilFiltered.map(img => {
-                      const sel = ilSelected.has(img.id);
-                      return (
-                        <IlImageCard key={img.id} img={img} selected={sel} onToggleSelect={ilToggleSelect} onSave={ilSaveImage} />
-                      );
-                    })}
+                  <div style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 4, overflow: "hidden" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "20px 64px 1fr 1fr 1fr auto", gap: 0, padding: "6px 12px", borderBottom: "1px solid #1a1a1a", background: "#111" }}>
+                      <div />
+                      <div />
+                      <div style={{ fontSize: 9, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", paddingLeft: 4 }}>Filename</div>
+                      <div style={{ fontSize: 9, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" }}>Category</div>
+                      <div style={{ fontSize: 9, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" }}>Description</div>
+                      <div />
+                    </div>
+                    {ilFiltered.map(img => (
+                      <IlImageCard key={img.id} img={img} view="list" selected={ilSelected.has(img.id)} onToggleSelect={ilToggleSelect} onSave={ilSaveImage} onDelete={ilDeleteImage} />
+                    ))}
                   </div>
                 )}
               </div>
