@@ -340,6 +340,7 @@ function App() {
   const [ilUploading, setIlUploading] = useState(false);
   const [ilUploadProgress, setIlUploadProgress] = useState({ done: 0, total: 0 });
   const [ilSelected, setIlSelected] = useState(new Set()); // selected image ids
+  const [clientImgSelected, setClientImgSelected] = useState(new Set()); // selected client image ids
   const [ilAssigning, setIlAssigning] = useState(false); // assign panel open
   const [ilAssignClients, setIlAssignClients] = useState(new Set()); // client ids to assign to
   const [ilAssignLoading, setIlAssignLoading] = useState(false);
@@ -1227,6 +1228,7 @@ function App() {
   };
 
   const loadClientImages = async (clientId) => {
+    setClientImgSelected(new Set());
     try {
       const res = await authFetch(`${API}/api/images/client/${clientId}`);
       const data = await res.json();
@@ -1393,7 +1395,30 @@ function App() {
     try {
       await authFetch(`${API}/api/images/${imageId}`, { method: "DELETE" });
       setClientImages(prev => prev.filter(img => img.id !== imageId));
+      setClientImgSelected(prev => { const n = new Set(prev); n.delete(imageId); return n; });
     } catch (e) { console.error("Failed to delete image:", e); }
+  };
+
+  const deleteClientImagesSelected = async () => {
+    if (!clientImgSelected.size) return;
+    if (!window.confirm(`Delete ${clientImgSelected.size} selected image${clientImgSelected.size !== 1 ? "s" : ""}? This cannot be undone.`)) return;
+    const ids = Array.from(clientImgSelected);
+    for (const id of ids) {
+      try { await authFetch(`${API}/api/images/${id}`, { method: "DELETE" }); } catch (e) { console.error("Delete failed:", e); }
+    }
+    setClientImages(prev => prev.filter(img => !ids.includes(img.id)));
+    setClientImgSelected(new Set());
+  };
+
+  const deleteIlImagesSelected = async () => {
+    if (!ilSelected.size) return;
+    if (!window.confirm(`Delete ${ilSelected.size} selected image${ilSelected.size !== 1 ? "s" : ""}? This cannot be undone.`)) return;
+    const ids = Array.from(ilSelected);
+    for (const id of ids) {
+      try { await authFetch(`${API}/api/images/${id}`, { method: "DELETE" }); } catch (e) { console.error("Delete failed:", e); }
+    }
+    setIlImages(prev => prev.filter(img => !ids.includes(img.id)));
+    setIlSelected(new Set());
   };
 
   // ─── SEO AUDIT ──────────────────────────────────────────────────
@@ -3076,23 +3101,50 @@ function App() {
 
                   {clientImages.length === 0 ? (
                     <div style={{ padding: "24px", background: "#0d0d0d", border: "1px solid #1a1a1a", textAlign: "center" }}>
-                      <div style={{ fontSize: 11, color: "#444", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif" }}>No images yet — drop some above to get started</div>
+                      <div style={{ fontSize: 11, color: "#444", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif" }}>No images yet -- drop some above to get started</div>
                     </div>
                   ) : (
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>
-                      {clientImages.map(img => (
-                        <div key={img.id} style={{ position: "relative", background: "#0d0d0d", border: "1px solid #1a1a1a", overflow: "hidden", cursor: "pointer" }}
-                          onClick={() => setEditingImage({ id: img.id, category: img.category || "", description: img.description || "", storage_path: img.storage_path, filename: img.filename, isClientImage: true })}
-                          onMouseEnter={e => e.currentTarget.querySelector(".del-btn").style.opacity = "1"}
-                          onMouseLeave={e => e.currentTarget.querySelector(".del-btn").style.opacity = "0"}>
-                          <img src={img.storage_path} alt={img.category} style={{ width: "100%", height: 90, objectFit: "cover", display: "block" }} />
-                          <div style={{ padding: "4px 6px", fontSize: 10, color: "#555", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{img.category || "general"}</div>
-                          {img.description && <div style={{ padding: "0 6px 4px", fontSize: 9, color: "#444", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{img.description}</div>}
-                          <button className="del-btn" onClick={e => { e.stopPropagation(); deleteClientImage(img.id); }}
-                            style={{ position: "absolute", top: 4, right: 4, background: "rgba(0,0,0,0.7)", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 13, width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0, transition: "opacity 0.15s", borderRadius: 2 }}>×</button>
-                        </div>
-                      ))}
-                    </div>
+                    <>
+                      {/* Client image toolbar */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                        <button onClick={() => setClientImgSelected(clientImgSelected.size === clientImages.length ? new Set() : new Set(clientImages.map(i => i.id)))}
+                          style={{ padding: "4px 12px", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", border: "1px solid #222", background: "transparent", color: "#555", cursor: "pointer", borderRadius: 3 }}>
+                          {clientImgSelected.size === clientImages.length && clientImages.length > 0 ? "Deselect All" : "Select All"}
+                        </button>
+                        {clientImgSelected.size > 0 && (
+                          <>
+                            <button onClick={deleteClientImagesSelected}
+                              style={{ padding: "4px 14px", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", border: "1px solid #7f1d1d", background: "rgba(239,68,68,0.12)", color: "#ef4444", cursor: "pointer", borderRadius: 3 }}>
+                              Delete {clientImgSelected.size} Selected
+                            </button>
+                            <button onClick={() => setClientImgSelected(new Set())}
+                              style={{ padding: "4px 10px", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", border: "1px solid #222", background: "transparent", color: "#555", cursor: "pointer", borderRadius: 3 }}>Clear</button>
+                          </>
+                        )}
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>
+                        {clientImages.map(img => {
+                          const ciSel = clientImgSelected.has(img.id);
+                          return (
+                            <div key={img.id} style={{ position: "relative", background: "#0d0d0d", border: `1px solid ${ciSel ? "#d60000" : "#1a1a1a"}`, overflow: "hidden", cursor: "pointer", outline: ciSel ? "1px solid #d60000" : "none" }}
+                              onClick={e => {
+                                if (e.target.closest(".del-btn")) return;
+                                setClientImgSelected(prev => { const n = new Set(prev); if (n.has(img.id)) n.delete(img.id); else n.add(img.id); return n; });
+                              }}
+                              onDoubleClick={e => { e.stopPropagation(); setEditingImage({ id: img.id, category: img.category || "", description: img.description || "", storage_path: img.storage_path, filename: img.filename, isClientImage: true }); }}
+                              onMouseEnter={e => { const b = e.currentTarget.querySelector(".del-btn"); if (b) b.style.opacity = "1"; }}
+                              onMouseLeave={e => { const b = e.currentTarget.querySelector(".del-btn"); if (b) b.style.opacity = "0"; }}>
+                              {ciSel && <div style={{ position: "absolute", top: 4, left: 4, width: 16, height: 16, background: "#d60000", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", zIndex: 2, lineHeight: 1 }}>✓</div>}
+                              <img src={img.storage_path} alt={img.category} style={{ width: "100%", height: 90, objectFit: "cover", display: "block", opacity: ciSel ? 0.75 : 1 }} />
+                              <div style={{ padding: "4px 6px", fontSize: 10, color: "#555", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{img.category || "general"}</div>
+                              {img.description && <div style={{ padding: "0 6px 4px", fontSize: 9, color: "#444", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{img.description}</div>}
+                              <button className="del-btn" onClick={e => { e.stopPropagation(); deleteClientImage(img.id); }}
+                                style={{ position: "absolute", top: 4, right: 4, background: "rgba(0,0,0,0.7)", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 13, width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0, transition: "opacity 0.15s", borderRadius: 2 }}>x</button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
                   )}
                   </div>
                   )}
@@ -3551,6 +3603,10 @@ function App() {
                         <button onClick={() => { setIlAssigning(true); setIlAssignClients(new Set()); }}
                           style={{ padding: "5px 14px", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", border: "1px solid #d60000", background: "#d60000", color: "#fff", cursor: "pointer", borderRadius: 3 }}>
                           Assign {ilSelected.size} to Clients
+                        </button>
+                        <button onClick={deleteIlImagesSelected}
+                          style={{ padding: "5px 14px", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", border: "1px solid #7f1d1d", background: "rgba(239,68,68,0.12)", color: "#ef4444", cursor: "pointer", borderRadius: 3 }}>
+                          Delete {ilSelected.size}
                         </button>
                         <button onClick={ilClearSelect}
                           style={{ padding: "5px 10px", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", border: "1px solid #222", background: "transparent", color: "#555", cursor: "pointer", borderRadius: 3 }}>Clear</button>
