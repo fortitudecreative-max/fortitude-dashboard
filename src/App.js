@@ -1819,6 +1819,28 @@ function App() {
                               <div style={{ fontSize: 12, color: selectedClient.brand_voice ? "#ccc" : "#333", fontFamily: "'Barlow Condensed', sans-serif", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{selectedClient.brand_voice || "Not set"}</div>
                             </div>
                           </div>
+                          <div style={{ marginTop: 14, marginBottom: 14 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                              <div style={{ fontSize: 9, color: "#555", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif" }}>Competitors</div>
+                              <button style={{ ...styles.connectBtn, fontSize: 10, padding: "3px 10px" }} onClick={findCompetitors} disabled={findingCompetitors}>{findingCompetitors ? "Searching..." : "⟳ Auto-Find"}</button>
+                            </div>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                              {competitors.map((comp, i) => (
+                                <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, background: "#111", border: "1px solid #1f1f1f", borderRadius: 6, padding: "4px 10px" }}>
+                                  <span style={{ fontSize: 12, color: "#ccc", fontFamily: "'Barlow Condensed', sans-serif" }}>{comp}</span>
+                                  <button style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 14, padding: 0, lineHeight: 1 }} onClick={() => { const u = competitors.filter((_, idx) => idx !== i); setCompetitors(u); saveCompetitors(u); }}>x</button>
+                                </div>
+                              ))}
+                              {competitors.length < 5 && (
+                                <button style={{ ...styles.connectBtn, fontSize: 11 }} onClick={() => {
+                                  const domain = prompt("Enter competitor domain (e.g. competitor.com):");
+                                  if (domain && competitors.length < 5) { const updated = [...competitors, domain.trim().replace(/^https?:\/\//, "")]; setCompetitors(updated); saveCompetitors(updated); }
+                                }}>+ Add</button>
+                              )}
+                            </div>
+                            {competitors.length > 0 && <div style={{ fontSize: 11, color: "#444", marginTop: 6 }}>{competitors.length}/5 competitors tracked</div>}
+                            {competitors.length === 0 && <div style={{ fontSize: 11, color: "#333", marginTop: 4, fontFamily: "'Barlow Condensed', sans-serif" }}>No competitors set</div>}
+                          </div>
                           <button style={{ ...styles.connectBtn, fontSize: 11, padding: "6px 14px" }} onClick={startEditClient}>✎ Edit Client</button>
                         </div>
                       )}
@@ -1954,30 +1976,6 @@ function App() {
                     ))}
                   </div>
 
-                  {/* COMPETITORS - inside Connected Apps area */}
-                  <div style={{ marginTop: 16, marginBottom: 4 }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                      <div style={styles.sectionTitle}>Competitors</div>
-                      <button style={styles.connectBtn} onClick={findCompetitors} disabled={findingCompetitors}>
-                        {findingCompetitors ? "Searching..." : "⟳ Auto-Find"}
-                      </button>
-                    </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
-                      {competitors.map((comp, i) => (
-                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, background: "#111", border: "1px solid #1f1f1f", borderRadius: 6, padding: "5px 10px" }}>
-                          <span style={{ fontSize: 12, color: "#ccc" }}>{comp}</span>
-                          <button style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 14, lineHeight: 1 }} onClick={() => { const updated = competitors.filter((_, idx) => idx !== i); setCompetitors(updated); saveCompetitors(updated); }}>×</button>
-                        </div>
-                      ))}
-                      {competitors.length < 5 && (
-                        <button style={{ ...styles.connectBtn, fontSize: 11 }} onClick={() => {
-                          const domain = prompt("Enter competitor domain (e.g. competitor.com):");
-                          if (domain && competitors.length < 5) { const updated = [...competitors, domain.trim()]; setCompetitors(updated); saveCompetitors(updated); }
-                        }}>+ Add</button>
-                      )}
-                    </div>
-                    {competitors.length > 0 && <div style={{ fontSize: 11, color: "#444" }}>{competitors.length}/5 competitors saved.</div>}
-                  </div>
                   </div>
                   )}
                 </div>
