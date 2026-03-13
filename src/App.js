@@ -1767,7 +1767,7 @@ function App() {
       });
       const data = await res.json();
       if (data.success) {
-        setPublishResult({ success: true, wpPostId: data.wpPostId, url: data.wpPostUrl, qa: data.qa || null, repairHistory: data.repairHistory || [], yoastEdition: data.yoastEdition, longtailKeyphrase: data.longtailKeyphrase, fortitudePlugin: data.fortitudePlugin, canWriteSeoMeta: data.canWriteSeoMeta, yoastOpt: data.yoastOpt || null });
+        setPublishResult({ success: true, wpPostId: data.wpPostId, url: data.wpPostUrl, qa: data.qa || null, repairHistory: data.repairHistory || [], yoastEdition: data.yoastEdition, longtailKeyphrase: data.longtailKeyphrase, fortitudePlugin: data.fortitudePlugin, canWriteSeoMeta: data.canWriteSeoMeta, yoastOpt: data.yoastOpt || null, imageUploadError: data.imageUploadError || null });
         loadClients();
         // Reload schedule jobs so published post moves to Archived Posts
         if (activeClient?.id) loadScheduleJobs(activeClient.id);
@@ -3923,6 +3923,11 @@ function App() {
                           {publishResult.success ? (
                             <div style={{ fontSize: 11, color: "#aaa", fontFamily: "'Barlow', sans-serif", lineHeight: 1.5 }}>
                               <a href={publishResult.url} target="_blank" rel="noreferrer" style={{ color: "#60a5fa", wordBreak: "break-all" }}>{publishResult.url}</a>
+                              {publishResult.imageUploadError && (
+                                <div style={{ marginTop: 6, fontSize: 10, color: "#ef4444", fontFamily: "'Barlow Condensed', sans-serif", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 3, padding: "4px 8px" }}>
+                                  ⚠ Featured image failed to upload: {publishResult.imageUploadError}
+                                </div>
+                              )}
                               {publishResult.yoastEdition && (
                                 <span style={{ marginLeft: 10, fontSize: 10, padding: "2px 8px", borderRadius: 3, background: publishResult.yoastEdition === "none" ? "#1a1a1a" : "#0a1a0a", border: `1px solid ${publishResult.yoastEdition === "none" ? "#333" : "#22c55e33"}`, color: publishResult.yoastEdition === "none" ? "#555" : "#22c55e", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em" }}>
                                   {publishResult.yoastEdition === "premium" ? "Yoast Premium ✓" : publishResult.yoastEdition === "free" ? "Yoast Free ✓" : "No Yoast detected"}
