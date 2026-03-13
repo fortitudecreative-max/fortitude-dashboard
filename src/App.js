@@ -2777,6 +2777,9 @@ function App() {
                           <option value="conversational">Casual and Conversational</option>
                           <option value="urgent">Urgent and Direct</option>
                         </select>
+                        <div style={{ fontSize: 10, color: "#333", fontFamily: "'Barlow', sans-serif", marginTop: 6 }}>
+                          Brand voice from the client profile is always applied automatically — this tone setting layers on top of it.
+                        </div>
                       </div>
 
                       {/* Content Rules */}
