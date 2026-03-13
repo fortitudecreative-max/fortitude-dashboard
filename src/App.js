@@ -197,14 +197,9 @@ function IlImageCard({ img, selected, view, onToggleSelect, onSave, onDelete, in
     setEditing(false);
   };
 
-  const Checkbox = ({ style }) => (
-    <div onClick={e => { e.stopPropagation(); onToggleSelect(img.id); }}
-      style={{ width: 18, height: 18, borderRadius: 3, border: `2px solid ${selected ? "#d60000" : "rgba(255,255,255,0.25)"}`, background: selected ? "#d60000" : "rgba(0,0,0,0.6)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.1s", ...style }}>
-      {selected && <span style={{ color: "#fff", fontSize: 10, lineHeight: 1, fontWeight: 700 }}>✓</span>}
-    </div>
-  );
+  const cbStyle = { width: 18, height: 18, borderRadius: 3, border: "2px solid " + (selected ? "#d60000" : "rgba(255,255,255,0.25)"), background: selected ? "#d60000" : "rgba(0,0,0,0.6)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.1s" };
 
-  const renderEditFields = () => (
+  const editForm = (
     <div>
       <select value={ind} onChange={e => setInd(e.target.value)}
         style={{ width: "100%", background: "#141414", border: "1px solid #333", color: ind ? "#fff" : "#555", borderRadius: 3, padding: "6px 8px", fontSize: 11, fontFamily: "'Barlow', sans-serif", boxSizing: "border-box", marginBottom: 6, cursor: "pointer" }}>
@@ -212,7 +207,7 @@ function IlImageCard({ img, selected, view, onToggleSelect, onSave, onDelete, in
         {(industries || []).map(i => <option key={i} value={i}>{i}</option>)}
       </select>
       <input value={cat} onChange={e => setCat(e.target.value)} placeholder="Category (e.g. Water Heaters)"
-        style={{ width: "100%", background: "#141414", border: "1px solid #333", color: "#fff", borderRadius: 3, padding: "6px 8px", fontSize: 11, fontFamily: "'Barlow', sans-serif", boxSizing: "border-box", marginBottom: 6 }} autoFocus />
+        style={{ width: "100%", background: "#141414", border: "1px solid #333", color: "#fff", borderRadius: 3, padding: "6px 8px", fontSize: 11, fontFamily: "'Barlow', sans-serif", boxSizing: "border-box", marginBottom: 6 }} />
       <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Describe what is in the photo..."
         style={{ width: "100%", background: "#141414", border: "1px solid #333", color: "#fff", borderRadius: 3, padding: "6px 8px", fontSize: 11, fontFamily: "'Barlow', sans-serif", boxSizing: "border-box", resize: "none", height: 60, marginBottom: 8 }} />
       <div style={{ display: "flex", gap: 6 }}>
@@ -228,55 +223,51 @@ function IlImageCard({ img, selected, view, onToggleSelect, onSave, onDelete, in
     </div>
   );
 
-  // ── LIST ROW ──────────────────────────────────────────────────────────────
   if (view === "list") {
     return (
       <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
         style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 12px", background: selected ? "rgba(214,0,0,0.04)" : hovered ? "#111" : "transparent", borderBottom: "1px solid #1a1a1a", transition: "background 0.1s" }}>
-        <Checkbox style={{ marginTop: 2 }} />
+        <div onClick={e => { e.stopPropagation(); onToggleSelect(img.id); }} style={{ ...cbStyle, marginTop: 2 }}>
+          {selected && <span style={{ color: "#fff", fontSize: 10, lineHeight: 1, fontWeight: 700 }}>✓</span>}
+        </div>
         <img src={img.storage_path} alt={img.filename} style={{ width: 64, height: 48, objectFit: "cover", borderRadius: 3, flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          {editing ? {renderEditFields()} : (
+          {editing ? editForm : (
             <div onDoubleClick={() => setEditing(true)} style={{ cursor: "pointer" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
                 <div style={{ fontSize: 12, color: cat ? "#ddd" : "#444", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", fontStyle: cat ? "normal" : "italic" }}>{cat || "No category"}</div>
                 {ind && <div style={{ fontSize: 9, color: "#d60000", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", border: "1px solid rgba(214,0,0,0.3)", padding: "1px 5px", borderRadius: 2 }}>{ind}</div>}
               </div>
-              <div style={{ fontSize: 10, color: desc ? "#666" : "#333", lineHeight: 1.4, fontStyle: desc ? "normal" : "italic", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{desc || "No description — click to add"}</div>
+              <div style={{ fontSize: 10, color: desc ? "#666" : "#333", lineHeight: 1.4, fontStyle: desc ? "normal" : "italic", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{desc || "No description — double-click to add"}</div>
               <div style={{ fontSize: 9, color: "#2a2a2a", marginTop: 2, fontFamily: "'Barlow Condensed', sans-serif" }}>{img.filename}</div>
             </div>
           )}
         </div>
         {!editing && (
           <button onClick={() => onDelete(img.id)}
-            style={{ flexShrink: 0, background: "none", border: "none", color: hovered ? "#ef4444" : "#2a2a2a", cursor: "pointer", fontSize: 16, padding: "0 4px", lineHeight: 1, transition: "color 0.15s" }}>×</button>
+            style={{ flexShrink: 0, background: "none", border: "none", color: hovered ? "#ef4444" : "#2a2a2a", cursor: "pointer", fontSize: 16, padding: "0 4px", lineHeight: 1, transition: "color 0.15s" }}>x</button>
         )}
       </div>
     );
   }
 
-  // ── GRID CARD ─────────────────────────────────────────────────────────────
   return (
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      style={{ background: "#0d0d0d", border: `1px solid ${selected ? "#d60000" : editing ? "#333" : "#1a1a1a"}`, borderRadius: 4, overflow: "hidden", position: "relative", transition: "border-color 0.1s" }}>
-      {/* Checkbox — top left */}
-      <div style={{ position: "absolute", top: 8, left: 8, zIndex: 2 }}>
-        <Checkbox />
+      style={{ background: "#0d0d0d", border: "1px solid " + (selected ? "#d60000" : editing ? "#333" : "#1a1a1a"), borderRadius: 4, overflow: "hidden", position: "relative", transition: "border-color 0.1s" }}>
+      <div onClick={e => { e.stopPropagation(); onToggleSelect(img.id); }} style={{ ...cbStyle, position: "absolute", top: 8, left: 8, zIndex: 2 }}>
+        {selected && <span style={{ color: "#fff", fontSize: 10, lineHeight: 1, fontWeight: 700 }}>✓</span>}
       </div>
-      {/* Delete — top right, visible on hover */}
       <button onClick={() => onDelete(img.id)}
-        style={{ position: "absolute", top: 6, right: 6, zIndex: 2, background: "rgba(0,0,0,0.7)", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 14, width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 3, opacity: hovered ? 1 : 0, transition: "opacity 0.15s" }}>×</button>
-      {/* Thumbnail */}
+        style={{ position: "absolute", top: 6, right: 6, zIndex: 2, background: "rgba(0,0,0,0.7)", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 14, width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 3, opacity: hovered ? 1 : 0, transition: "opacity 0.15s" }}>x</button>
       <div style={{ position: "relative" }} onDoubleClick={() => { if (!editing) setEditing(true); }}>
         <img src={img.storage_path} alt={img.filename} style={{ width: "100%", height: 140, objectFit: "cover", display: "block", cursor: "pointer" }} />
         {!editing && hovered && (
           <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "4px 8px", background: "rgba(0,0,0,0.6)", fontSize: 9, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", color: "#aaa", textAlign: "center" }}>Double-click to edit</div>
         )}
       </div>
-      {/* Info */}
       <div style={{ padding: "8px 10px 10px" }}>
         <div style={{ fontSize: 9, color: "#2a2a2a", marginBottom: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "'Barlow Condensed', sans-serif" }}>{img.filename}</div>
-        {editing ? {renderEditFields()} : (
+        {editing ? editForm : (
           <div onDoubleClick={() => setEditing(true)} style={{ cursor: "pointer" }}>
             {ind && <div style={{ fontSize: 9, color: "#d60000", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 3 }}>{ind}</div>}
             <div style={{ fontSize: 11, color: cat ? "#ccc" : "#333", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", fontStyle: cat ? "normal" : "italic", marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cat || "No category"}</div>
