@@ -307,6 +307,8 @@ function App() {
   const [industries, setIndustries] = useState(DEFAULT_INDUSTRIES);
   const [showAddIndustry, setShowAddIndustry] = useState(false);
   const [newIndustryName, setNewIndustryName] = useState("");
+  const [addingIndustryFor, setAddingIndustryFor] = useState(null); // "new" | "edit" | null
+  const [inlineIndustryInput, setInlineIndustryInput] = useState("");
   const [editingRow, setEditingRow] = useState(null); // { id, keyword, volume, kd, intent }
   const [savingEdit, setSavingEdit] = useState(false);
   const [editingIndustryTab, setEditingIndustryTab] = useState(null); // industry name being renamed
@@ -2030,9 +2032,35 @@ function App() {
                 <div style={styles.addClientForm}>
                   <div className="f-form-grid" style={styles.formGrid}>
                     <input style={styles.searchInput} placeholder="Client name" value={newClient.name} onChange={e => setNewClient({ ...newClient, name: e.target.value })} />
-                    <select style={styles.selectInput} value={newClient.industry} onChange={e => setNewClient({ ...newClient, industry: e.target.value })}>
-                      {industries.map(i => <option key={i}>{i}</option>)}
-                    </select>
+                    {addingIndustryFor === "new" ? (
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <input autoFocus style={{ ...styles.searchInput, flex: 1 }} placeholder="New industry name..." value={inlineIndustryInput} onChange={e => setInlineIndustryInput(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === "Enter") {
+                              const name = inlineIndustryInput.trim().toUpperCase();
+                              if (name && !industries.includes(name)) setIndustries(prev => [...prev, name]);
+                              if (name) setNewClient(prev => ({ ...prev, industry: name || prev.industry }));
+                              setAddingIndustryFor(null); setInlineIndustryInput("");
+                            }
+                            if (e.key === "Escape") { setAddingIndustryFor(null); setInlineIndustryInput(""); }
+                          }} />
+                        <button style={{ ...styles.addBtn, padding: "8px 14px", fontSize: 11, flexShrink: 0 }} onClick={() => {
+                          const name = inlineIndustryInput.trim().toUpperCase();
+                          if (name && !industries.includes(name)) setIndustries(prev => [...prev, name]);
+                          if (name) setNewClient(prev => ({ ...prev, industry: name || prev.industry }));
+                          setAddingIndustryFor(null); setInlineIndustryInput("");
+                        }}>Add</button>
+                        <button style={{ ...styles.addBtn, background: "none", border: "1px solid #333", color: "#666", padding: "8px 14px", fontSize: 11, flexShrink: 0 }} onClick={() => { setAddingIndustryFor(null); setInlineIndustryInput(""); }}>Cancel</button>
+                      </div>
+                    ) : (
+                      <select style={styles.selectInput} value={newClient.industry} onChange={e => {
+                        if (e.target.value === "__ADD_NEW__") { setAddingIndustryFor("new"); setInlineIndustryInput(""); }
+                        else setNewClient({ ...newClient, industry: e.target.value });
+                      }}>
+                        {industries.map(i => <option key={i} value={i}>{i}</option>)}
+                        <option value="__ADD_NEW__">+ Add New Industry...</option>
+                      </select>
+                    )}
                     <input style={styles.searchInput} placeholder="Domain (e.g. clientsite.com)" value={newClient.domain} onChange={e => setNewClient({ ...newClient, domain: e.target.value })} />
                     <input style={styles.searchInput} placeholder="WordPress URL (e.g. https://clientsite.com)" value={newClient.wordpress_url} onChange={e => setNewClient({ ...newClient, wordpress_url: e.target.value })} />
                   </div>
@@ -2299,12 +2327,36 @@ function App() {
                       </div>
                       <div>
                         <div style={styles.postMetaLabel}>Industry</div>
-                        <select style={{ ...styles.selectInput, marginTop: 6, width: "100%" }} value={clientEdits.industry || ""} onChange={e => setClientEdits({ ...clientEdits, industry: e.target.value })}>
-                          <option value="">-- Select Industry --</option>
-                          {["HVAC", "Plumbing", "Electrical", "Roofing", "Landscaping", "Painting", "Flooring", "Concrete", "Cleaning", "Pest Control", "General Contracting"].map(i => (
-                            <option key={i} value={i}>{i}</option>
-                          ))}
-                        </select>
+                        {addingIndustryFor === "edit" ? (
+                          <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                            <input autoFocus style={{ ...styles.searchInput, flex: 1 }} placeholder="New industry name..." value={inlineIndustryInput} onChange={e => setInlineIndustryInput(e.target.value)}
+                              onKeyDown={e => {
+                                if (e.key === "Enter") {
+                                  const name = inlineIndustryInput.trim().toUpperCase();
+                                  if (name && !industries.includes(name)) setIndustries(prev => [...prev, name]);
+                                  if (name) setClientEdits(prev => ({ ...prev, industry: name || prev.industry }));
+                                  setAddingIndustryFor(null); setInlineIndustryInput("");
+                                }
+                                if (e.key === "Escape") { setAddingIndustryFor(null); setInlineIndustryInput(""); }
+                              }} />
+                            <button style={{ ...styles.addBtn, padding: "8px 14px", fontSize: 11, flexShrink: 0 }} onClick={() => {
+                              const name = inlineIndustryInput.trim().toUpperCase();
+                              if (name && !industries.includes(name)) setIndustries(prev => [...prev, name]);
+                              if (name) setClientEdits(prev => ({ ...prev, industry: name || prev.industry }));
+                              setAddingIndustryFor(null); setInlineIndustryInput("");
+                            }}>Add</button>
+                            <button style={{ ...styles.addBtn, background: "none", border: "1px solid #333", color: "#666", padding: "8px 14px", fontSize: 11, flexShrink: 0 }} onClick={() => { setAddingIndustryFor(null); setInlineIndustryInput(""); }}>Cancel</button>
+                          </div>
+                        ) : (
+                          <select style={{ ...styles.selectInput, marginTop: 6, width: "100%" }} value={clientEdits.industry || ""} onChange={e => {
+                            if (e.target.value === "__ADD_NEW__") { setAddingIndustryFor("edit"); setInlineIndustryInput(""); }
+                            else setClientEdits({ ...clientEdits, industry: e.target.value });
+                          }}>
+                            <option value="">-- Select Industry --</option>
+                            {industries.map(i => <option key={i} value={i}>{i}</option>)}
+                            <option value="__ADD_NEW__">+ Add New Industry...</option>
+                          </select>
+                        )}
                       </div>
                       <div>
                         <div style={styles.postMetaLabel}>Industry Tags</div>
