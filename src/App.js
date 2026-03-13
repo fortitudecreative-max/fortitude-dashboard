@@ -386,7 +386,6 @@ function App() {
   const [publishLoading, setPublishLoading] = useState(false);
   const [publishResult, setPublishResult] = useState(null);
   const [yoastRetrying, setYoastRetrying] = useState(false);
-  const [yoastFixing, setYoastFixing] = useState({}); // { [jobId]: 'fixing' | 'done' | 'error' }
   const [activeClient, setActiveClient] = useState(null);
   const [editingClient, setEditingClient] = useState(false);
   const [clientEdits, setClientEdits] = useState({});
@@ -2076,7 +2075,6 @@ function App() {
                       setArchivedPostsExpanded(false);
                       setScheduledQueueExpanded(false);
                                             setImageGalleryExpanded(false);
-                      setYoastFixing({});
                       setScheduleSettings({
                         schedule_frequency: client.schedule_frequency || "daily",
                         schedule_days: client.schedule_days || ["Mon","Tue","Wed","Thu","Fri"],
@@ -2133,7 +2131,6 @@ function App() {
                       setArchivedPostsExpanded(false);
                       setScheduledQueueExpanded(false);
                                             setImageGalleryExpanded(false);
-                      setYoastFixing({});
                       setScheduleSettings({
                         schedule_frequency: client.schedule_frequency || "daily",
                         schedule_days: client.schedule_days || ["Mon","Tue","Wed","Thu","Fri"],
@@ -3017,8 +3014,6 @@ function App() {
                               alert("Delete failed: " + err.message);
                             }
                           };
-                          const fixState = yoastFixing[job.id];
-                          const showFixBtn = !!(job.wp_post_id && selectedClient?.wordpress_username);
                           return (
                             <div key={job.id} style={{ background: "#0a0a0a", border: "1px solid #141414", borderRadius: 6, padding: "10px 14px" }}>
                               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
@@ -3052,41 +3047,6 @@ function App() {
                                   </a>
                                 ) : (
                                   <span style={{ flex: 1, fontSize: 11, color: "#333" }}>No URL recorded</span>
-                                )}
-                                {showFixBtn && (
-                                    <button
-                                      onClick={async () => {
-                                        setYoastFixing(prev => ({ ...prev, [job.id]: "fixing" }));
-                                        try {
-                                          const r = await authFetch(`${API}/api/yoast-optimize`, {
-                                            method: "POST",
-                                            headers: { "Content-Type": "application/json" },
-                                            body: JSON.stringify({
-                                              clientId: selectedClient.id,
-                                              wpPostId: job.wp_post_id,
-                                              keyword: job.keyword,
-                                              title: job.keyword,
-                                              metaDescription: "",
-                                            }),
-                                          });
-                                          const d = await r.json();
-                                          setYoastFixing(prev => ({ ...prev, [job.id]: d.success ? "done" : "error" }));
-                                        } catch(e) {
-                                          setYoastFixing(prev => ({ ...prev, [job.id]: "error" }));
-                                        }
-                                      }}
-                                      disabled={fixState === "fixing"}
-                                      style={{
-                                        flexShrink: 0, fontSize: 9, padding: "3px 10px",
-                                        background: "none",
-                                        border: `1px solid ${fixState === "done" ? "rgba(34,197,94,0.4)" : fixState === "error" ? "rgba(239,68,68,0.4)" : "rgba(245,158,11,0.3)"}`,
-                                        color: fixState === "done" ? "#22c55e" : fixState === "error" ? "#ef4444" : "#f59e0b",
-                                        borderRadius: 3, cursor: fixState === "fixing" ? "not-allowed" : "pointer",
-                                        fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em",
-                                        opacity: fixState === "fixing" ? 0.5 : 1,
-                                      }}>
-                                      {fixState === "fixing" ? "FIXING..." : fixState === "done" ? "FIXED" : fixState === "error" ? "FAILED" : "FIX YOAST"}
-                                    </button>
                                 )}
                               </div>
                             </div>
