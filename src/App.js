@@ -2221,7 +2221,7 @@ function App() {
                         ? <img src={selectedClient.logo_url} alt={selectedClient.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                         : selectedClient.name.charAt(0)}
                     </div>
-                    <div style={{ flex: 1, textAlign: "left" }}>
+                    <div style={{ textAlign: "left" }}>
                       <div style={styles.clientDetailName}>{selectedClient.name}</div>
                       <div style={styles.clientDetailIndustry}>{selectedClient.industry} · {selectedClient.domain || "No domain set"}</div>
                     </div>
@@ -2531,15 +2531,13 @@ function App() {
                 <div style={{ marginBottom: 20 }}>
                   <button
                     onClick={() => setScheduleExpanded(v => !v)}
-                    style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: scheduleExpanded ? 16 : 0 }}
+                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: scheduleExpanded ? 16 : 0 }}
                   >
                     <div style={styles.sectionTitle}>Publishing Schedule</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <span style={{ fontSize: 12, color: selectedClient.schedule_enabled ? "#22c55e" : "#555" }}>
-                        {selectedClient.schedule_enabled ? "● Active" : "○ Inactive"}
-                      </span>
-                      <span style={{ fontSize: 18, color: "#fff", transition: "transform 0.2s", display: "inline-block", transform: scheduleExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
-                    </div>
+                    <span style={{ fontSize: 18, color: "#fff", transition: "transform 0.2s", display: "inline-block", transform: scheduleExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                    <span style={{ fontSize: 12, color: selectedClient.schedule_enabled ? "#22c55e" : "#555", marginLeft: "auto" }}>
+                      {selectedClient.schedule_enabled ? "● Active" : "○ Inactive"}
+                    </span>
                   </button>
                   {scheduleExpanded && (
                   <div>
@@ -3269,7 +3267,7 @@ function App() {
                 <div style={{ marginBottom: 20 }}>
                   <button
                     onClick={() => setImageGalleryExpanded(v => !v)}
-                    style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: imageGalleryExpanded ? 12 : 0 }}
+                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: imageGalleryExpanded ? 12 : 0 }}
                   >
                     <div style={styles.sectionTitle}>Client Image Library</div>
                     <span style={{ fontSize: 18, color: "#fff", transition: "transform 0.2s", display: "inline-block", transform: imageGalleryExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
