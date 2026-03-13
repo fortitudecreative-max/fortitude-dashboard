@@ -440,7 +440,7 @@ function App() {
   const [gbpManualLocationId, setGbpManualLocationId] = useState("");
   const [gbpAgencyConnected, setGbpAgencyConnected] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
-  const [clientsViewMode, setClientsViewMode] = useState(window.innerWidth < 768 ? "list" : "grid");
+  const [clientsViewMode, setClientsViewMode] = useState("list");
   const logoInputRef = useRef(null);
   const [clientImages, setClientImages] = useState([]);
   const [clientImageCategory, setClientImageCategory] = useState("");
