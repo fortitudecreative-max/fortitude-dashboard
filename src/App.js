@@ -971,8 +971,20 @@ function App() {
     try {
       const res = await authFetch(`${API}/api/keywords/queue/${clientId}`);
       const data = await res.json();
-      setMonthlyQueue(data.keywords || []);
+      const keywords = data.keywords || [];
+      setMonthlyQueue(keywords);
       setQueueMonth(data.month || "");
+      // Restore any previously generated posts from sessionStorage
+      const restored = {};
+      keywords.forEach(row => {
+        try {
+          const saved = sessionStorage.getItem("qrp_" + row.id);
+          if (saved) restored[row.id] = JSON.parse(saved);
+        } catch(e) {}
+      });
+      if (Object.keys(restored).length > 0) {
+        setQueueRowPosts(prev => ({ ...prev, ...restored }));
+      }
     } catch (e) {}
   };
 
@@ -1760,6 +1772,11 @@ function App() {
         // Reload schedule jobs so published post moves to Archived Posts
         if (activeClient?.id) loadScheduleJobs(activeClient.id);
         if (selectedClient?.id) loadScheduleJobs(selectedClient.id);
+        // Clear any sessionStorage entries for this keyword so queue shows as published
+        try {
+          Object.keys(sessionStorage).forEach(k => { if (k.startsWith("qrp_")) sessionStorage.removeItem(k); });
+        } catch(e) {}
+        setQueueRowPosts({});
 
 
       } else {
@@ -1834,7 +1851,7 @@ function App() {
     }
   };
 
-  // Generate a post for a specific queue row and store it in queueRowPosts state
+  // Generate a post for a specific queue row and store it in queueRowPosts state + sessionStorage
   const generateQueueRowPost = async (rowId, keyword, client) => {
     setQueueRowPosts(prev => ({ ...prev, [rowId]: { loading: true, error: null, post: null } }));
     try {
@@ -1852,7 +1869,9 @@ function App() {
       });
       const data = await res.json();
       if (data.post) {
-        setQueueRowPosts(prev => ({ ...prev, [rowId]: { loading: false, post: data.post, featuredImage: data.featuredImage, schemaHtml: data.schemaHtml, error: null } }));
+        const rowData = { loading: false, post: data.post, featuredImage: data.featuredImage, schemaHtml: data.schemaHtml, error: null };
+        setQueueRowPosts(prev => ({ ...prev, [rowId]: rowData }));
+        try { sessionStorage.setItem("qrp_" + rowId, JSON.stringify(rowData)); } catch(e) {}
       } else {
         setQueueRowPosts(prev => ({ ...prev, [rowId]: { loading: false, post: null, error: data.error || "Failed to generate" } }));
       }
