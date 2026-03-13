@@ -2746,6 +2746,7 @@ function App() {
                           { text: "Meta description must be 120-156 characters and include the target keyword", disabled: false },
                           { text: "Title must be 50-60 characters and SEO optimized", disabled: false },
                           { text: "Link to 1 relevant service page and 1 contact/quote page internally", disabled: false },
+                          { text: "Use inclusive language as defined by Yoast SEO — avoid gendered terms, ableist language, and exclusionary phrases", disabled: false },
                         ];
                         setPersonalityEdits({
                           tone: p.tone || "professional",
