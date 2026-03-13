@@ -2133,8 +2133,8 @@ function App() {
                       setArchivedPostsExpanded(false);
                       setScheduledQueueExpanded(false);
                                             setImageGalleryExpanded(false);
-                      setScheduleSettings({
                       setYoastFixing({});
+                      setScheduleSettings({
                         schedule_frequency: client.schedule_frequency || "daily",
                         schedule_days: client.schedule_days || ["Mon","Tue","Wed","Thu","Fri"],
                         schedule_start_hour: client.schedule_start_hour || 9,
@@ -3017,6 +3017,8 @@ function App() {
                               alert("Delete failed: " + err.message);
                             }
                           };
+                          const fixState = yoastFixing[job.id];
+                          const showFixBtn = !!(job.wp_post_id && selectedClient?.wordpress_username);
                           return (
                             <div key={job.id} style={{ background: "#0a0a0a", border: "1px solid #141414", borderRadius: 6, padding: "10px 14px" }}>
                               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
@@ -3051,9 +3053,7 @@ function App() {
                                 ) : (
                                   <span style={{ flex: 1, fontSize: 11, color: "#333" }}>No URL recorded</span>
                                 )}
-                                {job.wp_post_id && selectedClient?.wordpress_username && (() => {
-                                  const fixState = yoastFixing[job.id];
-                                  return (
+                                {showFixBtn && (
                                     <button
                                       onClick={async () => {
                                         setYoastFixing(prev => ({ ...prev, [job.id]: "fixing" }));
@@ -3087,8 +3087,7 @@ function App() {
                                       }}>
                                       {fixState === "fixing" ? "FIXING..." : fixState === "done" ? "FIXED" : fixState === "error" ? "FAILED" : "FIX YOAST"}
                                     </button>
-                                  );
-                                })()}
+                                )}
                               </div>
                             </div>
                           );
