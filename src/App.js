@@ -445,6 +445,10 @@ function App() {
   const [profileExpanded, setProfileExpanded] = useState(false);
   const [scheduleExpanded, setScheduleExpanded] = useState(false);
   const [gbpExpanded, setGbpExpanded] = useState(false);
+  const [personalityExpanded, setPersonalityExpanded] = useState(false);
+  const [personalityEdits, setPersonalityEdits] = useState(null); // working copy while editing
+  const [savingPersonality, setSavingPersonality] = useState(false);
+  const [newExcludedWord, setNewExcludedWord] = useState("");
   const [scheduledPostsExpanded, setScheduledPostsExpanded] = useState(false);
   const [archivedPostsExpanded, setArchivedPostsExpanded] = useState(false);
   const [scheduledQueueExpanded, setScheduledQueueExpanded] = useState(false);
@@ -1805,6 +1809,7 @@ function App() {
           clientId: client.id,
           brandVoice: client.brand_voice || "",
           wordpressUrl: client.wordpress_url || "",
+          aiPersonality: client.ai_personality || null,
         }),
       });
       const data = await res.json();
@@ -1860,6 +1865,7 @@ function App() {
           clientId: client.id,
           brandVoice: client.brand_voice || "",
           wordpressUrl: client.wordpress_url || "",
+          aiPersonality: client.ai_personality || null,
         }),
       });
       const data = await res.json();
@@ -2092,6 +2098,8 @@ function App() {
                       setProfileExpanded(false);
                       setScheduleExpanded(false);
                       setGbpExpanded(false);
+                      setPersonalityExpanded(false);
+                      setPersonalityEdits(null);
                       setScheduledPostsExpanded(false);
                       setArchivedPostsExpanded(false);
                       setScheduledQueueExpanded(false);
@@ -2148,6 +2156,8 @@ function App() {
                       setProfileExpanded(false);
                       setScheduleExpanded(false);
                       setGbpExpanded(false);
+                      setPersonalityExpanded(false);
+                      setPersonalityEdits(null);
                       setScheduledPostsExpanded(false);
                       setArchivedPostsExpanded(false);
                       setScheduledQueueExpanded(false);
@@ -2715,6 +2725,156 @@ function App() {
                       </div>
                     )}
                   </div>
+                  )}
+                </div>
+
+
+                {/* ── AI PERSONALITY SECTION ── */}
+                <div style={{ marginBottom: 20 }}>
+                  <button
+                    onClick={() => {
+                      const opening = !personalityExpanded;
+                      setPersonalityExpanded(opening);
+                      if (opening && !personalityEdits) {
+                        const p = selectedClient.ai_personality || {};
+                        const defaultRules = [
+                          { text: "Write for homeowners — friendly, helpful, and trustworthy tone", disabled: false },
+                          { text: "Never write DIY repair instructions — help readers identify and diagnose problems only", disabled: false },
+                          { text: "Always recommend hiring a licensed professional for actual repairs", disabled: false },
+                          { text: "Use proper HTML tags only (h2, h3, p, ul, li, strong) — no markdown", disabled: false },
+                          { text: "Include exactly 4 FAQs with natural conversational questions homeowners ask", disabled: false },
+                          { text: "Meta description must be 120-156 characters and include the target keyword", disabled: false },
+                          { text: "Title must be 50-60 characters and SEO optimized", disabled: false },
+                          { text: "Link to 1 relevant service page and 1 contact/quote page internally", disabled: false },
+                        ];
+                        setPersonalityEdits({
+                          tone: p.tone || "professional",
+                          rules: (p.rules && p.rules.length > 0) ? p.rules : defaultRules,
+                          excluded_words: p.excluded_words || [],
+                        });
+                      }
+                    }}
+                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: "0 0 12px 0" }}
+                  >
+                    <div style={styles.sectionTitle}>AI Personality</div>
+                    <span style={{ fontSize: 18, color: "#fff", transition: "transform 0.2s", display: "inline-block", transform: personalityExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                  </button>
+                  {personalityExpanded && personalityEdits && (
+                    <div style={{ paddingBottom: 8 }}>
+
+                      {/* Tone */}
+                      <div style={{ marginBottom: 16 }}>
+                        <div style={{ fontSize: 10, color: "#555", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>Content Tone</div>
+                        <select
+                          value={personalityEdits.tone}
+                          onChange={e => setPersonalityEdits(prev => ({ ...prev, tone: e.target.value }))}
+                          style={{ ...styles.selectInput, width: "100%" }}
+                        >
+                          <option value="professional">Professional and Trustworthy</option>
+                          <option value="friendly">Friendly and Approachable</option>
+                          <option value="playful">Playful and Animated</option>
+                          <option value="authoritative">Authoritative and Expert</option>
+                          <option value="conversational">Casual and Conversational</option>
+                          <option value="urgent">Urgent and Direct</option>
+                        </select>
+                      </div>
+
+                      {/* Content Rules */}
+                      <div style={{ marginBottom: 16 }}>
+                        <div style={{ fontSize: 10, color: "#555", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 4 }}>Content Rules</div>
+                        <div style={{ fontSize: 10, color: "#333", fontFamily: "'Barlow', sans-serif", marginBottom: 10 }}>Check to enable, uncheck to disable. Click x to delete. Edit any rule inline.</div>
+                        {personalityEdits.rules.map((rule, idx) => (
+                          <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
+                            <div
+                              onClick={() => setPersonalityEdits(prev => ({ ...prev, rules: prev.rules.map((r, i) => i === idx ? { ...r, disabled: !r.disabled } : r) }))}
+                              style={{ width: 14, height: 14, borderRadius: 2, border: "1px solid " + (rule.disabled ? "#2a2a2a" : "#d60000"), background: rule.disabled ? "transparent" : "rgba(214,0,0,0.15)", cursor: "pointer", flexShrink: 0, marginTop: 4 }}
+                            />
+                            <input
+                              value={rule.text}
+                              onChange={e => setPersonalityEdits(prev => ({ ...prev, rules: prev.rules.map((r, i) => i === idx ? { ...r, text: e.target.value } : r) }))}
+                              style={{ flex: 1, background: "#0a0a0a", border: "1px solid #1a1a1a", color: rule.disabled ? "#2a2a2a" : "#ccc", borderRadius: 3, padding: "5px 8px", fontSize: 11, fontFamily: "'Barlow', sans-serif", textDecoration: rule.disabled ? "line-through" : "none" }}
+                            />
+                            <button
+                              onClick={() => setPersonalityEdits(prev => ({ ...prev, rules: prev.rules.filter((_, i) => i !== idx) }))}
+                              style={{ background: "none", border: "none", color: "#333", cursor: "pointer", fontSize: 15, padding: "0 2px", flexShrink: 0, lineHeight: 1 }}
+                              onMouseEnter={e => e.currentTarget.style.color = "#ef4444"}
+                              onMouseLeave={e => e.currentTarget.style.color = "#333"}
+                            >x</button>
+                          </div>
+                        ))}
+                        <button
+                          onClick={() => setPersonalityEdits(prev => ({ ...prev, rules: [...prev.rules, { text: "", disabled: false }] }))}
+                          style={{ marginTop: 6, fontSize: 10, color: "#555", background: "none", border: "1px dashed #2a2a2a", borderRadius: 3, padding: "5px 12px", cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", width: "100%" }}
+                          onMouseEnter={e => e.currentTarget.style.borderColor = "#d60000"}
+                          onMouseLeave={e => e.currentTarget.style.borderColor = "#2a2a2a"}
+                        >+ Add Rule</button>
+                      </div>
+
+                      {/* Excluded Words */}
+                      <div style={{ marginBottom: 16 }}>
+                        <div style={{ fontSize: 10, color: "#555", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 4 }}>Excluded Words / Phrases</div>
+                        <div style={{ fontSize: 10, color: "#333", fontFamily: "'Barlow', sans-serif", marginBottom: 8 }}>These words and phrases will never appear in generated content.</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                          {personalityEdits.excluded_words.map((w, idx) => (
+                            <div key={idx} style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 3, padding: "3px 8px" }}>
+                              <span style={{ fontSize: 11, color: "#ef4444", fontFamily: "'Barlow Condensed', sans-serif" }}>{w}</span>
+                              <button
+                                onClick={() => setPersonalityEdits(prev => ({ ...prev, excluded_words: prev.excluded_words.filter((_, i) => i !== idx) }))}
+                                style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.6 }}
+                              >x</button>
+                            </div>
+                          ))}
+                          {personalityEdits.excluded_words.length === 0 && (
+                            <div style={{ fontSize: 11, color: "#2a2a2a", fontStyle: "italic", fontFamily: "'Barlow', sans-serif" }}>No excluded words yet</div>
+                          )}
+                        </div>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <input
+                            value={newExcludedWord}
+                            onChange={e => setNewExcludedWord(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === "Enter" && newExcludedWord.trim()) {
+                                setPersonalityEdits(prev => ({ ...prev, excluded_words: [...prev.excluded_words, newExcludedWord.trim()] }));
+                                setNewExcludedWord("");
+                              }
+                            }}
+                            placeholder="e.g. cheap, best price, guarantee..."
+                            style={{ flex: 1, background: "#0a0a0a", border: "1px solid #1a1a1a", color: "#ccc", borderRadius: 3, padding: "6px 8px", fontSize: 11, fontFamily: "'Barlow', sans-serif" }}
+                          />
+                          <button
+                            onClick={() => {
+                              if (newExcludedWord.trim()) {
+                                setPersonalityEdits(prev => ({ ...prev, excluded_words: [...prev.excluded_words, newExcludedWord.trim()] }));
+                                setNewExcludedWord("");
+                              }
+                            }}
+                            style={{ ...styles.addKeywordBtn, padding: "6px 14px", fontSize: 11, flexShrink: 0 }}
+                          >Add</button>
+                        </div>
+                      </div>
+
+                      {/* Save */}
+                      <button
+                        disabled={savingPersonality}
+                        onClick={async () => {
+                          setSavingPersonality(true);
+                          try {
+                            const res = await authFetch(`${API}/api/clients/${selectedClient.id}`, {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ ai_personality: personalityEdits }),
+                            });
+                            const data = await res.json();
+                            if (data.client) {
+                              setClients(prev => prev.map(c => c.id === selectedClient.id ? data.client : c));
+                              setSelectedClient(data.client);
+                            }
+                          } catch(e) { console.error("Personality save error:", e); }
+                          setSavingPersonality(false);
+                        }}
+                        style={{ ...styles.addBtn, width: "100%", opacity: savingPersonality ? 0.6 : 1 }}
+                      >{savingPersonality ? "Saving..." : "Save AI Personality"}</button>
+                    </div>
                   )}
                 </div>
 
