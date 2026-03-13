@@ -368,6 +368,8 @@ function App() {
   const [generatedPost, setGeneratedPost] = useState(null);
   const [wpCategories, setWpCategories] = useState([]);
   const [editingImage, setEditingImage] = useState(null); // { id, category, description } — modal open when set
+  const [editImageCategory, setEditImageCategory] = useState("");
+  const [editImageDescription, setEditImageDescription] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [generatedSchemaHtml, setGeneratedSchemaHtml] = useState(null);
   const [isEditingPost, setIsEditingPost] = useState(false);
@@ -3201,7 +3203,7 @@ function App() {
                                 if (e.target.closest(".del-btn")) return;
                                 setClientImgSelected(prev => { const n = new Set(prev); if (n.has(img.id)) n.delete(img.id); else n.add(img.id); return n; });
                               }}
-                              onDoubleClick={e => { e.stopPropagation(); setEditingImage({ id: img.id, category: img.category || "", description: img.description || "", storage_path: img.storage_path, filename: img.filename, isClientImage: true }); }}
+                              onDoubleClick={e => { e.stopPropagation(); setEditingImage({ id: img.id, category: img.category || "", description: img.description || "", storage_path: img.storage_path, filename: img.filename, isClientImage: true }); setEditImageCategory(img.category || ""); setEditImageDescription(img.description || ""); }}
                               onMouseEnter={e => { const b = e.currentTarget.querySelector(".del-btn"); if (b) b.style.opacity = "1"; }}
                               onMouseLeave={e => { const b = e.currentTarget.querySelector(".del-btn"); if (b) b.style.opacity = "0"; }}>
                               {ciSel && <div style={{ position: "absolute", top: 4, left: 4, width: 16, height: 16, background: "#d60000", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", zIndex: 2, lineHeight: 1 }}>✓</div>}
@@ -3563,7 +3565,7 @@ function App() {
               ) : (
                 <div style={styles.imageGrid}>
                   {images.map((img) => (
-                    <div key={img.id} style={{ ...styles.imageCard, cursor: "pointer", position: "relative" }} onClick={() => setEditingImage({ id: img.id, category: img.category || "", description: img.description || "", storage_path: img.storage_path, filename: img.filename })}>
+                    <div key={img.id} style={{ ...styles.imageCard, cursor: "pointer", position: "relative" }} onClick={() => { setEditingImage({ id: img.id, category: img.category || "", description: img.description || "", storage_path: img.storage_path, filename: img.filename }); setEditImageCategory(img.category || ""); setEditImageDescription(img.description || ""); }}>
                       <img src={img.storage_path} alt={img.category} style={styles.imageThumb} />
                       <div style={styles.imageInfo}>
                         <div style={styles.imageName}>{img.category || "general"}</div>
@@ -5059,8 +5061,8 @@ function App() {
               <div style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 11, color: "#888", marginBottom: 6, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>Category</div>
                 <input
-                  value={editingImage.category}
-                  onChange={e => setEditingImage(prev => ({ ...prev, category: e.target.value }))}
+                  value={editImageCategory}
+                  onChange={e => setEditImageCategory(e.target.value)}
                   placeholder="e.g. Water Heaters, Drain Cleaning, AC Repair..."
                   style={{ width: "100%", background: "#141414", border: "1px solid #333", color: "#fff", borderRadius: 4, padding: "8px 10px", fontSize: 13, fontFamily: "'Barlow', sans-serif", boxSizing: "border-box" }}
                 />
@@ -5068,8 +5070,8 @@ function App() {
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, color: "#888", marginBottom: 6, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>Description <span style={{ color: "#555", textTransform: "none", letterSpacing: 0 }}>(helps match this image to the right blog posts)</span></div>
                 <textarea
-                  value={editingImage.description}
-                  onChange={e => setEditingImage(prev => ({ ...prev, description: e.target.value }))}
+                  value={editImageDescription}
+                  onChange={e => setEditImageDescription(e.target.value)}
                   placeholder="Describe what is in this photo — e.g. plumber installing water heater in basement, burst pipe repair under sink, technician on roof with AC unit..."
                   style={{ width: "100%", background: "#141414", border: "1px solid #333", color: "#fff", borderRadius: 4, padding: "8px 10px", fontSize: 13, fontFamily: "'Barlow', sans-serif", resize: "vertical", minHeight: 80, boxSizing: "border-box" }}
                 />
@@ -5081,10 +5083,10 @@ function App() {
                     await authFetch(`${API}/api/images/${editingImage.id}`, {
                       method: "PUT",
                       headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ category: editingImage.category, description: editingImage.description }),
+                      body: JSON.stringify({ category: editImageCategory, description: editImageDescription }),
                     });
-                    setImages(prev => prev.map(i => i.id === editingImage.id ? { ...i, category: editingImage.category, description: editingImage.description } : i));
-                    setClientImages(prev => prev.map(i => i.id === editingImage.id ? { ...i, category: editingImage.category, description: editingImage.description } : i));
+                    setImages(prev => prev.map(i => i.id === editingImage.id ? { ...i, category: editImageCategory, description: editImageDescription } : i));
+                    setClientImages(prev => prev.map(i => i.id === editingImage.id ? { ...i, category: editImageCategory, description: editImageDescription } : i));
                     setEditingImage(null);
                   }}
                 >Save Changes</button>
