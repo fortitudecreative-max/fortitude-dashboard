@@ -2060,7 +2060,7 @@ function App() {
                         else setNewClient({ ...newClient, industry: e.target.value });
                       }}>
                         {industries.map(i => <option key={i} value={i}>{i}</option>)}
-                        <option value="__ADD_NEW__">+ Add New Industry...</option>
+                        <option value="__ADD_NEW__">+ Add New...</option>
                       </select>
                     )}
                     <input style={styles.searchInput} placeholder="Domain (e.g. clientsite.com)" value={newClient.domain} onChange={e => setNewClient({ ...newClient, domain: e.target.value })} />
@@ -2356,7 +2356,7 @@ function App() {
                           }}>
                             <option value="">-- Select Industry --</option>
                             {industries.map(i => <option key={i} value={i}>{i}</option>)}
-                            <option value="__ADD_NEW__">+ Add New Industry...</option>
+                            <option value="__ADD_NEW__">+ Add New...</option>
                           </select>
                         )}
                       </div>
