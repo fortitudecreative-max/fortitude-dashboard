@@ -2984,8 +2984,24 @@ function App() {
                                   const dayName = dayMap[cursor.getDay()];
                                   if (scheduleDays.includes(dayName)) scheduledDates.push(new Date(cursor));
                                 }
+                                // Build set of already-used/published keywords for cannibalization warning
+                                const normalize = kw => (kw || "").toLowerCase().trim();
+                                const publishedKws = new Set(scheduleJobs.filter(j => j.status === "published").map(j => normalize(j.keyword)));
+                                const usedKws = new Set(usedKeywords.map(k => normalize(k.keyword || k)));
+                                const queueKws = {};
+                                rows.forEach(r => {
+                                  const n = normalize(r.keyword);
+                                  queueKws[n] = (queueKws[n] || 0) + 1;
+                                });
+
                                 return rows.map((row, idx) => {
                                 const globalIdx = (baseOffset || 0) + idx;
+                                const normKw = normalize(row.keyword);
+                                const isPublished = publishedKws.has(normKw);
+                                const isUsed = usedKws.has(normKw);
+                                const isDupeInQueue = queueKws[normKw] > 1;
+                                const hasCannibalization = isPublished || isUsed || isDupeInQueue;
+                                const cannibalizationTitle = isPublished ? "Already published — keyword cannibalization risk" : isUsed ? "In used keywords list — may already be published" : isDupeInQueue ? "Duplicate keyword in this queue" : "";
                                 // Deterministic random minutes per row — seeded from row.id so stable across renders
                                 const seed = row.id ? String(row.id).split("").reduce((a,c) => a + c.charCodeAt(0), 0) : idx;
                                 const windowMinutes = Math.max(1, (endHour - startHour) * 60);
@@ -3013,10 +3029,18 @@ function App() {
                                     onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
                                   >
                                     <div style={{ flex: "0 0 28px", color: "#333", fontSize: 11, textAlign: "center" }}>{globalIdx + 1}</div>
-                                    <div style={{ flex: 3, color: row.used ? "#555" : "#fff", fontWeight: 500 }}>
-                                      {row.keyword}
-                                      {row.used && <span style={{ marginLeft: 8, fontSize: 10, color: "#555" }}>used</span>}
-                                      {hasPost && <span style={{ marginLeft: 8, fontSize: 10, color: "#22c55e" }}>● post ready</span>}
+                                    <div style={{ flex: 3, color: row.used ? "#555" : "#fff", fontWeight: 500, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                                      {hasCannibalization && (
+                                        <span title={cannibalizationTitle} style={{ fontSize: 13, cursor: "default", flexShrink: 0 }}>⚠️</span>
+                                      )}
+                                      <span>{row.keyword}</span>
+                                      {row.used && <span style={{ fontSize: 10, color: "#555" }}>used</span>}
+                                      {hasPost && <span style={{ fontSize: 10, color: "#22c55e" }}>● post ready</span>}
+                                      {hasCannibalization && (
+                                        <span style={{ fontSize: 10, color: "#f59e0b", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                                          {isPublished ? "published" : isUsed ? "used" : "duplicate"}
+                                        </span>
+                                      )}
                                     </div>
                                     <div style={{ flex: 1, textAlign: "center" }}>
                                       <span style={{ ...styles.intentBadge, color: getIntentColor(row.intent), background: getIntentColor(row.intent) + "22", borderColor: getIntentColor(row.intent) + "44" }}>{row.intent}</span>
@@ -3140,7 +3164,15 @@ function App() {
                                 <div style={{ flex: 1, textAlign: "center" }}>Intent</div>
                                 <div style={{ flex: "0 0 120px", textAlign: "center" }}>Actions</div>
                               </div>
-                              {clientKeywords.map(row => (
+                              {clientKeywords.map(row => {
+                                const normKw = (row.keyword || "").toLowerCase().trim();
+                                const ckPublished = new Set(scheduleJobs.filter(j => j.status === "published").map(j => (j.keyword || "").toLowerCase().trim()));
+                                const ckUsed = new Set(usedKeywords.map(k => ((k.keyword || k) + "").toLowerCase().trim()));
+                                const ckInQueue = new Set(monthlyQueue.map(q => (q.keyword || "").toLowerCase().trim()));
+                                const ckCannib = ckPublished.has(normKw) || ckUsed.has(normKw) || ckInQueue.has(normKw);
+                                const ckLabel = ckPublished.has(normKw) ? "published" : ckUsed.has(normKw) ? "used" : ckInQueue.has(normKw) ? "in queue" : "";
+                                const ckTitle = ckPublished.has(normKw) ? "Already published — keyword cannibalization risk" : ckUsed.has(normKw) ? "In used keywords list" : ckInQueue.has(normKw) ? "Already in Scheduled Queue" : "";
+                                return (
                                 <div key={row.id}
                                   draggable
                                   onDragStart={e => { e.dataTransfer.setData("clientKwId", row.id); e.dataTransfer.setData("clientKwKeyword", row.keyword); e.dataTransfer.setData("clientKwIntent", row.intent || "Informational"); e.dataTransfer.setData("clientKwVolume", String(row.volume || 0)); e.dataTransfer.effectAllowed = "move"; }}
@@ -3148,8 +3180,11 @@ function App() {
                                   onMouseEnter={e => e.currentTarget.style.background = "#111"}
                                   onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                                 >
-                                  <div style={{ flex: 3, color: "#fff", fontWeight: 500, display: "flex", alignItems: "center", gap: 8 }}>
-                                    <span style={{ color: "#333", fontSize: 13 }}>⠿</span>{row.keyword}
+                                  <div style={{ flex: 3, color: "#fff", fontWeight: 500, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                                    <span style={{ color: "#333", fontSize: 13 }}>⠿</span>
+                                    {ckCannib && <span title={ckTitle} style={{ fontSize: 13, cursor: "default", flexShrink: 0 }}>⚠️</span>}
+                                    <span>{row.keyword}</span>
+                                    {ckCannib && <span style={{ fontSize: 10, color: "#f59e0b", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em", textTransform: "uppercase" }}>{ckLabel}</span>}
                                   </div>
                                   <div style={{ flex: 1, textAlign: "center", color: "#aaa" }}>{(row.volume || 0).toLocaleString()}</div>
                                   <div style={{ flex: 1, textAlign: "center" }}>
@@ -3169,7 +3204,7 @@ function App() {
                                     }}>✕</button>
                                   </div>
                                 </div>
-                              ))}
+                                ); })}
                             </div>
                             {clientKeywordsTotal > 20 && (
                               <div style={{ display: "flex", gap: 6, justifyContent: "center", alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
