@@ -1931,7 +1931,7 @@ function App() {
       {/* Sidebar */}
       <div className={`f-sidebar${mobileMenuOpen ? " open" : ""}`} style={{ width: sidebarOpen ? 240 : 64 }}>
         <div style={styles.logo}>
-          {sidebarOpen ? <div><div style={styles.logoText}>FORTITUDE</div><div style={styles.logoSub}>CREATIVE</div></div> : <div style={styles.logoIcon}>F</div>}
+          <img src="https://fortitudecreative.com/wp-content/uploads/2025/04/Fortitude-Logo32.svg" alt="Fortitude Creative" style={{height: sidebarOpen ? 110 : 40, display: 'block', transition: 'height 0.2s'}} />
           <div style={{ display: "flex", gap: 6 }}>
             <button className="f-close-btn" style={{ display: "none", background: "none", border: "1px solid #2a2a2a", color: "#555", cursor: "pointer", padding: "4px 8px", fontSize: 12 }} onClick={() => setMobileMenuOpen(false)}>✕</button>
             <button style={styles.toggleBtn} onClick={() => setSidebarOpen(!sidebarOpen)}>{sidebarOpen ? "←" : "→"}</button>
