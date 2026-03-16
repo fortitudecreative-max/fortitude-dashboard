@@ -1355,8 +1355,10 @@ function App() {
       setIlAssigning(false);
       setIlSelected(new Set());
       setIlAssignClients(new Set());
-      alert(`Assigned ${data.assigned} image${data.assigned !== 1 ? "s" : ""} to ${clientCount} client${clientCount !== 1 ? "s" : ""}.`);
-    } catch (e3) { console.error("assign error", e3); }
+      let msg = `Assigned ${data.assigned} image${data.assigned !== 1 ? "s" : ""} to ${clientCount} client${clientCount !== 1 ? "s" : ""}. Skipped: ${data.skipped || 0}`;
+      if (data.errors && data.errors.length) msg += "\n\nERRORS:\n" + data.errors.map(e => e.imgId + " -> " + e.clientId + ": " + e.error + " (" + e.code + ")").join("\n");
+      alert(msg);
+    } catch (e3) { alert("Assign fetch failed: " + e3.message); console.error("assign error", e3); }
     finally { setIlAssignLoading(false); }
   };
 
