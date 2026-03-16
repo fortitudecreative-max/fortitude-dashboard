@@ -1310,7 +1310,7 @@ function App() {
         const data = await res.json();
         if (data.uploaded) allUploaded.push(...data.uploaded);
         setIlUploadProgress(prev => ({ ...prev, done: prev.done + batch.length }));
-      } catch (e2) { console.error("batch upload error", e2); }
+      } catch (e2) { console.error("batch upload error", e2); alert("Upload error: " + e2.message); }
     }
     setIlImages(prev => [...allUploaded, ...prev]);
     setIlUploading(false);
