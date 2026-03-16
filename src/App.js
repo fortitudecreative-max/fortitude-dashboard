@@ -1351,13 +1351,16 @@ function App() {
         body: JSON.stringify({ imageIds: Array.from(ilSelected), clientIds: Array.from(ilAssignClients) }),
       });
       const data = await res.json();
+      const assignedClientIds = Array.from(ilAssignClients);
       const clientCount = ilAssignClients.size;
       setIlAssigning(false);
       setIlSelected(new Set());
       setIlAssignClients(new Set());
-      let msg = `Assigned ${data.assigned} image${data.assigned !== 1 ? "s" : ""} to ${clientCount} client${clientCount !== 1 ? "s" : ""}. Skipped: ${data.skipped || 0}`;
-      if (data.errors && data.errors.length) msg += "\n\nERRORS:\n" + data.errors.map(e => e.imgId + " -> " + e.clientId + ": " + e.error + " (" + e.code + ")").join("\n");
-      alert(msg);
+      // Refresh client image library if the selected client was one of the targets
+      if (selectedClient && assignedClientIds.includes(selectedClient.id)) {
+        loadClientImages(selectedClient.id);
+      }
+      alert(`Assigned ${data.assigned} image${data.assigned !== 1 ? "s" : ""} to ${clientCount} client${clientCount !== 1 ? "s" : ""}.`);
     } catch (e3) { alert("Assign fetch failed: " + e3.message); console.error("assign error", e3); }
     finally { setIlAssignLoading(false); }
   };
@@ -3336,7 +3339,7 @@ function App() {
                                 {/* CLIENT IMAGE LIBRARY */}
                 <div style={{ marginBottom: 20 }}>
                   <button
-                    onClick={() => setImageGalleryExpanded(v => !v)}
+                    onClick={() => { const next = !imageGalleryExpanded; setImageGalleryExpanded(next); if (next && selectedClient) loadClientImages(selectedClient.id); }}
                     style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: imageGalleryExpanded ? 12 : 0 }}
                   >
                     <div style={styles.sectionTitle}>Client Image Library</div>
