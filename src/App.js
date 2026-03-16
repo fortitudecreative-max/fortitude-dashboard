@@ -2001,11 +2001,21 @@ function App() {
       {/* Sidebar */}
       <div className={`f-sidebar${mobileMenuOpen ? " open" : ""}`} style={{ width: sidebarOpen ? 240 : 64 }}>
         <div style={styles.logo}>
-          <img src="https://fortitudecreative.com/wp-content/uploads/2025/04/Fortitude-Logo32.svg" alt="Fortitude Creative" style={{height: sidebarOpen ? 90 : 36, display: 'block', transition: 'height 0.2s', padding: '3px'}} />
-          <div style={{ display: "flex", gap: 6 }}>
-            <button className="f-close-btn" style={{ display: "none", background: "none", border: "1px solid #2a2a2a", color: "#555", cursor: "pointer", padding: "4px 8px", fontSize: 12 }} onClick={() => setMobileMenuOpen(false)}>✕</button>
-            <button style={styles.toggleBtn} onClick={() => setSidebarOpen(!sidebarOpen)}>{sidebarOpen ? "←" : "→"}</button>
-          </div>
+          {sidebarOpen ? (
+            <>
+              <img src="https://fortitudecreative.com/wp-content/uploads/2025/04/Fortitude-Logo32.svg" alt="Fortitude Creative" style={{ height: 90, display: "block", transition: "height 0.2s", padding: "3px" }} />
+              <div style={{ display: "flex", gap: 6 }}>
+                <button className="f-close-btn" style={{ display: "none", background: "none", border: "1px solid #2a2a2a", color: "#555", cursor: "pointer", padding: "4px 8px", fontSize: 12 }} onClick={() => setMobileMenuOpen(false)}>✕</button>
+                <button style={styles.toggleBtn} onClick={() => setSidebarOpen(false)}>←</button>
+              </div>
+            </>
+          ) : (
+            <button onClick={() => setSidebarOpen(true)} title="Expand sidebar" style={{ width: "100%", height: 64, display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 18, transition: "color 0.15s" }}
+              onMouseEnter={e => e.currentTarget.style.color = "#fff"}
+              onMouseLeave={e => e.currentTarget.style.color = "#555"}>
+              →
+            </button>
+          )}
         </div>
         <nav style={styles.nav}>
           {[
