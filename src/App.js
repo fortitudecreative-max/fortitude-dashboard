@@ -392,6 +392,8 @@ function App() {
   const [dragQueueId, setDragQueueId] = useState(null);
   const [dragOverQueueId, setDragOverQueueId] = useState(null);
   const [savingSchedule, setSavingSchedule] = useState(false);
+  const [scheduleSettingsDirty, setScheduleSettingsDirty] = useState(false);
+  const [scheduleSettingsSaved, setScheduleSettingsSaved] = useState(false);
   const [competitors, setCompetitors] = useState([]);
   const [findingCompetitors, setFindingCompetitors] = useState(false);
   const [monthlyQueue, setMonthlyQueue] = useState([]);
@@ -584,6 +586,8 @@ function App() {
         schedule_end_hour: c.schedule_end_hour || 12,
         schedule_timezone: c.schedule_timezone || "America/New_York",
       });
+      setScheduleSettingsDirty(false);
+      setScheduleSettingsSaved(false);
       setGbpPostResult(null);
       setShowGbpComposer(false);
       setShowGbpAssignPanel(false);
@@ -2111,6 +2115,8 @@ function App() {
                         schedule_end_hour: client.schedule_end_hour || 12,
                         schedule_timezone: client.schedule_timezone || "America/New_York",
                       });
+                      setScheduleSettingsDirty(false);
+                      setScheduleSettingsSaved(false);
                     };
                     return (
                       <div key={client.id} style={styles.clientCard} onClick={handleClientClick} onMouseEnter={e => e.currentTarget.style.borderColor = "#dc2626"} onMouseLeave={e => e.currentTarget.style.borderColor = "#1f1f1f"}>
@@ -2169,6 +2175,8 @@ function App() {
                         schedule_end_hour: client.schedule_end_hour || 12,
                         schedule_timezone: client.schedule_timezone || "America/New_York",
                       });
+                      setScheduleSettingsDirty(false);
+                      setScheduleSettingsSaved(false);
                     };
                     return (
                       <div key={client.id} onClick={handleClientClick}
@@ -2551,10 +2559,10 @@ function App() {
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
                       <div>
                         <div style={styles.postMetaLabel}>Frequency</div>
-                        <select style={{ ...styles.selectInput, width: "100%", marginTop: 6 }} value={scheduleSettings.schedule_frequency || "daily"} onChange={async e => {
-                          const newSettings = { ...scheduleSettings, schedule_frequency: e.target.value };
-                          setScheduleSettings(newSettings);
-                          try { const res = await authFetch(`${API}/api/schedule/${selectedClient.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newSettings) }); const data = await res.json(); setSelectedClient(prev => ({ ...prev, ...data.client })); } catch(e) {}
+                        <select style={{ ...styles.selectInput, width: "100%", marginTop: 6 }} value={scheduleSettings.schedule_frequency || "daily"} onChange={e => {
+                          setScheduleSettings(prev => ({ ...prev, schedule_frequency: e.target.value }));
+                          setScheduleSettingsDirty(true);
+                          setScheduleSettingsSaved(false);
                         }}>
                           <option value="daily">Daily</option>
                           <option value="every_other_day">Every Other Day</option>
@@ -2563,26 +2571,26 @@ function App() {
                       </div>
                       <div>
                         <div style={styles.postMetaLabel}>Publish Window Start</div>
-                        <select style={{ ...styles.selectInput, width: "100%", marginTop: 6 }} value={scheduleSettings.schedule_start_hour || 9} onChange={async e => {
-                          const newSettings = { ...scheduleSettings, schedule_start_hour: parseInt(e.target.value) };
-                          setScheduleSettings(newSettings);
-                          try { const res = await authFetch(`${API}/api/schedule/${selectedClient.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newSettings) }); const data = await res.json(); setSelectedClient(prev => ({ ...prev, ...data.client })); } catch(e) {}
+                        <select style={{ ...styles.selectInput, width: "100%", marginTop: 6 }} value={scheduleSettings.schedule_start_hour || 9} onChange={e => {
+                          setScheduleSettings(prev => ({ ...prev, schedule_start_hour: parseInt(e.target.value) }));
+                          setScheduleSettingsDirty(true);
+                          setScheduleSettingsSaved(false);
                         }}>
                           {[6,7,8,9,10,11,12,13,14,15,16,17].map(h => <option key={h} value={h}>{h > 12 ? `${h-12}pm` : h === 12 ? "12pm" : `${h}am`}</option>)}
                         </select>
                       </div>
                       <div>
                         <div style={styles.postMetaLabel}>Publish Window End</div>
-                        <select style={{ ...styles.selectInput, width: "100%", marginTop: 6 }} value={scheduleSettings.schedule_end_hour || 12} onChange={async e => {
-                          const newSettings = { ...scheduleSettings, schedule_end_hour: parseInt(e.target.value) };
-                          setScheduleSettings(newSettings);
-                          try { const res = await authFetch(`${API}/api/schedule/${selectedClient.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newSettings) }); const data = await res.json(); setSelectedClient(prev => ({ ...prev, ...data.client })); } catch(e) {}
+                        <select style={{ ...styles.selectInput, width: "100%", marginTop: 6 }} value={scheduleSettings.schedule_end_hour || 12} onChange={e => {
+                          setScheduleSettings(prev => ({ ...prev, schedule_end_hour: parseInt(e.target.value) }));
+                          setScheduleSettingsDirty(true);
+                          setScheduleSettingsSaved(false);
                         }}>
                           {[7,8,9,10,11,12,13,14,15,16,17,18].map(h => <option key={h} value={h}>{h > 12 ? `${h-12}pm` : h === 12 ? "12pm" : `${h}am`}</option>)}
                         </select>
                       </div>
                     </div>
-                    <div style={{ marginBottom: 16 }}>
+                    <div style={{ marginBottom: 20 }}>
                       <div style={styles.postMetaLabel}>Publish Days</div>
                       <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
                         {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(day => {
@@ -2590,15 +2598,11 @@ function App() {
                           const active = days.includes(day);
                           return (
                             <button key={day} style={{ padding: "6px 12px", borderRadius: 6, fontSize: 11, cursor: "pointer", fontFamily: "inherit", border: "1px solid", background: active ? "rgba(220,38,38,0.1)" : "none", borderColor: active ? "rgba(220,38,38,0.3)" : "#1f1f1f", color: active ? "#dc2626" : "#555" }}
-                              onClick={async () => {
+                              onClick={() => {
                                 const updated = active ? days.filter(d => d !== day) : [...days, day];
-                                const newSettings = { ...scheduleSettings, schedule_days: updated };
-                                setScheduleSettings(newSettings);
-                                try {
-                                  const res = await authFetch(`${API}/api/schedule/${selectedClient.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newSettings) });
-                                  const data = await res.json();
-                                  setSelectedClient(prev => ({ ...prev, ...data.client }));
-                                } catch (e) {}
+                                setScheduleSettings(prev => ({ ...prev, schedule_days: updated }));
+                                setScheduleSettingsDirty(true);
+                                setScheduleSettingsSaved(false);
                               }}>
                               {day}
                             </button>
@@ -2606,7 +2610,36 @@ function App() {
                         })}
                       </div>
                     </div>
-                    <div style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", marginTop: 4 }}>✓ Changes save automatically</div>
+                    <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12 }}>
+                      {scheduleSettingsSaved && !scheduleSettingsDirty && (
+                        <span style={{ fontSize: 11, color: "#22c55e", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.05em" }}>
+                          ✓ Saved
+                        </span>
+                      )}
+                      <button
+                        onClick={async () => {
+                          setSavingSchedule(true);
+                          try {
+                            const res = await authFetch(`${API}/api/schedule/${selectedClient.id}`, {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify(scheduleSettings)
+                            });
+                            const data = await res.json();
+                            setSelectedClient(prev => ({ ...prev, ...data.client }));
+                            setScheduleSettingsDirty(false);
+                            setScheduleSettingsSaved(true);
+                          } catch (e) {
+                            alert("Failed to save schedule settings. Please try again.");
+                          }
+                          setSavingSchedule(false);
+                        }}
+                        disabled={savingSchedule || !scheduleSettingsDirty}
+                        style={{ padding: "8px 20px", borderRadius: 6, border: "none", cursor: scheduleSettingsDirty ? "pointer" : "default", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, fontSize: 13, letterSpacing: "0.06em", textTransform: "uppercase", background: scheduleSettingsDirty ? "#d60000" : "#1a1a1a", color: scheduleSettingsDirty ? "#fff" : "#444", transition: "background 0.15s, color 0.15s" }}
+                      >
+                        {savingSchedule ? "Saving..." : "Save Schedule"}
+                      </button>
+                    </div>
                   </div>
                   </div>
                   )}
