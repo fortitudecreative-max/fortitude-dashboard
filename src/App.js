@@ -1315,6 +1315,24 @@ function App() {
     setIlImages(prev => [...allUploaded, ...prev]);
     setIlUploading(false);
     setIlUploadProgress({ done: 0, total: 0 });
+
+    // Poll for auto-tags in background - refresh each uploaded image after Claude tags it
+    if (allUploaded.length > 0) {
+      setTimeout(async () => {
+        try {
+          const ids = allUploaded.map(i => i.id);
+          const res2 = await authFetch(`${API}/api/images?all=true`);
+          const d2 = await res2.json();
+          const refreshed = (d2.images || []).filter(img => ids.includes(img.id));
+          if (refreshed.length > 0) {
+            setIlImages(prev => prev.map(img => {
+              const r = refreshed.find(x => x.id === img.id);
+              return r ? r : img;
+            }));
+          }
+        } catch (e4) { /* silent */ }
+      }, 8000);
+    }
   };
 
   const ilSaveImage = async (id, category, description, industry) => {
