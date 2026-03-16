@@ -364,6 +364,9 @@ function App() {
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [generatedSchemaHtml, setGeneratedSchemaHtml] = useState(null);
   const [isEditingPost, setIsEditingPost] = useState(false);
+  const [regenPrompt, setRegenPrompt] = useState("");
+  const [showRegenPrompt, setShowRegenPrompt] = useState(false);
+  const [regenLoading, setRegenLoading] = useState(false);
   const [editLinkUrl, setEditLinkUrl] = useState("");
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [showHtmlInput, setShowHtmlInput] = useState(false);
@@ -1879,6 +1882,46 @@ function App() {
   };
 
   // Generate a post for a specific queue row and store it in queueRowPosts state + sessionStorage
+  const regeneratePost = async () => {
+    if (!generatingPost || !activeClient || !regenPrompt.trim()) return;
+    setRegenLoading(true);
+    setGeneratedPost(null);
+    setPublishResult(null);
+    setContentLoading(true);
+    setContentError(null);
+    setShowRegenPrompt(false);
+    try {
+      const res = await authFetch(`${API}/api/content/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          keyword: generatingPost,
+          industry: activeClient.industry,
+          clientName: activeClient.name,
+          clientId: activeClient.id,
+          brandVoice: activeClient.brand_voice || "",
+          wordpressUrl: activeClient.wordpress_url || "",
+          aiPersonality: activeClient.ai_personality || null,
+          regenPrompt: regenPrompt.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (data.post) {
+        setGeneratedPost(data.post);
+        setFeaturedImage(data.featuredImage);
+        setGeneratedSchemaHtml(data.schemaHtml || null);
+        setRegenPrompt("");
+      } else {
+        setContentError(data.error || "Regeneration failed");
+      }
+    } catch (e) {
+      setContentError(e.message);
+    } finally {
+      setContentLoading(false);
+      setRegenLoading(false);
+    }
+  };
+
   const generateQueueRowPost = async (rowId, keyword, client) => {
     setQueueRowPosts(prev => ({ ...prev, [rowId]: { loading: true, error: null, post: null } }));
     try {
@@ -4077,12 +4120,47 @@ function App() {
                         <button style={{ ...styles.addKeywordBtn, fontSize: 12, padding: "6px 14px", color: "#f59e0b", borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.07)" }}
                           onClick={() => setIsEditingPost(true)}>✎ Edit</button>
                       )}
-                      <button style={{ ...styles.addBtn, background: "none", border: "1px solid #dc2626", color: "#dc2626" }} onClick={() => { setGeneratedPost(null); setGeneratingPost(null); setGeneratedSchemaHtml(null); setIsEditingPost(false); setWpCategories([]); setSelectedCategoryId(null); }}>Clear</button>
+                      <button
+                        style={{ ...styles.addKeywordBtn, fontSize: 12, padding: "6px 14px", color: "#a78bfa", borderColor: "rgba(167,139,250,0.3)", background: showRegenPrompt ? "rgba(167,139,250,0.12)" : "rgba(167,139,250,0.05)" }}
+                        onClick={() => { setShowRegenPrompt(v => !v); setRegenPrompt(""); }}>
+                        ↺ Regenerate
+                      </button>
+                      <button style={{ ...styles.addBtn, background: "none", border: "1px solid #dc2626", color: "#dc2626" }} onClick={() => { setGeneratedPost(null); setGeneratingPost(null); setGeneratedSchemaHtml(null); setIsEditingPost(false); setWpCategories([]); setSelectedCategoryId(null); setShowRegenPrompt(false); setRegenPrompt(""); }}>Clear</button>
                       <button style={{ ...styles.addBtn, opacity: publishLoading ? 0.6 : 1 }} onClick={publishToWordPress} disabled={publishLoading}>
                         {publishLoading ? "Publishing..." : "Publish to WordPress"}
                       </button>
                     </div>
                   </div>
+
+                  {/* ── Regenerate prompt panel ── */}
+                  {showRegenPrompt && (
+                    <div style={{ background: "#0a0a0a", border: "1px solid rgba(167,139,250,0.25)", borderRadius: 6, padding: "16px 18px", marginBottom: 16 }}>
+                      <div style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", color: "#a78bfa", marginBottom: 8 }}>
+                        Direction for Regeneration
+                      </div>
+                      <textarea
+                        value={regenPrompt}
+                        onChange={e => setRegenPrompt(e.target.value)}
+                        placeholder="e.g. Make the tone more conversational, add a section about maintenance tips, focus more on cost savings, shorten the intro..."
+                        style={{ width: "100%", minHeight: 80, background: "#111", border: "1px solid #2a2a2a", color: "#fff", fontSize: 13, fontFamily: "'Barlow', sans-serif", padding: "10px 12px", borderRadius: 4, resize: "vertical", boxSizing: "border-box", outline: "none" }}
+                        onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) regeneratePost(); }}
+                      />
+                      <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center" }}>
+                        <button
+                          onClick={regeneratePost}
+                          disabled={!regenPrompt.trim() || regenLoading}
+                          style={{ padding: "8px 20px", fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", background: regenPrompt.trim() ? "rgba(167,139,250,0.9)" : "#1a1a1a", color: regenPrompt.trim() ? "#000" : "#333", border: "none", borderRadius: 3, cursor: regenPrompt.trim() ? "pointer" : "default", fontWeight: 700 }}>
+                          {regenLoading ? "Regenerating..." : "↺ Regenerate Post"}
+                        </button>
+                        <button onClick={() => { setShowRegenPrompt(false); setRegenPrompt(""); }}
+                          style={{ padding: "8px 14px", fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em", background: "transparent", color: "#555", border: "1px solid #2a2a2a", borderRadius: 3, cursor: "pointer" }}>
+                          Cancel
+                        </button>
+                        <div style={{ fontSize: 11, color: "#333", fontFamily: "'Barlow Condensed', sans-serif" }}>Cmd+Enter to submit</div>
+                      </div>
+                    </div>
+                  )}
+
                   <div style={styles.postPreview}>
                     {/* ── Formatting toolbar (edit mode only) ── */}
                     {isEditingPost && (() => {
