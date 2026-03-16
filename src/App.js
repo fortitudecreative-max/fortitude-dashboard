@@ -1801,11 +1801,14 @@ function App() {
         // Reload schedule jobs so published post moves to Archived Posts
         if (activeClient?.id) loadScheduleJobs(activeClient.id);
         if (selectedClient?.id) loadScheduleJobs(selectedClient.id);
-        // Clear any sessionStorage entries for this keyword so queue shows as published
+        // Clear only the sessionStorage entry for the published keyword so other generated posts survive
         try {
-          Object.keys(sessionStorage).forEach(k => { if (k.startsWith("qrp_")) sessionStorage.removeItem(k); });
+          const publishedRow = monthlyQueue.find(r => r.keyword === generatingPost);
+          if (publishedRow) {
+            sessionStorage.removeItem("qrp_" + publishedRow.id);
+            setQueueRowPosts(prev => { const next = { ...prev }; delete next[publishedRow.id]; return next; });
+          }
         } catch(e) {}
-        setQueueRowPosts({});
 
 
       } else {
