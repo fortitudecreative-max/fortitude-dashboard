@@ -4117,12 +4117,9 @@ function App() {
               {generatedPost && !contentLoading && (
                 <div>
                   {previousView && (
-                    <div style={{ padding: "16px 32px 0 32px" }}>
-                      <button onClick={() => { setActiveTab(previousView.tab); setSelectedClient(previousView.client); setPreviousView(null); }} style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "none", border: "1px solid #2a2a2a", color: "#aaa", fontSize: 11, cursor: "pointer", padding: "7px 16px", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", borderRadius: 3, transition: "all 0.15s" }} onMouseEnter={e => { e.currentTarget.style.borderColor = "#d60000"; e.currentTarget.style.color = "#d60000"; }} onMouseLeave={e => { e.currentTarget.style.borderColor = "#2a2a2a"; e.currentTarget.style.color = "#aaa"; }}>
-                        <span style={{ fontSize: 14, lineHeight: 1 }}>&#8592;</span>
-                        Back to {previousView.client ? previousView.client.name : "Clients"}
-                      </button>
-                    </div>
+                    <button onClick={() => { setActiveTab(previousView.tab); setSelectedClient(previousView.client); setPreviousView(null); }} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "#888", fontSize: 13, cursor: "pointer", padding: "10px 0 6px 0", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.04em" }}>
+                      <span style={{ fontSize: 18, lineHeight: 1 }}>&#8592;</span> Back to {previousView.client ? previousView.client.name : "Clients"}
+                    </button>
                   )}
                   <div style={styles.sectionHeader}>
                     <div style={styles.sectionTitle}>Generated Post — {generatingPost}</div>
@@ -4467,14 +4464,6 @@ function App() {
                         );
                       })()}
                     </div>
-                  {publishResult.success && previousView && (
-                    <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #1a1a1a", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <button onClick={() => { setActiveTab(previousView.tab); setSelectedClient(previousView.client); setPreviousView(null); setPublishResult(null); setGeneratedPost(null); }} style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#d60000", border: "none", color: "#fff", fontSize: 11, cursor: "pointer", padding: "9px 20px", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", borderRadius: 3 }}>
-                        <span style={{ fontSize: 15, lineHeight: 1 }}>&#8592;</span> Back to {previousView.client ? previousView.client.name : "Clients"}
-                      </button>
-                      <div style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em" }}>Post published successfully</div>
-                    </div>
-                  )}
                   )}
                 </div>
               )}
