@@ -4463,6 +4463,14 @@ function App() {
                           </div>
                         );
                       })()}
+                      {publishResult.success && previousView && (
+                        <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #1a1a1a", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <button onClick={() => { setActiveTab(previousView.tab); setSelectedClient(previousView.client); setPreviousView(null); setPublishResult(null); setGeneratedPost(null); }} style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#d60000", border: "none", color: "#fff", fontSize: 11, cursor: "pointer", padding: "9px 20px", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", borderRadius: 3 }}>
+                            <span style={{ fontSize: 15, lineHeight: 1 }}>&#8592;</span> Back to {previousView.client ? previousView.client.name : "Clients"}
+                          </button>
+                          <div style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em" }}>Post published successfully</div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
