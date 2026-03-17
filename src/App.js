@@ -282,6 +282,7 @@ function IlImageCard({ img, selected, view, onToggleSelect, onSave, onDelete, in
 function App() {
   const [session, setSession] = useState(undefined); // undefined = loading, null = logged out
   const [activeTab, setActiveTab] = useState("clients");
+  const [previousView, setPreviousView] = useState(null); // { tab, client } for back button
   const [selectedClient, setSelectedClient] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -1829,6 +1830,7 @@ function App() {
     setActiveClient(client);
     setContentLoading(true);
     setContentError(null);
+    setPreviousView({ tab: "clients", client: selectedClient || client });
     setActiveTab("content");
     setSelectedClient(null);
     try {
@@ -2031,7 +2033,7 @@ function App() {
             { id: "publishing", icon: "⟳", label: "Publishing" },
             { id: "settings", icon: "⚙", label: "Settings" },
           ].map((item) => (
-            <button key={item.id} style={{ ...styles.navItem, ...(activeTab === item.id ? styles.navItemActive : {}) }} onClick={() => { setActiveTab(item.id); setSelectedClient(null); setMobileMenuOpen(false); if (item.id === "imagelib") { loadIlImages(); } }}>
+            <button key={item.id} style={{ ...styles.navItem, ...(activeTab === item.id ? styles.navItemActive : {}) }} onClick={() => { setActiveTab(item.id); setSelectedClient(null); setPreviousView(null); setMobileMenuOpen(false); if (item.id === "imagelib") { loadIlImages(); } }}>
               <span style={styles.navIcon}>{item.icon}</span>
               {sidebarOpen && <span style={styles.navLabel}>{item.label}</span>}
             </button>
@@ -3177,6 +3179,7 @@ function App() {
                                           setFeaturedImage(rowPostData.featuredImage || null);
                                           setGeneratedSchemaHtml(rowPostData.schemaHtml || null);
                                           setActiveClient(selectedClient);
+                                          setPreviousView({ tab: "clients", client: selectedClient });
                                           setActiveTab("content");
                                         }}>👁 View Post</button>
                                       ) : (
@@ -4113,6 +4116,11 @@ function App() {
               )}
               {generatedPost && !contentLoading && (
                 <div>
+                  {previousView && (
+                    <button onClick={() => { setActiveTab(previousView.tab); setSelectedClient(previousView.client); setPreviousView(null); }} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "#888", fontSize: 13, cursor: "pointer", padding: "10px 0 6px 0", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.04em" }}>
+                      <span style={{ fontSize: 18, lineHeight: 1 }}>&#8592;</span> Back to {previousView.client ? previousView.client.name : "Clients"}
+                    </button>
+                  )}
                   <div style={styles.sectionHeader}>
                     <div style={styles.sectionTitle}>Generated Post — {generatingPost}</div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
