@@ -3218,6 +3218,7 @@ function App() {
                                           setFeaturedImage(rowPostData.featuredImage || null);
                                           setGeneratedSchemaHtml(rowPostData.schemaHtml || null);
                                           setActiveClient(selectedClient);
+                                          setPublishResult(null);
                                           setPreviousView({ tab: "clients", client: selectedClient });
                                           setActiveTab("content");
                                         }}>👁 View Post</button>
