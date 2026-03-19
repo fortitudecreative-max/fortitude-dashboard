@@ -3172,6 +3172,12 @@ function App() {
                                     <div style={{ flex: 1, textAlign: "center" }}>
                                       <span style={{ ...styles.intentBadge, color: getIntentColor(row.intent), background: getIntentColor(row.intent) + "22", borderColor: getIntentColor(row.intent) + "44" }}>{row.intent}</span>
                                     </div>
+                                    <div style={{ flex: "0 0 70px", textAlign: "center", color: "#aaa", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif" }}>
+                                      {row.volume ? (row.volume >= 1000 ? (row.volume / 1000).toFixed(1) + "k" : row.volume.toLocaleString()) : "--"}
+                                    </div>
+                                    <div style={{ flex: "0 0 50px", textAlign: "center", fontSize: 11, fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", color: !row.kd ? "#555" : row.kd <= 30 ? "#22c55e" : row.kd <= 60 ? "#eab308" : "#ef4444" }}>
+                                      {row.kd || "--"}
+                                    </div>
                                     <div style={{ flex: "0 0 130px", textAlign: "center" }}>
                                       {row.used ? (
                                         <span style={{ fontSize: 11, color: "#555", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.06em" }}>PUBLISHED</span>
@@ -3233,6 +3239,8 @@ function App() {
                                           <div style={{ flex: "0 0 28px" }}></div>
                                           <div style={{ flex: 3 }}>Keyword</div>
                                           <div style={{ flex: 1, textAlign: "center" }}>Intent</div>
+                                          <div style={{ flex: "0 0 70px", textAlign: "center" }}>Vol</div>
+                                          <div style={{ flex: "0 0 50px", textAlign: "center" }}>KD</div>
                                           <div style={{ flex: "0 0 130px", textAlign: "center" }}>Scheduled</div>
                                           <div style={{ flex: "0 0 220px", textAlign: "center" }}>Actions</div>
                                         </div>
@@ -3258,6 +3266,8 @@ function App() {
                                           <div style={{ flex: "0 0 28px" }}></div>
                                           <div style={{ flex: 3 }}>Keyword</div>
                                           <div style={{ flex: 1, textAlign: "center" }}>Intent</div>
+                                          <div style={{ flex: "0 0 70px", textAlign: "center" }}>Vol</div>
+                                          <div style={{ flex: "0 0 50px", textAlign: "center" }}>KD</div>
                                           <div style={{ flex: "0 0 130px", textAlign: "center" }}>Scheduled</div>
                                           <div style={{ flex: "0 0 220px", textAlign: "center" }}>Actions</div>
                                         </div>
