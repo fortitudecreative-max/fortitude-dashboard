@@ -1020,11 +1020,11 @@ function App() {
       const keywords = data.keywords || [];
       setMonthlyQueue(keywords);
       setQueueMonth(data.month || "");
-      // Restore any previously generated posts from sessionStorage
+      // Restore any previously generated posts from localStorage
       const restored = {};
       keywords.forEach(row => {
         try {
-          const saved = sessionStorage.getItem("qrp_" + row.id);
+          const saved = localStorage.getItem("qrp_" + row.id);
           if (saved) restored[row.id] = JSON.parse(saved);
         } catch(e) {}
       });
@@ -1841,11 +1841,14 @@ function App() {
         // Reload schedule jobs so published post moves to Archived Posts
         if (activeClient?.id) loadScheduleJobs(activeClient.id);
         if (selectedClient?.id) loadScheduleJobs(selectedClient.id);
-        // Clear only the sessionStorage entry for the published keyword so other generated posts survive
+        // Reload monthly queue so the published row disappears immediately
+        const qClient = selectedClient || activeClient;
+        if (qClient?.id) loadMonthlyQueue(qClient.id);
+        // Clear the localStorage entry for the published keyword
         try {
           const publishedRow = monthlyQueue.find(r => r.keyword === generatingPost);
           if (publishedRow) {
-            sessionStorage.removeItem("qrp_" + publishedRow.id);
+            localStorage.removeItem("qrp_" + publishedRow.id);
             setQueueRowPosts(prev => { const next = { ...prev }; delete next[publishedRow.id]; return next; });
           }
         } catch(e) {}
@@ -1986,7 +1989,7 @@ function App() {
       if (data.post) {
         const rowData = { loading: false, post: data.post, featuredImage: data.featuredImage, schemaHtml: data.schemaHtml, error: null };
         setQueueRowPosts(prev => ({ ...prev, [rowId]: rowData }));
-        try { sessionStorage.setItem("qrp_" + rowId, JSON.stringify(rowData)); } catch(e) {}
+        try { localStorage.setItem("qrp_" + rowId, JSON.stringify(rowData)); } catch(e) {}
       } else {
         setQueueRowPosts(prev => ({ ...prev, [rowId]: { loading: false, post: null, error: data.error || "Failed to generate" } }));
       }
