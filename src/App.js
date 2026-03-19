@@ -483,7 +483,7 @@ function App() {
   const [siteIssuesFixingAll, setSiteIssuesFixingAll] = useState(false);
   const [seoAuditTab, setSeoAuditTab] = useState("overview"); // "overview"|"issues"|"pages"|"statistics"
 
-  // ── Auth session listener ──────────────────────────────────────────
+  // ── Auth session listener + proactive token refresh ───────────────
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session ?? null);
@@ -491,7 +491,15 @@ function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session ?? null);
     });
-    return () => subscription.unsubscribe();
+    // Refresh the session every 45 minutes so the token never silently expires
+    const refreshInterval = setInterval(async () => {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (data?.session) setSession(data.session);
+    }, 45 * 60 * 1000);
+    return () => {
+      subscription.unsubscribe();
+      clearInterval(refreshInterval);
+    };
   }, []);
 
   useEffect(() => {
