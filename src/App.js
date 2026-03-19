@@ -3044,42 +3044,7 @@ function App() {
                   </button>
                   {scheduledQueueExpanded && (
                     <div>
-                      {scheduleJobs.filter(j => j.status !== "published").length > 0 && (
-                        <div style={{ marginBottom: 16 }}>
-                          <div style={{ fontSize: 10, color: "#555", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>
-                            Scheduled Posts ({scheduleJobs.filter(j => j.status !== "published").length})
-                          </div>
-                          <div style={styles.table}>
-                        <div style={styles.tableHeader}>
-                          <div style={{ flex: "0 0 20px" }}></div>
-                          <div style={{ flex: 3 }}>Keyword</div>
-                          <div style={{ flex: 2 }}>Scheduled Time</div>
-                          <div style={{ flex: 1, textAlign: "center" }}>Status</div>
-                        </div>
-                        {scheduleJobs.filter(j => j.status !== "published").map(job => (
-                          <div
-                            key={job.id}
-                            draggable={job.status === "pending"}
-                            onDragStart={() => { if (job.status === "pending") setDragJobId(job.id); }}
-                            onDragOver={e => { e.preventDefault(); if (job.status === "pending") setDragOverJobId(job.id); }}
-                            onDragLeave={() => setDragOverJobId(null)}
-                            onDrop={() => { reorderScheduleJobs(dragJobId, job.id); setDragJobId(null); setDragOverJobId(null); }}
-                            onDragEnd={() => { setDragJobId(null); setDragOverJobId(null); }}
-                            style={{ ...styles.tableRow, cursor: job.status === "pending" ? "grab" : "default", borderLeft: dragOverJobId === job.id && dragJobId !== job.id ? "2px solid #d60000" : "2px solid transparent", opacity: dragJobId === job.id ? 0.4 : 1, transition: "border-color 0.1s, opacity 0.1s" }}
-                          >
-                            <div style={{ flex: "0 0 20px", color: job.status === "pending" ? "#333" : "transparent", fontSize: 13, userSelect: "none" }}>⠿</div>
-                            <div style={{ flex: 3, color: "#fff" }}>{job.keyword}</div>
-                            <div style={{ flex: 2, color: "#aaa" }}>{new Date(job.scheduled_time).toLocaleString()}</div>
-                            <div style={{ flex: 1, textAlign: "center" }}>
-                              <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20, border: "1px solid", color: job.status === "failed" ? "#ef4444" : job.status === "running" ? "#f59e0b" : "#555", background: job.status === "failed" ? "rgba(239,68,68,0.1)" : job.status === "running" ? "rgba(245,158,11,0.1)" : "#111", borderColor: job.status === "failed" ? "rgba(239,68,68,0.2)" : "#1f1f1f" }}>
-                                {job.status}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                          </div>
-                        </div>
-                      )}
+
                         {/* Tab Bar */}
                     <div style={{ display: "flex", gap: 2, marginBottom: 20, borderBottom: "1px solid #222", paddingBottom: 0 }}>
                       {[
