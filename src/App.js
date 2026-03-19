@@ -485,19 +485,40 @@ function App() {
 
   // ── Auth session listener + proactive token refresh ───────────────
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session ?? null);
-    });
+    // Force a refresh on load -- never trust the cached session
+    const initSession = async () => {
+      const { data: refreshed } = await supabase.auth.refreshSession();
+      if (refreshed?.session) {
+        setSession(refreshed.session);
+      } else {
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session ?? null);
+      }
+    };
+    initSession();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session ?? null);
     });
-    // Refresh the session every 45 minutes so the token never silently expires
+
+    // Refresh every 45 minutes so the token never expires mid-session
     const refreshInterval = setInterval(async () => {
-      const { data, error } = await supabase.auth.refreshSession();
+      const { data } = await supabase.auth.refreshSession();
       if (data?.session) setSession(data.session);
     }, 45 * 60 * 1000);
+
+    // Also refresh whenever the tab becomes visible again after being hidden
+    const handleVisibility = async () => {
+      if (document.visibilityState === "visible") {
+        const { data } = await supabase.auth.refreshSession();
+        if (data?.session) setSession(data.session);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
     return () => {
       subscription.unsubscribe();
+      document.removeEventListener("visibilitychange", handleVisibility);
       clearInterval(refreshInterval);
     };
   }, []);
