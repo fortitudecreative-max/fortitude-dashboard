@@ -1031,6 +1031,20 @@ function App() {
       if (Object.keys(restored).length > 0) {
         setQueueRowPosts(prev => ({ ...prev, ...restored }));
       }
+      // Auto-regenerate if queue is empty
+      if (keywords.length === 0) {
+        setRefreshingQueue(true);
+        try {
+          const rRes = await authFetch(`${API}/api/keywords/monthly-refresh/${clientId}`, { method: "POST" });
+          const rData = await rRes.json();
+          if (!rData.error) {
+            const r2 = await authFetch(`${API}/api/keywords/queue/${clientId}`);
+            const r2Data = await r2.json();
+            setMonthlyQueue(r2Data.keywords || []);
+            setQueueMonth(r2Data.month || "");
+          }
+        } catch(e) {} finally { setRefreshingQueue(false); }
+      }
     } catch (e) {}
   };
 
@@ -3074,7 +3088,7 @@ function App() {
 
                         {monthlyQueue.length === 0 && !queueReplacing ? (
                           <div style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 10, padding: 24, textAlign: "center" }}>
-                            <div style={{ color: "#444", fontSize: 13, marginBottom: 12 }}>No keywords yet. Click "Regenerate Queue" to populate both sections.</div>
+                            <div style={{ color: "#444", fontSize: 13, marginBottom: 12 }}>No keywords yet — generating queue...</div>
                             {queueError && <div style={{ color: "#d60000", fontSize: 12, marginBottom: 12, background: "#1a0000", border: "1px solid #330000", borderRadius: 6, padding: "8px 12px" }}>{queueError}</div>}
                           </div>
                         ) : (
@@ -3207,15 +3221,12 @@ function App() {
                                       <button style={{ ...styles.addKeywordBtn, color: "#a78bfa", borderColor: "rgba(167,139,250,0.3)", background: "rgba(167,139,250,0.07)" }} onClick={refreshResearchKeywords} disabled={refreshingResearch}>
                                         {refreshingResearch ? "⟳ Loading..." : "↻ Refresh List"}
                                       </button>
-                                      <button style={{ ...styles.addKeywordBtn }} onClick={refreshMonthlyQueue} disabled={refreshingQueue}>
-                                        {refreshingQueue ? "Regenerating..." : "⟳ Regen Queue"}
-                                      </button>
                                       <button style={{ ...styles.addKeywordBtn, color: "#d60000", borderColor: "rgba(214,0,0,0.4)", background: "rgba(214,0,0,0.06)" }} onClick={() => { setShowManualKeywordInput(v => !v); setManualKeywordText(""); }}>
                                         {showManualKeywordInput ? "✕ Cancel" : "+ Add Keyword"}
                                       </button>
                                     </div>
                                     {allRows.length === 0 ? (
-                                      <div style={{ padding: "20px 16px", color: "#444", fontSize: 12, textAlign: "center" }}>No keyword research yet — click Refresh List or Regenerate Queue</div>
+                                      <div style={{ padding: "20px 16px", color: "#444", fontSize: 12, textAlign: "center" }}>No keyword research yet — click Refresh List to populate</div>
                                     ) : (
                                       <div style={styles.table}>
                                         <div style={styles.tableHeader}>
