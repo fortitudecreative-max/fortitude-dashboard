@@ -506,9 +506,19 @@ function App() {
     loadKeywords(activeIndustry);
   }, [activeIndustry]);
 
-  // Auth-aware fetch wrapper — automatically injects the session token
+  // Auth-aware fetch wrapper -- automatically injects the session token
+  // Auto-refreshes the session if the token is expired or expiring within 60s
   const authFetch = async (url, options = {}) => {
-    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    let { data: { session: currentSession } } = await supabase.auth.getSession();
+    const expiresAt = currentSession?.expires_at;
+    const nowSecs = Math.floor(Date.now() / 1000);
+    if (!currentSession || (expiresAt && expiresAt - nowSecs < 60)) {
+      const { data: refreshed } = await supabase.auth.refreshSession();
+      if (refreshed?.session) {
+        currentSession = refreshed.session;
+        setSession(refreshed.session);
+      }
+    }
     const token = currentSession?.access_token;
     return fetch(url, {
       ...options,
