@@ -2049,7 +2049,7 @@ function App() {
             { id: "content", icon: "✦", label: "Content" },
             { id: "seo", icon: "◎", label: "SEO Audit" },
             { id: "publishing", icon: "⟳", label: "Publishing" },
-            { id: "settings", icon: "⚙", label: "Settings" },
+            { id: "settings", icon: "⚙", label: "Agency Settings" },
           ].map((item) => (
             <button key={item.id} style={{ ...styles.navItem, ...(activeTab === item.id ? styles.navItemActive : {}) }} onClick={() => { setActiveTab(item.id); setSelectedClient(null); setPreviousView(null); setMobileMenuOpen(false); if (item.id === "imagelib") { loadIlImages(); } }}>
               <span style={styles.navIcon}>{item.icon}</span>
@@ -2088,7 +2088,7 @@ function App() {
               {activeTab === "gap" && "Competitor Gap Analysis"}
               {activeTab === "content" && "Content Pipeline"}
               {activeTab === "publishing" && "Auto Publishing"}
-              {activeTab === "settings" && "Settings"}
+              {activeTab === "settings" && "Agency Settings"}
               {activeTab === "seo" && "SEO Audit"}
             </div>
             <div style={styles.headerSub}>{new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</div>
@@ -5335,17 +5335,90 @@ function App() {
             );
           })()}
 
-          {/* COMING SOON */}
-          {(activeTab === "publishing" || activeTab === "settings") && (
+          {/* COMING SOON - publishing only */}
+          {activeTab === "publishing" && (
             <div style={styles.comingSoon}>
               <div style={styles.comingSoonIcon}>⚡</div>
               <div style={styles.comingSoonTitle}>Coming Soon</div>
-              <div style={styles.comingSoonSub}>
-                {activeTab === "publishing" && "Auto-publishing to WordPress and Google Business Profiles on a schedule."}
-                {activeTab === "settings" && "Brand voice editor, WordPress connections, and account settings."}
-              </div>
+              <div style={styles.comingSoonSub}>Auto-publishing to WordPress and Google Business Profiles on a schedule.</div>
             </div>
           )}
+
+          {/* AGENCY SETTINGS */}
+          {activeTab === "settings" && (() => {
+            const sectionStyle = { background: "#0d0d0d", border: "1px solid #1a1a1a", borderTop: "3px solid #d60000", padding: "24px 28px", marginBottom: 20 };
+            const sectionTitle = { fontSize: 13, fontWeight: 700, color: "#d60000", fontFamily: "'Oswald', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 20 };
+            const rowStyle = { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 0", borderBottom: "1px solid #1a1a1a" };
+            const labelStyle = { fontSize: 13, color: "#aaa", letterSpacing: "0.04em" };
+            const valueStyle = { fontSize: 13, color: "#fff", fontWeight: 600 };
+            return (
+              <div style={{ maxWidth: 720 }}>
+
+                {/* ACCOUNT */}
+                <div style={sectionStyle}>
+                  <div style={sectionTitle}>Account</div>
+                  <div style={rowStyle}>
+                    <span style={labelStyle}>Logged in as</span>
+                    <span style={valueStyle}>{session?.user?.email}</span>
+                  </div>
+                  <div style={{ ...rowStyle, borderBottom: "none" }}>
+                    <span style={labelStyle}>Session</span>
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <button style={{ ...styles.addBtn, fontSize: 12, padding: "6px 16px", background: "rgba(255,255,255,0.05)", borderColor: "#333", color: "#aaa" }}
+                        onClick={async () => {
+                          const { data } = await supabase.auth.refreshSession();
+                          if (data?.session) {
+                            setSession(data.session);
+                            localStorage.setItem("fortitude_token", data.session.access_token);
+                            alert("Session refreshed successfully.");
+                          } else {
+                            alert("Could not refresh -- please sign out and back in.");
+                          }
+                        }}>
+                        Refresh Session
+                      </button>
+                      <button style={{ ...styles.addBtn, fontSize: 12, padding: "6px 16px", background: "rgba(214,0,0,0.1)", borderColor: "#d60000", color: "#d60000" }}
+                        onClick={async () => { await supabase.auth.signOut(); setSession(null); }}>
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* GOOGLE BUSINESS PROFILE */}
+                <div style={sectionStyle}>
+                  <div style={sectionTitle}>Google Business Profile</div>
+                  <div style={{ ...rowStyle, borderBottom: "none" }}>
+                    <div>
+                      <div style={valueStyle}>Agency Google Account</div>
+                      <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>Connect the Google account that manages your clients GBP listings.</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                      {gbpAgencyConnected && (
+                        <span style={{ fontSize: 12, color: "#22c55e", marginRight: 6 }}>● Connected</span>
+                      )}
+                      <button style={{ ...styles.addBtn, fontSize: 12, padding: "6px 16px", ...(gbpAgencyConnected ? { background: "rgba(255,255,255,0.05)", borderColor: "#333", color: "#aaa" } : { background: "rgba(214,0,0,0.1)", borderColor: "#d60000", color: "#d60000" }) }}
+                        onClick={gbpAgencyConnected
+                          ? async () => {
+                              await authFetch(`${API}/api/gbp/disconnect-agency`, { method: "POST" });
+                              setGbpAgencyConnected(false);
+                            }
+                          : connectAgencyGbp}>
+                        {gbpAgencyConnected ? "Disconnect" : "Connect Google Account"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* DANGER ZONE */}
+                <div style={{ ...sectionStyle, borderTop: "3px solid #333" }}>
+                  <div style={{ ...sectionTitle, color: "#666" }}>More Coming Soon</div>
+                  <div style={{ fontSize: 13, color: "#444" }}>Brand voice defaults, AI model settings, billing, and more.</div>
+                </div>
+
+              </div>
+            );
+          })()}
         </div>
 
             {/* FEATURED IMAGE PICKER MODAL */}
