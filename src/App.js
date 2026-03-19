@@ -3058,14 +3058,6 @@ function App() {
                     {/* ── MONTHLY QUEUE TAB ── */}
                     {clientTab === "monthly" && (
                       <div>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
-                          <button style={{ ...styles.addKeywordBtn, fontSize: 10, padding: "4px 10px", letterSpacing: "0.04em" }} onClick={refreshMonthlyQueue} disabled={refreshingQueue}>
-                            {refreshingQueue ? "Regenerating..." : "⟳ Regenerate Queue"}
-                          </button>
-                          <button style={{ ...styles.addKeywordBtn, fontSize: 10, padding: "4px 10px", letterSpacing: "0.04em", color: "#d60000", borderColor: "rgba(214,0,0,0.4)", background: "rgba(214,0,0,0.06)" }} onClick={() => { setShowManualKeywordInput(v => !v); setManualKeywordText(""); }}>
-                            {showManualKeywordInput ? "✕ Cancel" : "+ Add Keyword"}
-                          </button>
-                        </div>
                         <>
                         {showManualKeywordInput && (
                           <div style={{ background: "#0a0a0a", border: "1px solid #222", borderRadius: 8, padding: "14px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -3206,12 +3198,18 @@ function App() {
 
                                   {/* ── KEYWORD RESEARCH SECTION ── */}
                                   <div style={{ border: "1px solid #1a1a1a", borderRadius: 8, overflow: "hidden" }}>
-                                    <div style={{ background: "#0a0a0a", padding: "10px 16px", display: "flex", alignItems: "center", gap: 14, borderBottom: "1px solid #1a1a1a", flexWrap: "wrap" }}>
-                                      <span style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", color: "#a78bfa", fontWeight: 600 }}>Keyword Research</span>
-                                      <button style={{ ...styles.addKeywordBtn, fontSize: 13, padding: "8px 18px", color: "#a78bfa", borderColor: "rgba(167,139,250,0.3)", background: "rgba(167,139,250,0.07)" }} onClick={refreshResearchKeywords} disabled={refreshingResearch}>
+                                    <div style={{ background: "#0a0a0a", padding: "10px 16px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #1a1a1a", flexWrap: "wrap" }}>
+                                      <span style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", color: "#a78bfa", fontWeight: 600, marginRight: "auto" }}>Keyword Research</span>
+                                      <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif" }}>{allRows.filter(r => !r.used).length} active</span>
+                                      <button style={{ ...styles.addKeywordBtn, fontSize: 10, padding: "4px 10px", color: "#a78bfa", borderColor: "rgba(167,139,250,0.3)", background: "rgba(167,139,250,0.07)" }} onClick={refreshResearchKeywords} disabled={refreshingResearch}>
                                         {refreshingResearch ? "⟳ Loading..." : "↻ Refresh List"}
                                       </button>
-                                      <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", marginLeft: "auto" }}>{allRows.filter(r => !r.used).length} active</span>
+                                      <button style={{ ...styles.addKeywordBtn, fontSize: 10, padding: "4px 10px" }} onClick={refreshMonthlyQueue} disabled={refreshingQueue}>
+                                        {refreshingQueue ? "Regenerating..." : "⟳ Regenerate Queue"}
+                                      </button>
+                                      <button style={{ ...styles.addKeywordBtn, fontSize: 10, padding: "4px 10px", color: "#d60000", borderColor: "rgba(214,0,0,0.4)", background: "rgba(214,0,0,0.06)" }} onClick={() => { setShowManualKeywordInput(v => !v); setManualKeywordText(""); }}>
+                                        {showManualKeywordInput ? "✕ Cancel" : "+ Add Keyword"}
+                                      </button>
                                     </div>
                                     {allRows.length === 0 ? (
                                       <div style={{ padding: "20px 16px", color: "#444", fontSize: 12, textAlign: "center" }}>No keyword research yet — click Refresh List or Regenerate Queue</div>
@@ -3231,12 +3229,12 @@ function App() {
 
                                   {/* ── COMPETITOR GAP SECTION ── */}
                                   <div style={{ border: "1px solid #1a1a1a", borderRadius: 8, overflow: "hidden" }}>
-                                    <div style={{ background: "#0a0a0a", padding: "10px 16px", display: "flex", alignItems: "center", gap: 14, borderBottom: "1px solid #1a1a1a", flexWrap: "wrap" }}>
-                                      <span style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", color: "#f59e0b", fontWeight: 600 }}>Competitor Gap</span>
-                                      <button style={{ ...styles.addKeywordBtn, fontSize: 13, padding: "8px 18px", color: "#f59e0b", borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.07)" }} onClick={refreshGapKeywords} disabled={refreshingGap}>
+                                    <div style={{ background: "#0a0a0a", padding: "10px 16px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #1a1a1a", flexWrap: "wrap" }}>
+                                      <span style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", color: "#f59e0b", fontWeight: 600, marginRight: "auto" }}>Competitor Gap</span>
+                                      <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif" }}>{gapRows.filter(r => !r.used).length} active</span>
+                                      <button style={{ ...styles.addKeywordBtn, fontSize: 10, padding: "4px 10px", color: "#f59e0b", borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.07)" }} onClick={refreshGapKeywords} disabled={refreshingGap}>
                                         {refreshingGap ? "⟳ Loading..." : "↻ Refresh List"}
                                       </button>
-                                      <span style={{ fontSize: 10, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", marginLeft: "auto" }}>{gapRows.filter(r => !r.used).length} active</span>
                                     </div>
                                     {gapRows.length === 0 ? (
                                       <div style={{ padding: "20px 16px", color: "#444", fontSize: 12, textAlign: "center" }}>No competitor gap keywords — add competitors in Competitors tab, then click Refresh List</div>
