@@ -3058,11 +3058,11 @@ function App() {
                     {/* ── MONTHLY QUEUE TAB ── */}
                     {clientTab === "monthly" && (
                       <div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-                          <button style={{ ...styles.addBtn, fontSize: 11, padding: "6px 16px" }} onClick={refreshMonthlyQueue} disabled={refreshingQueue}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+                          <button style={{ ...styles.addKeywordBtn, fontSize: 10, padding: "4px 10px", letterSpacing: "0.04em" }} onClick={refreshMonthlyQueue} disabled={refreshingQueue}>
                             {refreshingQueue ? "Regenerating..." : "⟳ Regenerate Queue"}
                           </button>
-                          <button style={{ ...styles.addBtn, background: "transparent", border: "1px solid #d60000", color: "#d60000", fontSize: 11, padding: "6px 16px" }} onClick={() => { setShowManualKeywordInput(v => !v); setManualKeywordText(""); }}>
+                          <button style={{ ...styles.addKeywordBtn, fontSize: 10, padding: "4px 10px", letterSpacing: "0.04em", color: "#d60000", borderColor: "rgba(214,0,0,0.4)", background: "rgba(214,0,0,0.06)" }} onClick={() => { setShowManualKeywordInput(v => !v); setManualKeywordText(""); }}>
                             {showManualKeywordInput ? "✕ Cancel" : "+ Add Keyword"}
                           </button>
                         </div>
