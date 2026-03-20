@@ -3213,9 +3213,9 @@ function App() {
                                 );
                               }); }; // end renderQueueRows
 
-                              const researchRows = monthlyQueue.filter(r => r.source === "library" || r.source === "ai");
-                              const gapRows = monthlyQueue.filter(r => r.source === "gap");
-                              const otherRows = monthlyQueue.filter(r => !["library","ai","gap"].includes(r.source));
+                              const researchRows = monthlyQueue.filter(r => !r.used && (r.source === "library" || r.source === "ai"));
+                              const gapRows = monthlyQueue.filter(r => !r.used && r.source === "gap");
+                              const otherRows = monthlyQueue.filter(r => !r.used && !["library","ai","gap"].includes(r.source));
                               const allRows = [...researchRows, ...otherRows]; // research section includes manually-added
 
                               return (
