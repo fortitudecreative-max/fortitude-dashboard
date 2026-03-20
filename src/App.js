@@ -3076,15 +3076,7 @@ function App() {
 
                 {clientMainTab === "queue" && (
                   <div style={{ paddingTop: 20 }}>
-{/* Tab Bar */}
-                    <div style={{ display: "flex", gap: 2, marginBottom: 20, borderBottom: "1px solid #222", paddingBottom: 0 }}>
-                      {[
-                        { key: "monthly", label: `Scheduled Queue${monthlyQueue.length ? ` (${monthlyQueue.length})` : ""}` },
-                        { key: "clientkeywords", label: `Client Keywords${clientKeywordsTotal ? ` (${clientKeywordsTotal})` : ""}` },
-                                      ].map(t => (
-                        <button key={t.key} onClick={() => { setClientTab(t.key); if (t.key === "clientkeywords") loadClientKeywords(selectedClient.id, 1); }} style={{ ...styles.industryTab, ...(clientTab === t.key ? styles.industryTabActive : {}), marginBottom: -1, borderBottom: clientTab === t.key ? "2px solid #d60000" : "1px solid transparent" }}>{t.label}</button>
-                      ))}
-                    </div>
+
                         <>
                         {showManualKeywordInput && (
                           <div style={{ background: "#0a0a0a", border: "1px solid #222", borderRadius: 8, padding: "14px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
