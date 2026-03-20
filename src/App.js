@@ -409,7 +409,8 @@ function App() {
   const [clientKeywordsTotal, setClientKeywordsTotal] = useState(0);
   const [clientListPage, setClientListPage] = useState(1);
   const [monthlyQueuePage, setMonthlyQueuePage] = useState(1);
-  const [clientTab, setClientTab] = useState('monthly'); // 'monthly' | 'clientlist' | 'used'
+  const [clientTab, setClientTab] = useState('monthly');
+  const [clientMainTab, setClientMainTab] = useState('queue'); // 'monthly' | 'clientlist' | 'used'
   const [refreshingQueue, setRefreshingQueue] = useState(false);
   const [refreshingResearch, setRefreshingResearch] = useState(false);
   const [refreshingGap, setRefreshingGap] = useState(false);
@@ -2239,6 +2240,7 @@ function App() {
                       setProfileExpanded(false);
                       setScheduleExpanded(false);
                       setGbpExpanded(false);
+                      setClientMainTab('queue');
                       setPersonalityExpanded(false);
                       setPersonalityEdits(null);
                       setScheduledPostsExpanded(false);
@@ -2557,6 +2559,8 @@ function App() {
                   )}
                 </div>
 
+                {clientProfileExpanded && (
+                  <div style={{ borderTop: "1px solid #1a1a1a", marginTop: 16, paddingTop: 4 }}>
                 {/* ── CONNECTED APPS DROPDOWN ── */}
                 <div style={{ marginBottom: 20 }}>
                     <button
@@ -3050,19 +3054,29 @@ function App() {
                   )}
                 </div>
 
-                {/* ── KEYWORD QUEUE SECTION ── */}
-                <div style={{ marginBottom: 20 }}>
-                  <button
-                    onClick={() => setScheduledQueueExpanded(v => !v)}
-                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: "0 0 12px 0" }}
-                  >
-                    <div style={styles.sectionTitle}>Keyword Queue</div>
-                    <span style={{ fontSize: 18, color: "#fff", transition: "transform 0.2s", display: "inline-block", transform: scheduledQueueExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
-                  </button>
-                  {scheduledQueueExpanded && (
-                    <div>
+                  </div>
+                )}
 
-                        {/* Tab Bar */}
+                {/* ── MAIN CONTENT TABS ── */}
+                <div style={{ display: "flex", gap: 0, marginTop: 20, borderBottom: "2px solid #1a1a1a" }}>
+                  {[
+                    { key: "queue", label: "Scheduled Queue" + (monthlyQueue.filter(r => !r.used).length ? " (" + monthlyQueue.filter(r => !r.used).length + ")" : "") },
+                    { key: "clientkeywords", label: "Client Keywords" + (clientKeywordsTotal ? " (" + clientKeywordsTotal + ")" : "") },
+                    { key: "archived", label: "Archived Posts (" + scheduleJobs.filter(j => j.status === "published").length + ")" },
+                    { key: "images", label: "Image Library" },
+                  ].map(t => (
+                    <button key={t.key} onClick={() => {
+                      setClientMainTab(t.key);
+                      if (t.key === "clientkeywords") loadClientKeywords(selectedClient.id, 1);
+                      if (t.key === "images") loadClientImages(selectedClient.id);
+                      if (t.key === "archived") loadScheduleJobs(selectedClient.id);
+                    }} style={{ ...styles.industryTab, ...(clientMainTab === t.key ? styles.industryTabActive : {}), marginBottom: -2, borderBottom: clientMainTab === t.key ? "2px solid #d60000" : "2px solid transparent", fontSize: 11, padding: "8px 16px" }}>{t.label}</button>
+                  ))}
+                </div>
+
+                {clientMainTab === "queue" && (
+                  <div style={{ paddingTop: 20 }}>
+{/* Tab Bar */}
                     <div style={{ display: "flex", gap: 2, marginBottom: 20, borderBottom: "1px solid #222", paddingBottom: 0 }}>
                       {[
                         { key: "monthly", label: `Scheduled Queue${monthlyQueue.length ? ` (${monthlyQueue.length})` : ""}` },
@@ -3071,10 +3085,6 @@ function App() {
                         <button key={t.key} onClick={() => { setClientTab(t.key); if (t.key === "clientkeywords") loadClientKeywords(selectedClient.id, 1); }} style={{ ...styles.industryTab, ...(clientTab === t.key ? styles.industryTabActive : {}), marginBottom: -1, borderBottom: clientTab === t.key ? "2px solid #d60000" : "1px solid transparent" }}>{t.label}</button>
                       ))}
                     </div>
-
-                    {/* ── MONTHLY QUEUE TAB ── */}
-                    {clientTab === "monthly" && (
-                      <div>
                         <>
                         {showManualKeywordInput && (
                           <div style={{ background: "#0a0a0a", border: "1px solid #222", borderRadius: 8, padding: "14px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -3282,12 +3292,10 @@ function App() {
                           </div>
                         )}
                         </>
-                      </div>
-                    )}
-
-                    {/* ── CLIENT KEYWORDS TAB ── */}
-                    {clientTab === "clientkeywords" && (
-                      <div>
+                  </div>
+                )}
+                {clientMainTab === "clientkeywords" && (
+                  <div style={{ paddingTop: 20 }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                           <div style={styles.sectionTitle}>Client Keywords</div>
                           <div style={{ fontSize: 11, color: "#555" }}>Drag a row or click → Queue to move it to Scheduled Queue • ✕ to remove</div>
@@ -3359,28 +3367,11 @@ function App() {
                             )}
                           </div>
                         )}
-                      </div>
-                    )}
-
-                    {/* ── USED KEYWORDS TAB ── */}
-                    </div>
-                  )}
-                </div>
-
-                {/* ARCHIVED POSTS — standalone section */}
-                <div style={{ marginBottom: 20 }}>
-                    <button
-                      onClick={() => setArchivedPostsExpanded(v => !v)}
-                      style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: "0 0 12px 0" }}
-                    >
-                      <div style={styles.sectionTitle}>
-                        Archived Posts <span style={{ fontSize: 12, color: "#555", fontWeight: 400, fontFamily: "'Barlow Condensed', sans-serif" }}>({scheduleJobs.filter(j => j.status === "published").length})</span>
-                      </div>
-                      <span style={{ fontSize: 18, color: "#fff", transition: "transform 0.2s", display: "inline-block", transform: archivedPostsExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
-                    </button>
-                    {archivedPostsExpanded && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                        {scheduleJobs.filter(j => j.status === "published").length === 0 && (
+                  </div>
+                )}
+                {clientMainTab === "archived" && (
+                  <div style={{ paddingTop: 20 }}>
+{scheduleJobs.filter(j => j.status === "published").length === 0 && (
                           <div style={{ fontSize: 12, color: "#444", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.05em", padding: "10px 0" }}>No published posts yet.</div>
                         )}
                         {scheduleJobs.filter(j => j.status === "published").map(job => {
@@ -3436,22 +3427,11 @@ function App() {
                             </div>
                           );
                         })}
-                      </div>
-                    )}
-                </div>
-
-                                {/* CLIENT IMAGE LIBRARY */}
-                <div style={{ marginBottom: 20 }}>
-                  <button
-                    onClick={() => { const next = !imageGalleryExpanded; setImageGalleryExpanded(next); if (next && selectedClient) loadClientImages(selectedClient.id); }}
-                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: imageGalleryExpanded ? 12 : 0 }}
-                  >
-                    <div style={styles.sectionTitle}>Client Image Library</div>
-                    <span style={{ fontSize: 18, color: "#fff", transition: "transform 0.2s", display: "inline-block", transform: imageGalleryExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
-                  </button>
-                  {imageGalleryExpanded && (
-                  <div>
-                  <div style={{ fontSize: 11, color: "#555", letterSpacing: "0.08em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", marginBottom: 12 }}>
+                  </div>
+                )}
+                {clientMainTab === "images" && (
+                  <div style={{ paddingTop: 20 }}>
+<div style={{ fontSize: 11, color: "#555", letterSpacing: "0.08em", textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", marginBottom: 12 }}>
                     These images are used as featured images when generating posts.
                   </div>
 
@@ -3549,8 +3529,7 @@ function App() {
                     </>
                   )}
                   </div>
-                  )}
-                </div>
+                )}
               </div>
             </div>
           )}
